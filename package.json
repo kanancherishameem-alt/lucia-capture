@@ -1,0 +1,21 @@
+{
+  "name": "lucia-finance",
+  "version": "1.0.0",
+  "description": "LUCIA FINANCE — Photography & Videography Money Tracker",
+  "main": "index.html",
+  "scripts": {
+    "start": "python3 server.py",
+    "dev": "python3 server.py",
+    "serve": "python3 server.py",
+    "test": "python3 tests/test_finances.py"
+  },
+  "keywords": [
+    "finance",
+    "tracker",
+    "photography",
+    "videography",
+    "studio"
+  ],
+  "author": "Lucia Studio",
+  "license": "ISC"
+}

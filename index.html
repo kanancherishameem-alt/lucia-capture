@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>LUCIA FINANCE — Photography & Videography Money Tracker</title>
+  <meta name="description" content="Simple, smooth and luxury finance tracker for Lucia Photography & Videography studio.">
+  <meta name="theme-color" content="#0a0b0d">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" type="image/png" href="lucia_logo.png">
+</head>
+<body>
+
+  <div class="app-container">
+
+    <!-- Sticky Header -->
+    <header class="app-header">
+      <div class="brand-wrapper" onclick="App.navigateTo('home')">
+        <img src="lucia_logo.png" alt="Lucia Logo" class="brand-logo" onerror="this.style.display='none'">
+        <div class="brand-titles">
+          <span class="brand-name">LUCIA FINANCE</span>
+          <span class="brand-subtitle">Studio Money Tracker</span>
+        </div>
+      </div>
+
+      <!-- Desktop Navigation -->
+      <nav class="desktop-nav">
+        <button class="nav-link active" data-view="home" onclick="App.navigateTo('home')">Home</button>
+        <button class="nav-link" data-view="projects" onclick="App.navigateTo('projects')">Projects</button>
+        <button class="nav-link" data-view="income" onclick="App.navigateTo('income')">Income</button>
+        <button class="nav-link" data-view="expenses" onclick="App.navigateTo('expenses')">Expenses</button>
+        <button class="nav-link" data-view="partners" onclick="App.navigateTo('partners')">Partners</button>
+        <button class="nav-link" data-view="company-fund" onclick="App.navigateTo('company-fund')">Company Fund</button>
+        <button class="nav-link" data-view="reports" onclick="App.navigateTo('reports')">Reports</button>
+      </nav>
+
+      <!-- Header Quick Actions -->
+      <div class="header-actions">
+        <button class="btn btn-gold btn-sm d-none-mobile" onclick="App.openQuickHubModal()">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          Add
+        </button>
+        <button class="icon-btn" onclick="App.navigateTo('settings')" title="Settings">
+          <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Content Containers -->
+    <main class="main-content">
+
+      <!-- ================= 1. HOME DASHBOARD ================= -->
+      <section id="view-home" class="view-section active">
+        <!-- Dashboard Subhead -->
+        <div class="section-header">
+          <div class="section-title-group">
+            <h1>Financial Dashboard</h1>
+            <p id="dashboard-period-subtitle">Showing performance for This Month</p>
+          </div>
+          <div class="filter-pills" id="home-period-filter">
+            <button class="pill-btn active" data-period="month" onclick="App.setHomePeriod('month')">This Month</button>
+            <button class="pill-btn" data-period="all" onclick="App.setHomePeriod('all')">All Time</button>
+          </div>
+        </div>
+
+        <!-- 4 Top Stat Cards: THIS MONTH -->
+        <div class="hero-stats-grid">
+          <div class="stat-card">
+            <div class="stat-header">
+              <span class="stat-label">Income</span>
+              <div class="stat-icon green">
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
+              </div>
+            </div>
+            <div class="stat-value" id="home-stat-income">₹1,50,000</div>
+            <div class="stat-footer">Direct client advances & settlements</div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-header">
+              <span class="stat-label">Expenses</span>
+              <div class="stat-icon red">
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg>
+              </div>
+            </div>
+            <div class="stat-value" id="home-stat-expenses">₹40,000</div>
+            <div class="stat-footer">Shoots, travel, gear, editing & overhead</div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-header">
+              <span class="stat-label">Salaries</span>
+              <div class="stat-icon purple">
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="7" r="4"></circle><path d="M5.5 21a8.38 8.38 0 0 1 13 0"></path></svg>
+              </div>
+            </div>
+            <div class="stat-value" id="home-stat-salaries">₹20,000</div>
+            <div class="stat-footer">Partner fixed monthly draw</div>
+          </div>
+
+          <div class="stat-card highlight-gold">
+            <div class="stat-header">
+              <span class="stat-label">Net Profit</span>
+              <div class="stat-icon gold">
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"></path><line x1="12" y1="6" x2="12" y2="8"></line><line x1="12" y1="16" x2="12" y2="18"></line></svg>
+              </div>
+            </div>
+            <div class="stat-value gold" id="home-stat-netprofit">₹90,000</div>
+            <div class="stat-footer">Income − Expenses − Salaries</div>
+          </div>
+        </div>
+
+        <!-- Profit Split Section -->
+        <div class="split-card-wrapper">
+          <div class="card-title-row">
+            <h2>
+              <svg width="18" height="18" fill="none" stroke="var(--gold-primary)" stroke-width="2.2" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><polyline points="17 11 19 13 23 9"></polyline></svg>
+              Profit Split (Automated)
+            </h2>
+            <span class="badge-tag">Exact 100% Balanced</span>
+          </div>
+
+          <div class="profit-split-grid">
+            <div class="split-partner-box">
+              <div class="split-partner-name">
+                <span id="home-split-p1-name">Shameem</span>
+                <span class="split-percent" id="home-split-p1-pct">33.33%</span>
+              </div>
+              <div class="split-amount" id="home-split-p1-amount">₹30,000</div>
+            </div>
+
+            <div class="split-partner-box">
+              <div class="split-partner-name">
+                <span id="home-split-p2-name">Shiyan</span>
+                <span class="split-percent" id="home-split-p2-pct">33.33%</span>
+              </div>
+              <div class="split-amount" id="home-split-p2-amount">₹30,000</div>
+            </div>
+
+            <div class="split-partner-box">
+              <div class="split-partner-name">
+                <span>Company Fund</span>
+                <span class="split-percent" id="home-split-cf-pct">33.34%</span>
+              </div>
+              <div class="split-amount" id="home-split-cf-amount">₹30,000</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- OTHER Section: Pending Payments + Company Fund Balance -->
+        <div class="dashboard-dual-grid">
+          <div class="content-box" style="cursor: pointer;" onclick="App.navigateTo('projects')">
+            <div class="card-title-row" style="margin-bottom: 10px;">
+              <span class="stat-label">Pending Payments</span>
+              <span class="badge-tag" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; border-color: rgba(245, 158, 11, 0.3);">Action Needed</span>
+            </div>
+            <div class="stat-value" style="color: #fbbf24;" id="home-pending-amount">₹25,000</div>
+            <p style="font-size: 12px; color: var(--text-secondary); margin-top: 6px;">Uncollected client balance across ongoing events →</p>
+          </div>
+
+          <div class="content-box">
+            <div class="card-title-row" style="margin-bottom: 10px;">
+              <span class="stat-label">Company Fund Balance</span>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span class="badge-tag">Reserve</span>
+                <button class="delete-btn" onclick="event.stopPropagation(); App.confirmDeleteFundBalance();" title="Delete / Reset Company Fund Balance">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                </button>
+              </div>
+            </div>
+            <div class="stat-value gold" id="home-company-fund-balance">₹1,20,000</div>
+            <p style="font-size: 12px; color: var(--text-secondary); margin-top: 6px; cursor: pointer;" onclick="App.navigateTo('company-fund')">Available studio capital for gear, cameras & growth →</p>
+          </div>
+        </div>
+
+        <!-- Visual Mini Trend Chart -->
+        <div class="chart-card">
+          <div class="chart-header">
+            <h3>Monthly Financial Breakdown</h3>
+            <span style="font-size: 11px; color: var(--text-muted);">Real-time comparison</span>
+          </div>
+          <div class="canvas-wrapper">
+            <canvas id="home-chart-canvas"></canvas>
+          </div>
+        </div>
+
+        <!-- Recent Transactions Feed -->
+        <div class="content-box">
+          <div class="card-title-row">
+            <h2>Recent Studio Activity</h2>
+            <button class="btn btn-outline btn-sm" onclick="App.openQuickHubModal()">+ Add New</button>
+          </div>
+          <div class="transaction-list" id="home-recent-transactions">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 2. PROJECTS ================= -->
+      <section id="view-projects" class="view-section">
+        <div class="section-header">
+          <div class="section-title-group">
+            <h1>Photography & Videography Projects</h1>
+            <p>Track packages, collections, pending dues, and shoot expenses</p>
+          </div>
+          <button class="btn btn-gold" onclick="App.openModal('modal-project')">
+            + New Project
+          </button>
+        </div>
+
+        <!-- Project Status Filters -->
+        <div class="filter-pills" id="project-status-filter" style="margin-bottom: 16px;">
+          <button class="pill-btn active" data-status="all" onclick="App.filterProjects('all')">All</button>
+          <button class="pill-btn" data-status="Payment Pending" onclick="App.filterProjects('Payment Pending')">Payment Pending</button>
+          <button class="pill-btn" data-status="Ongoing" onclick="App.filterProjects('Ongoing')">Ongoing</button>
+          <button class="pill-btn" data-status="Upcoming" onclick="App.filterProjects('Upcoming')">Upcoming</button>
+          <button class="pill-btn" data-status="Completed" onclick="App.filterProjects('Completed')">Completed</button>
+        </div>
+
+        <div class="projects-grid" id="projects-grid-container">
+          <!-- Dynamically populated with cards -->
+        </div>
+      </section>
+
+      <!-- ================= 3. INCOME ================= -->
+      <section id="view-income" class="view-section">
+        <div class="section-header">
+          <div class="section-title-group">
+            <h1>Income Records</h1>
+            <p>Direct collections, advances, and package settlements</p>
+          </div>
+          <button class="btn btn-gold" onclick="App.openModal('modal-income')">
+            + Add Income
+          </button>
+        </div>
+
+        <div class="stat-card" style="margin-bottom: 20px;">
+          <div class="stat-header">
+            <span class="stat-label">Total Recorded Income</span>
+            <div class="stat-icon green">₹</div>
+          </div>
+          <div class="stat-value" id="income-page-total">₹1,50,000</div>
+        </div>
+
+        <div class="transaction-list" id="income-list-container">
+          <!-- Dynamically populated -->
+        </div>
+      </section>
+
+      <!-- ================= 4. EXPENSES ================= -->
+      <section id="view-expenses" class="view-section">
+        <div class="section-header">
+          <div class="section-title-group">
+            <h1>Studio & Shoot Expenses</h1>
+            <p>Gear rental, travel, editing fees, crew food, and software</p>
+          </div>
+          <button class="btn btn-gold" onclick="App.openModal('modal-expense')">
+            + Add Expense
+          </button>
+        </div>
+
+        <div class="dashboard-dual-grid">
+          <div class="stat-card">
+            <div class="stat-header">
+              <span class="stat-label">Total Business Expenses</span>
+              <div class="stat-icon red">₹</div>
+            </div>
+            <div class="stat-value" id="expenses-page-total">₹40,000</div>
+          </div>
+
+          <div class="chart-card" style="margin-bottom: 0;">
+            <div class="chart-header">
+              <h3>Expense Breakdown by Category</h3>
+            </div>
+            <div class="canvas-wrapper">
+              <canvas id="expenses-category-canvas"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Expense Category Filters -->
+        <div class="filter-pills" id="expense-cat-filter" style="margin: 20px 0 14px 0;">
+          <button class="pill-btn active" data-cat="all" onclick="App.filterExpenses('all')">All</button>
+          <button class="pill-btn" data-cat="Travel" onclick="App.filterExpenses('Travel')">Travel</button>
+          <button class="pill-btn" data-cat="Equipment" onclick="App.filterExpenses('Equipment')">Equipment</button>
+          <button class="pill-btn" data-cat="Editing" onclick="App.filterExpenses('Editing')">Editing</button>
+          <button class="pill-btn" data-cat="Food" onclick="App.filterExpenses('Food')">Food</button>
+          <button class="pill-btn" data-cat="Software" onclick="App.filterExpenses('Software')">Software</button>
+          <button class="pill-btn" data-cat="Marketing" onclick="App.filterExpenses('Marketing')">Marketing</button>
+          <button class="pill-btn" data-cat="Other" onclick="App.filterExpenses('Other')">Other</button>
+        </div>
+
+        <div class="transaction-list" id="expenses-list-container">
+          <!-- Dynamically populated -->
+        </div>
+      </section>
+
+      <!-- ================= 5. PARTNERS ================= -->
+      <section id="view-partners" class="view-section">
+        <div class="section-header">
+          <div class="section-title-group">
+            <h1>Partners Hub</h1>
+            <p>Salary, earned profit share, and withdrawal ledger</p>
+          </div>
+          <button class="btn btn-gold" onclick="App.openModal('modal-withdrawal')">
+            Record Partner Withdrawal
+          </button>
+        </div>
+
+        <div class="partner-deck" style="margin-bottom: 24px;">
+          <!-- Shameem Card -->
+          <div class="partner-card">
+            <div class="partner-header">
+              <div class="partner-avatar">S1</div>
+              <div>
+                <div class="partner-name" id="partner1-title-name">SHAMEEM</div>
+                <div class="partner-role">Co-Founder & Partner</div>
+              </div>
+            </div>
+
+            <div class="partner-available-banner">
+              <div class="available-label">Available Balance</div>
+              <div class="available-amount" id="p1-available">₹20,000</div>
+              <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Profit Share − Withdrawn</div>
+            </div>
+
+            <div class="partner-breakdown-list">
+              <div class="partner-row">
+                <span class="partner-row-label">Salary Earned</span>
+                <span class="partner-row-val" id="p1-salary">₹20,000</span>
+              </div>
+              <div class="partner-row">
+                <span class="partner-row-label">Profit Share</span>
+                <span class="partner-row-val gold" id="p1-profit">₹30,000</span>
+              </div>
+              <div class="partner-row">
+                <span class="partner-row-label">Withdrawn</span>
+                <span class="partner-row-val" style="color: #f87171;" id="p1-withdrawn">₹10,000</span>
+              </div>
+            </div>
+
+            <button class="btn btn-outline" style="width: 100%;" onclick="App.openWithdrawalModal('partner1')">
+              Record Shameem Withdrawal
+            </button>
+          </div>
+
+          <!-- Shiyan Card -->
+          <div class="partner-card">
+            <div class="partner-header">
+              <div class="partner-avatar">S2</div>
+              <div>
+                <div class="partner-name" id="partner2-title-name">SHIYAN</div>
+                <div class="partner-role">Co-Founder & Partner</div>
+              </div>
+            </div>
+
+            <div class="partner-available-banner">
+              <div class="available-label">Available Balance</div>
+              <div class="available-amount" id="p2-available">₹25,000</div>
+              <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Profit Share − Withdrawn</div>
+            </div>
+
+            <div class="partner-breakdown-list">
+              <div class="partner-row">
+                <span class="partner-row-label">Salary Earned</span>
+                <span class="partner-row-val" id="p2-salary">₹20,000</span>
+              </div>
+              <div class="partner-row">
+                <span class="partner-row-label">Profit Share</span>
+                <span class="partner-row-val gold" id="p2-profit">₹30,000</span>
+              </div>
+              <div class="partner-row">
+                <span class="partner-row-label">Withdrawn</span>
+                <span class="partner-row-val" style="color: #f87171;" id="p2-withdrawn">₹5,000</span>
+              </div>
+            </div>
+
+            <button class="btn btn-outline" style="width: 100%;" onclick="App.openWithdrawalModal('partner2')">
+              Record Shiyan Withdrawal
+            </button>
+          </div>
+        </div>
+
+        <!-- Partner Withdrawals History -->
+        <div class="content-box">
+          <div class="card-title-row">
+            <h2>Partner Withdrawal History</h2>
+          </div>
+          <div class="transaction-list" id="partners-withdrawal-list">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 6. COMPANY FUND ================= -->
+      <section id="view-company-fund" class="view-section">
+        <div class="section-header">
+          <div class="section-title-group">
+            <h1>Company Fund Reserve</h1>
+            <p>Studio reinvestment pool for camera bodies, prime lenses, and growth</p>
+          </div>
+        </div>
+
+        <div class="fund-banner">
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div class="fund-balance-label">Company Fund Balance</div>
+            <button class="delete-btn" onclick="App.confirmDeleteFundBalance()" title="Delete / Reset Company Fund Balance">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            </button>
+          </div>
+          <div class="fund-balance-amount" id="fund-balance-large">₹1,20,000</div>
+          <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 20px;">
+            The fund automatically receives the company's 33.34% share of net monthly profit.
+          </p>
+          <div class="fund-actions-row">
+            <button class="btn btn-gold" onclick="App.openFundModal('addition')">
+              + Add Fund
+            </button>
+            <button class="btn btn-outline" onclick="App.openFundModal('usage')">
+              − Use Fund (Camera, Lens, etc.)
+            </button>
+            <button class="btn btn-outline" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.4);" onclick="App.confirmDeleteFundBalance()">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+              Delete / Reset Balance
+            </button>
+          </div>
+        </div>
+
+        <div class="content-box">
+          <div class="card-title-row">
+            <h2>Company Fund Ledger (Purchases & Additions)</h2>
+          </div>
+          <div class="transaction-list" id="fund-ledger-list">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 7. REPORTS ================= -->
+      <section id="view-reports" class="view-section">
+        <div class="section-header">
+          <div class="section-title-group">
+            <h1>Studio Financial Reports</h1>
+            <p>Simple monthly summaries without complicated accounting jargon</p>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn-outline btn-sm" onclick="App.exportCSV()">Export CSV</button>
+            <button class="btn btn-gold btn-sm" onclick="window.print()">Print Report</button>
+          </div>
+        </div>
+
+        <!-- Report Period Selector -->
+        <div class="filter-pills" id="reports-period-selector" style="margin-bottom: 20px;">
+          <button class="pill-btn active" data-period="this-month" onclick="App.setReportPeriod('this-month')">This Month</button>
+          <button class="pill-btn" data-period="last-month" onclick="App.setReportPeriod('last-month')">Last Month</button>
+          <button class="pill-btn" data-period="this-year" onclick="App.setReportPeriod('this-year')">This Year</button>
+          <button class="pill-btn" data-period="all-time" onclick="App.setReportPeriod('all-time')">All Time</button>
+        </div>
+
+        <!-- Detailed Metrics Grid -->
+        <div class="hero-stats-grid" style="margin-bottom: 24px;">
+          <div class="stat-card">
+            <div class="stat-label">Total Income</div>
+            <div class="stat-value" id="rep-income">₹1,50,000</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Total Expenses</div>
+            <div class="stat-value" id="rep-expenses">₹40,000</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Total Salaries</div>
+            <div class="stat-value" id="rep-salaries">₹20,000</div>
+          </div>
+          <div class="stat-card highlight-gold">
+            <div class="stat-label">Net Profit</div>
+            <div class="stat-value gold" id="rep-profit">₹90,000</div>
+          </div>
+        </div>
+
+        <div class="profit-split-grid" style="margin-bottom: 24px;">
+          <div class="split-partner-box">
+            <div class="split-partner-name">Shameem Share</div>
+            <div class="split-amount" id="rep-shameem">₹30,000</div>
+          </div>
+          <div class="split-partner-box">
+            <div class="split-partner-name">Shiyan Share</div>
+            <div class="split-amount" id="rep-shiyan">₹30,000</div>
+          </div>
+          <div class="split-partner-box">
+            <div class="split-partner-name">Company Fund Share</div>
+            <div class="split-amount" id="rep-fund">₹30,000</div>
+          </div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-header">
+            <h3>Visual Financial Comparison</h3>
+          </div>
+          <div class="canvas-wrapper">
+            <canvas id="reports-chart-canvas"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 8. SETTINGS ================= -->
+      <section id="view-settings" class="view-section">
+        <div class="section-header">
+          <div class="section-title-group">
+            <h1>Studio Settings</h1>
+            <p>Customize profit distribution percentages and partner settings</p>
+          </div>
+        </div>
+
+        <div class="content-box" style="max-width: 650px; margin-bottom: 24px;">
+          <div class="card-title-row">
+            <h2>Profit Split Percentages</h2>
+            <span class="badge-tag" id="settings-pct-status">Sum: 100%</span>
+          </div>
+          <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;">
+            Set how Net Profit is divided after subtracting business expenses and partner salaries.
+          </p>
+
+          <form id="form-settings-percentages" onsubmit="App.savePercentages(event)">
+            <div class="form-group">
+              <label class="form-label">Shameem Share (%)</label>
+              <input type="number" step="0.01" min="0" max="100" class="form-input" id="set-pct-p1" value="33.33" oninput="App.validatePercentages()" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Shiyan Share (%)</label>
+              <input type="number" step="0.01" min="0" max="100" class="form-input" id="set-pct-p2" value="33.33" oninput="App.validatePercentages()" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Company Fund Share (%)</label>
+              <input type="number" step="0.01" min="0" max="100" class="form-input" id="set-pct-cf" value="33.34" oninput="App.validatePercentages()" required>
+            </div>
+            <button type="submit" class="btn btn-gold" id="btn-save-pct">Save Percentages</button>
+          </form>
+        </div>
+
+        <div class="content-box" style="max-width: 650px; margin-bottom: 24px;">
+          <div class="card-title-row">
+            <h2>Data Management & Backup</h2>
+          </div>
+          <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;">
+            Export your data to a JSON backup file or restore previously saved data.
+          </p>
+          <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <button class="btn btn-outline" onclick="App.backupJSON()">Download Backup (.json)</button>
+            <label class="btn btn-outline" style="cursor: pointer;">
+              Restore Backup
+              <input type="file" accept=".json" style="display: none;" onchange="App.restoreJSON(event)">
+            </label>
+            <button class="btn btn-outline" style="color: #f59e0b;" onclick="App.confirmResetSampleData()">Reset Sample Data</button>
+            <button class="btn btn-outline" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.4);" onclick="App.confirmClearAllData()">Clear All Records</button>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Mobile Bottom Navigation Bar -->
+    <nav class="mobile-bottom-nav">
+      <button class="bottom-tab active" data-view="home" onclick="App.navigateTo('home')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+        <span>Home</span>
+      </button>
+
+      <button class="bottom-tab" data-view="projects" onclick="App.navigateTo('projects')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
+        <span>Projects</span>
+      </button>
+
+      <!-- Elevated Gold + Add Button -->
+      <button class="btn-center-add" onclick="App.openQuickHubModal()" title="Add Transaction">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+      </button>
+
+      <button class="bottom-tab" data-view="finance" onclick="App.navigateTo('income')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+        <span>Finance</span>
+      </button>
+
+      <button class="bottom-tab" data-view="more" onclick="App.navigateTo('partners')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>
+        <span>More</span>
+      </button>
+    </nav>
+
+    <!-- ================= MODALS & DRAWERS ================= -->
+
+    <!-- 1. Quick Add Action Hub Modal -->
+    <div id="modal-quick-hub" class="modal-overlay" onclick="App.closeModal(event, 'modal-quick-hub')">
+      <div class="modal-sheet" onclick="event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title">
+            <svg width="20" height="20" fill="none" stroke="var(--gold-primary)" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            Quick Add
+          </div>
+          <button class="modal-close-btn" onclick="App.closeModalDirect('modal-quick-hub')">✕</button>
+        </div>
+
+        <div class="quick-add-grid">
+          <div class="quick-add-btn" onclick="App.openAddIncomeFromHub()">
+            <div class="quick-add-icon" style="background: var(--accent-income-bg); color: var(--accent-income);">
+              <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
+            </div>
+            <span>Add Income</span>
+          </div>
+
+          <div class="quick-add-btn" onclick="App.openAddExpenseFromHub()">
+            <div class="quick-add-icon" style="background: var(--accent-expense-bg); color: var(--accent-expense);">
+              <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg>
+            </div>
+            <span>Add Expense</span>
+          </div>
+
+          <div class="quick-add-btn" onclick="App.openAddProjectFromHub()">
+            <div class="quick-add-icon" style="background: var(--gold-subtle); color: var(--gold-primary);">
+              <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
+            </div>
+            <span>Add Project</span>
+          </div>
+
+          <div class="quick-add-btn" onclick="App.openAddPaymentFromHub()">
+            <div class="quick-add-icon" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24;">
+              <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
+            </div>
+            <span>Add Payment</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. Add Income Modal -->
+    <div id="modal-income" class="modal-overlay" onclick="App.closeModal(event, 'modal-income')">
+      <div class="modal-sheet" onclick="event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title">Add Income</div>
+          <button class="modal-close-btn" onclick="App.closeModalDirect('modal-income')">✕</button>
+        </div>
+        <form id="form-income" onsubmit="App.handleSaveIncome(event)">
+          <div class="form-group">
+            <label class="form-label">Client / Project</label>
+            <select class="form-select" id="inc-project" onchange="App.handleIncomeProjectChange()">
+              <!-- Dynamically populated with active projects -->
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Amount (₹)</label>
+            <div class="amount-input-wrapper">
+              <span class="amount-prefix">₹</span>
+              <input type="number" inputmode="numeric" class="form-input" id="inc-amount" placeholder="0" required autofocus>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Date</label>
+            <input type="date" class="form-input" id="inc-date" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Payment Method</label>
+            <div class="payment-method-selector" id="inc-method-selector">
+              <div class="method-choice selected" data-method="UPI" onclick="App.selectPaymentMethod('inc', 'UPI')">UPI</div>
+              <div class="method-choice" data-method="Cash" onclick="App.selectPaymentMethod('inc', 'Cash')">Cash</div>
+              <div class="method-choice" data-method="Bank" onclick="App.selectPaymentMethod('inc', 'Bank')">Bank</div>
+            </div>
+            <input type="hidden" id="inc-method" value="UPI">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Note (Optional)</label>
+            <input type="text" class="form-input" id="inc-notes" placeholder="e.g. Advance token / final settlement">
+          </div>
+
+          <button type="submit" class="btn btn-gold" style="width: 100%; padding: 14px; font-size: 15px; margin-top: 10px;">
+            Save Income
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- 3. Add Expense Modal -->
+    <div id="modal-expense" class="modal-overlay" onclick="App.closeModal(event, 'modal-expense')">
+      <div class="modal-sheet" onclick="event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title">Add Expense</div>
+          <button class="modal-close-btn" onclick="App.closeModalDirect('modal-expense')">✕</button>
+        </div>
+        <form id="form-expense" onsubmit="App.handleSaveExpense(event)">
+          <div class="form-group">
+            <label class="form-label">Amount (₹)</label>
+            <div class="amount-input-wrapper">
+              <span class="amount-prefix">₹</span>
+              <input type="number" inputmode="numeric" class="form-input" id="exp-amount" placeholder="0" required autofocus>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Category</label>
+            <select class="form-select" id="exp-category" required>
+              <option value="Travel">Travel (Fuel, Flight, Taxi)</option>
+              <option value="Equipment">Equipment (Rental, Lights, Mics)</option>
+              <option value="Editing">Editing (Colorist, Sound, Freelance)</option>
+              <option value="Food">Food & Refreshments</option>
+              <option value="Software">Software & Cloud (Adobe, Storage)</option>
+              <option value="Marketing">Marketing & Sponsored Ads</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Project (Optional)</label>
+            <select class="form-select" id="exp-project">
+              <!-- Dynamically populated -->
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Date</label>
+            <input type="date" class="form-input" id="exp-date" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Payment Method</label>
+            <div class="payment-method-selector" id="exp-method-selector">
+              <div class="method-choice selected" data-method="UPI" onclick="App.selectPaymentMethod('exp', 'UPI')">UPI</div>
+              <div class="method-choice" data-method="Cash" onclick="App.selectPaymentMethod('exp', 'Cash')">Cash</div>
+              <div class="method-choice" data-method="Bank" onclick="App.selectPaymentMethod('exp', 'Bank')">Bank</div>
+            </div>
+            <input type="hidden" id="exp-method" value="UPI">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Note (Optional)</label>
+            <input type="text" class="form-input" id="exp-notes" placeholder="e.g. Lens rental for wedding day">
+          </div>
+
+          <button type="submit" class="btn btn-gold" style="width: 100%; padding: 14px; font-size: 15px; margin-top: 10px;">
+            Save Expense
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- 4. Add Project Modal -->
+    <div id="modal-project" class="modal-overlay" onclick="App.closeModal(event, 'modal-project')">
+      <div class="modal-sheet" onclick="event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title">Add Project</div>
+          <button class="modal-close-btn" onclick="App.closeModalDirect('modal-project')">✕</button>
+        </div>
+        <form id="form-project" onsubmit="App.handleSaveProject(event)">
+          <div class="form-group">
+            <label class="form-label">Project / Event Name</label>
+            <input type="text" class="form-input" id="proj-name" placeholder="e.g. Aswathi Wedding" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Client Name</label>
+            <input type="text" class="form-input" id="proj-client" placeholder="e.g. Aswathi & Kiran" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Client Phone (Optional)</label>
+            <input type="tel" class="form-input" id="proj-phone" placeholder="+91 98470 12345">
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div class="form-group">
+              <label class="form-label">Package (₹)</label>
+              <input type="number" inputmode="numeric" class="form-input" id="proj-package" placeholder="50000" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Advance Received (₹)</label>
+              <input type="number" inputmode="numeric" class="form-input" id="proj-received" placeholder="0">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Event Date</label>
+            <input type="date" class="form-input" id="proj-date" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Status</label>
+            <select class="form-select" id="proj-status">
+              <option value="Upcoming">Upcoming</option>
+              <option value="Ongoing">Ongoing</option>
+              <option value="Payment Pending">Payment Pending</option>
+              <option value="Completed">Completed</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Location (Optional)</label>
+            <input type="text" class="form-input" id="proj-location" placeholder="e.g. Calicut Hyatt">
+          </div>
+
+          <button type="submit" class="btn btn-gold" style="width: 100%; padding: 14px; font-size: 15px; margin-top: 10px;">
+            Save Project
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- 5. Add Payment Modal -->
+    <div id="modal-payment" class="modal-overlay" onclick="App.closeModal(event, 'modal-payment')">
+      <div class="modal-sheet" onclick="event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title">Add Payment</div>
+          <button class="modal-close-btn" onclick="App.closeModalDirect('modal-payment')">✕</button>
+        </div>
+        <form id="form-payment" onsubmit="App.handleSavePayment(event)">
+          <div class="form-group">
+            <label class="form-label">Select Project with Pending Balance</label>
+            <select class="form-select" id="pay-project" onchange="App.handlePayProjectSelected()" required>
+              <!-- Dynamically populated -->
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Amount (₹)</label>
+            <div class="amount-input-wrapper">
+              <span class="amount-prefix">₹</span>
+              <input type="number" inputmode="numeric" class="form-input" id="pay-amount" placeholder="0" required>
+            </div>
+            <div id="pay-pending-hint" style="font-size: 11px; color: var(--gold-primary); margin-top: 4px;"></div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Date</label>
+            <input type="date" class="form-input" id="pay-date" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Payment Method</label>
+            <div class="payment-method-selector" id="pay-method-selector">
+              <div class="method-choice selected" data-method="UPI" onclick="App.selectPaymentMethod('pay', 'UPI')">UPI</div>
+              <div class="method-choice" data-method="Cash" onclick="App.selectPaymentMethod('pay', 'Cash')">Cash</div>
+              <div class="method-choice" data-method="Bank" onclick="App.selectPaymentMethod('pay', 'Bank')">Bank</div>
+            </div>
+            <input type="hidden" id="pay-method" value="UPI">
+          </div>
+
+          <button type="submit" class="btn btn-gold" style="width: 100%; padding: 14px; font-size: 15px; margin-top: 10px;">
+            Record Payment
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- 6. Record Partner Withdrawal Modal -->
+    <div id="modal-withdrawal" class="modal-overlay" onclick="App.closeModal(event, 'modal-withdrawal')">
+      <div class="modal-sheet" onclick="event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title">Record Partner Withdrawal</div>
+          <button class="modal-close-btn" onclick="App.closeModalDirect('modal-withdrawal')">✕</button>
+        </div>
+        <form id="form-withdrawal" onsubmit="App.handleSaveWithdrawal(event)">
+          <div class="form-group">
+            <label class="form-label">Partner</label>
+            <select class="form-select" id="wd-partner" required>
+              <option value="partner1">Shameem</option>
+              <option value="partner2">Shiyan</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Amount (₹)</label>
+            <div class="amount-input-wrapper">
+              <span class="amount-prefix">₹</span>
+              <input type="number" inputmode="numeric" class="form-input" id="wd-amount" placeholder="0" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Date</label>
+            <input type="date" class="form-input" id="wd-date" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Payment Method</label>
+            <select class="form-select" id="wd-method">
+              <option value="Bank">Bank Transfer</option>
+              <option value="UPI">UPI</option>
+              <option value="Cash">Cash</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Note / Purpose</label>
+            <input type="text" class="form-input" id="wd-notes" placeholder="e.g. Personal draw">
+          </div>
+
+          <button type="submit" class="btn btn-gold" style="width: 100%; padding: 14px; font-size: 15px; margin-top: 10px;">
+            Save Withdrawal
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- 7. Company Fund Modal (Add / Use) -->
+    <div id="modal-fund" class="modal-overlay" onclick="App.closeModal(event, 'modal-fund')">
+      <div class="modal-sheet" onclick="event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title" id="fund-modal-title">Company Fund</div>
+          <button class="modal-close-btn" onclick="App.closeModalDirect('modal-fund')">✕</button>
+        </div>
+        <form id="form-fund" onsubmit="App.handleSaveFundTransaction(event)">
+          <input type="hidden" id="fund-tx-type" value="usage">
+
+          <div class="form-group">
+            <label class="form-label">Category</label>
+            <select class="form-select" id="fund-category">
+              <option value="Camera">Camera (e.g. Sony FX3 / A7IV)</option>
+              <option value="Lens">Lens (e.g. 24-70mm G-Master)</option>
+              <option value="Equipment">Lighting & Audio Gear</option>
+              <option value="Marketing">Brand Marketing & Website</option>
+              <option value="Capital">Capital Infusion / Reserve</option>
+              <option value="Other">Other Studio Asset</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Description</label>
+            <input type="text" class="form-input" id="fund-desc" placeholder="e.g. Sony FX3 Camera body purchase" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Amount (₹)</label>
+            <div class="amount-input-wrapper">
+              <span class="amount-prefix">₹</span>
+              <input type="number" inputmode="numeric" class="form-input" id="fund-amount" placeholder="0" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Date</label>
+            <input type="date" class="form-input" id="fund-date" required>
+          </div>
+
+          <button type="submit" class="btn btn-gold" style="width: 100%; padding: 14px; font-size: 15px; margin-top: 10px;">
+            Save Fund Record
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- 8. Project Detail Drawer Modal -->
+    <div id="modal-project-details" class="modal-overlay" onclick="App.closeModal(event, 'modal-project-details')">
+      <div class="modal-sheet" onclick="event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title" id="detail-proj-name">Project Details</div>
+          <button class="modal-close-btn" onclick="App.closeModalDirect('modal-project-details')">✕</button>
+        </div>
+        <div id="detail-proj-content">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="toast-container"></div>
+
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/finance.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
