@@ -892,7 +892,7 @@
     <div id="modal-income" class="modal-overlay" onclick="App.closeModal(event, 'modal-income')">
       <div class="modal-sheet" onclick="event.stopPropagation()">
         <div class="modal-header">
-          <div class="modal-title">Add Revenue</div>
+          <div class="modal-title" id="modal-income-title">Add Revenue</div>
           <button class="modal-close-btn" onclick="App.closeModalDirect('modal-income')">✕</button>
         </div>
         <form id="form-income" onsubmit="App.handleSaveIncome(event)">
@@ -931,7 +931,7 @@
             <input type="text" class="form-input" id="inc-notes" placeholder="e.g. Advance token / final settlement">
           </div>
 
-          <button type="submit" class="btn btn-gold" style="width: 100%; padding: 14px; font-size: 15px; margin-top: 10px;">
+          <button type="submit" class="btn btn-gold" id="btn-save-income" style="width: 100%; padding: 14px; font-size: 15px; margin-top: 10px;">
             Save Revenue
           </button>
         </form>
@@ -942,7 +942,7 @@
     <div id="modal-expense" class="modal-overlay" onclick="App.closeModal(event, 'modal-expense')">
       <div class="modal-sheet" onclick="event.stopPropagation()">
         <div class="modal-header">
-          <div class="modal-title">Add Expense</div>
+          <div class="modal-title" id="modal-expense-title">Add Expense</div>
           <button class="modal-close-btn" onclick="App.closeModalDirect('modal-expense')">✕</button>
         </div>
         <form id="form-expense" onsubmit="App.handleSaveExpense(event)">
@@ -994,7 +994,7 @@
             <input type="text" class="form-input" id="exp-notes" placeholder="e.g. Lens rental for wedding day">
           </div>
 
-          <button type="submit" class="btn btn-gold" style="width: 100%; padding: 14px; font-size: 15px; margin-top: 10px;">
+          <button type="submit" class="btn btn-gold" id="btn-save-expense" style="width: 100%; padding: 14px; font-size: 15px; margin-top: 10px;">
             Save Expense
           </button>
         </form>
@@ -1005,7 +1005,7 @@
     <div id="modal-project" class="modal-overlay" onclick="App.closeModal(event, 'modal-project')">
       <div class="modal-sheet" onclick="event.stopPropagation()">
         <div class="modal-header">
-          <div class="modal-title">Add Project</div>
+          <div class="modal-title" id="modal-project-title">Add Project</div>
           <button class="modal-close-btn" onclick="App.closeModalDirect('modal-project')">✕</button>
         </div>
         <form id="form-project" onsubmit="App.handleSaveProject(event)">
@@ -1055,7 +1055,7 @@
             <input type="text" class="form-input" id="proj-location" placeholder="e.g. Calicut Hyatt">
           </div>
 
-          <button type="submit" class="btn btn-gold" style="width: 100%; padding: 14px; font-size: 15px; margin-top: 10px;">
+          <button type="submit" class="btn btn-gold" id="btn-save-project" style="width: 100%; padding: 14px; font-size: 15px; margin-top: 10px;">
             Save Project
           </button>
         </form>
@@ -1112,7 +1112,7 @@
     <div id="modal-withdrawal" class="modal-overlay" onclick="App.closeModal(event, 'modal-withdrawal')">
       <div class="modal-sheet" onclick="event.stopPropagation()">
         <div class="modal-header">
-          <div class="modal-title">Record Partner Withdrawal</div>
+          <div class="modal-title" id="modal-withdrawal-title">Record Partner Withdrawal</div>
           <button class="modal-close-btn" onclick="App.closeModalDirect('modal-withdrawal')">✕</button>
         </div>
         <form id="form-withdrawal" onsubmit="App.handleSaveWithdrawal(event)">
@@ -1151,7 +1151,7 @@
             <input type="text" class="form-input" id="wd-notes" placeholder="e.g. Personal draw">
           </div>
 
-          <button type="submit" class="btn btn-gold" style="width: 100%; padding: 14px; font-size: 15px; margin-top: 10px;">
+          <button type="submit" class="btn btn-gold" id="btn-save-withdrawal" style="width: 100%; padding: 14px; font-size: 15px; margin-top: 10px;">
             Save Withdrawal
           </button>
         </form>
@@ -1198,7 +1198,7 @@
             <input type="date" class="form-input" id="fund-date" required>
           </div>
 
-          <button type="submit" class="btn btn-gold" style="width: 100%; padding: 14px; font-size: 15px; margin-top: 10px;">
+          <button type="submit" class="btn btn-gold" id="btn-save-fund" style="width: 100%; padding: 14px; font-size: 15px; margin-top: 10px;">
             Save Fund Record
           </button>
         </form>

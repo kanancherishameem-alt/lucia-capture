@@ -13,6 +13,11 @@ const App = {
   invoiceLineItems: [],
   editingInvoiceId: null,
   previewingInvoiceId: null,
+  editingIncomeId: null,
+  editingExpenseId: null,
+  editingProjectId: null,
+  editingWithdrawalId: null,
+  editingFundId: null,
   enteredPin: '',
   authMode: 'pin',
 
@@ -297,6 +302,43 @@ const App = {
       modal.classList.add('open');
       document.body.style.overflow = 'hidden';
 
+      // Reset form and reset title/button if opening fresh (not in edit mode)
+      if (modalId === 'modal-income' && !this.editingIncomeId) {
+        document.getElementById('form-income')?.reset();
+        const dateEl = document.getElementById('inc-date');
+        if (dateEl) dateEl.value = new Date().toISOString().split('T')[0];
+        const titleEl = document.getElementById('modal-income-title');
+        if (titleEl) titleEl.textContent = 'Add Revenue';
+        const btnEl = document.getElementById('btn-save-income');
+        if (btnEl) btnEl.textContent = 'Save Revenue';
+        this.selectPaymentMethod('inc', 'UPI');
+      } else if (modalId === 'modal-expense' && !this.editingExpenseId) {
+        document.getElementById('form-expense')?.reset();
+        const dateEl = document.getElementById('exp-date');
+        if (dateEl) dateEl.value = new Date().toISOString().split('T')[0];
+        const titleEl = document.getElementById('modal-expense-title');
+        if (titleEl) titleEl.textContent = 'Add Expense';
+        const btnEl = document.getElementById('btn-save-expense');
+        if (btnEl) btnEl.textContent = 'Save Expense';
+        this.selectPaymentMethod('exp', 'UPI');
+      } else if (modalId === 'modal-project' && !this.editingProjectId) {
+        document.getElementById('form-project')?.reset();
+        const dateEl = document.getElementById('proj-date');
+        if (dateEl) dateEl.value = new Date().toISOString().split('T')[0];
+        const titleEl = document.getElementById('modal-project-title');
+        if (titleEl) titleEl.textContent = 'Add Project';
+        const btnEl = document.getElementById('btn-save-project');
+        if (btnEl) btnEl.textContent = 'Save Project';
+      } else if (modalId === 'modal-withdrawal' && !this.editingWithdrawalId) {
+        document.getElementById('form-withdrawal')?.reset();
+        const dateEl = document.getElementById('wd-date');
+        if (dateEl) dateEl.value = new Date().toISOString().split('T')[0];
+        const titleEl = document.getElementById('modal-withdrawal-title');
+        if (titleEl) titleEl.textContent = 'Record Partner Withdrawal';
+        const btnEl = document.getElementById('btn-save-withdrawal');
+        if (btnEl) btnEl.textContent = 'Save Withdrawal';
+      }
+
       // Prepopulate select inputs
       if (modalId === 'modal-income') this.populateIncomeProjectDropdown();
       if (modalId === 'modal-expense') this.populateExpenseProjectDropdown();
@@ -315,6 +357,11 @@ const App = {
     if (modal) {
       modal.classList.remove('open');
       document.body.style.overflow = '';
+      if (modalId === 'modal-income') this.editingIncomeId = null;
+      if (modalId === 'modal-expense') this.editingExpenseId = null;
+      if (modalId === 'modal-project') this.editingProjectId = null;
+      if (modalId === 'modal-withdrawal') this.editingWithdrawalId = null;
+      if (modalId === 'modal-fund') this.editingFundId = null;
     }
   },
 
@@ -349,13 +396,218 @@ const App = {
   },
 
   openFundModal(type = 'usage') {
+    this.editingFundId = null;
     const title = document.getElementById('fund-modal-title');
     const typeInput = document.getElementById('fund-tx-type');
+    const btn = document.getElementById('btn-save-fund');
     if (title && typeInput) {
       typeInput.value = type;
       title.textContent = type === 'addition' ? '+ Add Company Fund' : '− Use Company Fund (Gear / Asset)';
     }
+    if (btn) btn.textContent = 'Save Fund Record';
+    document.getElementById('form-fund')?.reset();
+    const dateEl = document.getElementById('fund-date');
+    if (dateEl) dateEl.value = new Date().toISOString().split('T')[0];
     this.openModal('modal-fund');
+  },
+
+  openEditIncomeModal(id) {
+    const inc = (window.dataStore.data.income || []).find(i => i.id === id);
+    if (!inc) return;
+
+    this.editingIncomeId = id;
+    this.populateIncomeProjectDropdown();
+
+    const projSel = document.getElementById('inc-project');
+    if (projSel) projSel.value = inc.projectId || '';
+
+    const amtInp = document.getElementById('inc-amount');
+    if (amtInp) amtInp.value = inc.amount;
+
+    const dateInp = document.getElementById('inc-date');
+    if (dateInp) dateInp.value = inc.date || new Date().toISOString().split('T')[0];
+
+    const notesInp = document.getElementById('inc-notes');
+    if (notesInp) notesInp.value = inc.notes || '';
+
+    this.selectPaymentMethod('inc', inc.paymentMethod || 'UPI');
+
+    const titleEl = document.getElementById('modal-income-title');
+    if (titleEl) titleEl.textContent = 'Edit Revenue Record';
+
+    const btnEl = document.getElementById('btn-save-income');
+    if (btnEl) btnEl.textContent = 'Update Revenue';
+
+    const modal = document.getElementById('modal-income');
+    if (modal) {
+      modal.classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
+  },
+
+  openEditExpenseModal(id) {
+    const exp = (window.dataStore.data.expenses || []).find(e => e.id === id);
+    if (!exp) return;
+
+    this.editingExpenseId = id;
+    this.populateExpenseProjectDropdown();
+
+    const amtInp = document.getElementById('exp-amount');
+    if (amtInp) amtInp.value = exp.amount;
+
+    const catSel = document.getElementById('exp-category');
+    if (catSel) catSel.value = exp.category || 'Other';
+
+    const projSel = document.getElementById('exp-project');
+    if (projSel) projSel.value = exp.projectId || '';
+
+    const dateInp = document.getElementById('exp-date');
+    if (dateInp) dateInp.value = exp.date || new Date().toISOString().split('T')[0];
+
+    const notesInp = document.getElementById('exp-notes');
+    if (notesInp) notesInp.value = exp.notes || '';
+
+    this.selectPaymentMethod('exp', exp.paymentMethod || 'UPI');
+
+    const titleEl = document.getElementById('modal-expense-title');
+    if (titleEl) titleEl.textContent = 'Edit Expense Record';
+
+    const btnEl = document.getElementById('btn-save-expense');
+    if (btnEl) btnEl.textContent = 'Update Expense';
+
+    const modal = document.getElementById('modal-expense');
+    if (modal) {
+      modal.classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
+  },
+
+  openEditProjectModal(id) {
+    const proj = (window.dataStore.data.projects || []).find(p => p.id === id);
+    if (!proj) return;
+
+    this.editingProjectId = id;
+
+    const nameInp = document.getElementById('proj-name');
+    if (nameInp) nameInp.value = proj.name || '';
+
+    const clientInp = document.getElementById('proj-client');
+    if (clientInp) clientInp.value = proj.clientName || '';
+
+    const phoneInp = document.getElementById('proj-phone');
+    if (phoneInp) phoneInp.value = proj.clientPhone || '';
+
+    const pkgInp = document.getElementById('proj-package');
+    if (pkgInp) pkgInp.value = proj.packageAmount || 0;
+
+    const rcvInp = document.getElementById('proj-received');
+    if (rcvInp) rcvInp.value = proj.receivedAmount || 0;
+
+    const dateInp = document.getElementById('proj-date');
+    if (dateInp) dateInp.value = proj.eventDate || new Date().toISOString().split('T')[0];
+
+    const statusSel = document.getElementById('proj-status');
+    if (statusSel) statusSel.value = proj.status || 'Upcoming';
+
+    const locInp = document.getElementById('proj-location');
+    if (locInp) locInp.value = proj.location || '';
+
+    const titleEl = document.getElementById('modal-project-title');
+    if (titleEl) titleEl.textContent = 'Edit Project Details';
+
+    const btnEl = document.getElementById('btn-save-project');
+    if (btnEl) btnEl.textContent = 'Update Project';
+
+    const modal = document.getElementById('modal-project');
+    if (modal) {
+      modal.classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
+  },
+
+  openEditWithdrawalModal(id) {
+    const wd = (window.dataStore.data.withdrawals || []).find(w => w.id === id);
+    if (!wd) return;
+
+    this.editingWithdrawalId = id;
+
+    const partnerSel = document.getElementById('wd-partner');
+    if (partnerSel) partnerSel.value = wd.partnerId || 'partner1';
+
+    const amtInp = document.getElementById('wd-amount');
+    if (amtInp) amtInp.value = wd.amount;
+
+    const dateInp = document.getElementById('wd-date');
+    if (dateInp) dateInp.value = wd.date || new Date().toISOString().split('T')[0];
+
+    const methodSel = document.getElementById('wd-method');
+    if (methodSel) methodSel.value = wd.paymentMethod || 'Bank';
+
+    const notesInp = document.getElementById('wd-notes');
+    if (notesInp) notesInp.value = wd.notes || '';
+
+    const titleEl = document.getElementById('modal-withdrawal-title');
+    if (titleEl) titleEl.textContent = 'Edit Partner Withdrawal';
+
+    const btnEl = document.getElementById('btn-save-withdrawal');
+    if (btnEl) btnEl.textContent = 'Update Withdrawal';
+
+    const modal = document.getElementById('modal-withdrawal');
+    if (modal) {
+      modal.classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
+  },
+
+  openEditFundTransactionModal(id) {
+    const entry = (window.dataStore.data.companyFundLedger || []).find(e => e.id === id);
+    if (!entry) return;
+
+    this.editingFundId = id;
+
+    const typeInp = document.getElementById('fund-tx-type');
+    if (typeInp) typeInp.value = entry.type || 'usage';
+
+    const catSel = document.getElementById('fund-category');
+    if (catSel) catSel.value = entry.category || 'Other';
+
+    const descInp = document.getElementById('fund-desc');
+    if (descInp) descInp.value = entry.description || '';
+
+    const amtInp = document.getElementById('fund-amount');
+    if (amtInp) amtInp.value = entry.amount;
+
+    const dateInp = document.getElementById('fund-date');
+    if (dateInp) dateInp.value = entry.date || new Date().toISOString().split('T')[0];
+
+    const titleEl = document.getElementById('fund-modal-title');
+    if (titleEl) titleEl.textContent = entry.type === 'addition' ? 'Edit Capital Injection' : 'Edit Equipment / Asset Record';
+
+    const btnEl = document.getElementById('btn-save-fund');
+    if (btnEl) btnEl.textContent = 'Update Fund Record';
+
+    const modal = document.getElementById('modal-fund');
+    if (modal) {
+      modal.classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
+  },
+
+  editItem(collection, id) {
+    if (collection === 'income') this.openEditIncomeModal(id);
+    else if (collection === 'expenses') this.openEditExpenseModal(id);
+    else if (collection === 'projects') this.openEditProjectModal(id);
+    else if (collection === 'withdrawals') this.openEditWithdrawalModal(id);
+    else if (collection === 'companyFundLedger') this.openEditFundTransactionModal(id);
+    else if (collection === 'invoices') this.openEditInvoiceModal(id);
+  },
+
+  editProjectIncome(projectId, incomeId) {
+    this.openEditIncomeModal(incomeId);
+  },
+
+  editProjectExpense(projectId, expenseId) {
+    this.openEditExpenseModal(expenseId);
   },
 
   selectPaymentMethod(prefix, method) {
@@ -460,27 +712,42 @@ const App = {
     const notes = document.getElementById('inc-notes').value;
 
     if (!amount || amount <= 0) {
-      alert('Please enter a valid income amount');
+      alert('Please enter a valid revenue amount');
       return;
     }
 
-    window.dataStore.addIncome({
-      projectId,
-      projectName,
-      clientName,
-      amount,
-      date,
-      paymentMethod,
-      notes
-    });
-
-    // Reset and close
-    e.target.reset();
-    document.getElementById('inc-date').value = new Date().toISOString().split('T')[0];
-    this.closeModalDirect('modal-income');
-
-    // Prompt requested exact toast:
-    this.showToast('Revenue added successfully ✓');
+    if (this.editingIncomeId) {
+      window.dataStore.updateIncome(this.editingIncomeId, {
+        projectId: projectId || null,
+        projectName,
+        clientName,
+        amount,
+        date,
+        paymentMethod,
+        notes
+      });
+      this.editingIncomeId = null;
+      e.target.reset();
+      this.closeModalDirect('modal-income');
+      this.showToast('Revenue record updated ✓');
+      if (projectId && document.getElementById('modal-project-details')?.classList.contains('open')) {
+        this.viewProjectDetails(projectId);
+      }
+    } else {
+      window.dataStore.addIncome({
+        projectId,
+        projectName,
+        clientName,
+        amount,
+        date,
+        paymentMethod,
+        notes
+      });
+      e.target.reset();
+      document.getElementById('inc-date').value = new Date().toISOString().split('T')[0];
+      this.closeModalDirect('modal-income');
+      this.showToast('Revenue added successfully ✓');
+    }
   },
 
   handleSaveExpense(e) {
@@ -488,6 +755,11 @@ const App = {
     const amount = FinanceEngine.parseINR(document.getElementById('exp-amount').value);
     const category = document.getElementById('exp-category').value;
     const projectId = document.getElementById('exp-project').value || null;
+    let projectName = 'Studio Overhead';
+    if (projectId) {
+      const p = (window.dataStore.data.projects || []).find(x => x.id === projectId);
+      if (p) projectName = p.name;
+    }
     const date = document.getElementById('exp-date').value;
     const paymentMethod = document.getElementById('exp-method').value || 'UPI';
     const notes = document.getElementById('exp-notes').value;
@@ -497,20 +769,38 @@ const App = {
       return;
     }
 
-    window.dataStore.addExpense({
-      projectId,
-      category,
-      amount,
-      date,
-      paymentMethod,
-      notes
-    });
-
-    e.target.reset();
-    document.getElementById('exp-date').value = new Date().toISOString().split('T')[0];
-    this.closeModalDirect('modal-expense');
-
-    this.showToast('Expense recorded successfully ✓');
+    if (this.editingExpenseId) {
+      window.dataStore.updateExpense(this.editingExpenseId, {
+        projectId,
+        projectName,
+        category,
+        amount,
+        date,
+        paymentMethod,
+        notes
+      });
+      this.editingExpenseId = null;
+      e.target.reset();
+      this.closeModalDirect('modal-expense');
+      this.showToast('Expense updated successfully ✓');
+      if (projectId && document.getElementById('modal-project-details')?.classList.contains('open')) {
+        this.viewProjectDetails(projectId);
+      }
+    } else {
+      window.dataStore.addExpense({
+        projectId,
+        projectName,
+        category,
+        amount,
+        date,
+        paymentMethod,
+        notes
+      });
+      e.target.reset();
+      document.getElementById('exp-date').value = new Date().toISOString().split('T')[0];
+      this.closeModalDirect('modal-expense');
+      this.showToast('Expense recorded successfully ✓');
+    }
   },
 
   handleSaveProject(e) {
@@ -529,22 +819,41 @@ const App = {
       return;
     }
 
-    window.dataStore.addProject({
-      name,
-      clientName,
-      clientPhone,
-      packageAmount,
-      receivedAmount,
-      eventDate,
-      status,
-      location
-    });
-
-    e.target.reset();
-    document.getElementById('proj-date').value = new Date().toISOString().split('T')[0];
-    this.closeModalDirect('modal-project');
-
-    this.showToast(`Project "${name}" created ✓`);
+    if (this.editingProjectId) {
+      window.dataStore.updateProject(this.editingProjectId, {
+        name,
+        clientName,
+        clientPhone,
+        packageAmount,
+        receivedAmount,
+        eventDate,
+        status,
+        location
+      });
+      const pid = this.editingProjectId;
+      this.editingProjectId = null;
+      e.target.reset();
+      this.closeModalDirect('modal-project');
+      this.showToast(`Project "${name}" updated successfully ✓`);
+      if (document.getElementById('modal-project-details')?.classList.contains('open')) {
+        this.viewProjectDetails(pid);
+      }
+    } else {
+      window.dataStore.addProject({
+        name,
+        clientName,
+        clientPhone,
+        packageAmount,
+        receivedAmount,
+        eventDate,
+        status,
+        location
+      });
+      e.target.reset();
+      document.getElementById('proj-date').value = new Date().toISOString().split('T')[0];
+      this.closeModalDirect('modal-project');
+      this.showToast(`Project "${name}" created ✓`);
+    }
   },
 
   handleSavePayment(e) {
@@ -592,20 +901,32 @@ const App = {
       return;
     }
 
-    window.dataStore.addPartnerWithdrawal({
-      partnerId,
-      amount,
-      date,
-      paymentMethod,
-      notes
-    });
-
-    e.target.reset();
-    document.getElementById('wd-date').value = new Date().toISOString().split('T')[0];
-    this.closeModalDirect('modal-withdrawal');
-
-    const pName = partnerId === 'partner1' ? window.dataStore.data.settings.partner1Name : window.dataStore.data.settings.partner2Name;
-    this.showToast(`Withdrawal of ₹${amount.toLocaleString('en-IN')} recorded for ${pName} ✓`);
+    if (this.editingWithdrawalId) {
+      window.dataStore.updateWithdrawal(this.editingWithdrawalId, {
+        partnerId,
+        amount,
+        date,
+        paymentMethod,
+        notes
+      });
+      this.editingWithdrawalId = null;
+      e.target.reset();
+      this.closeModalDirect('modal-withdrawal');
+      this.showToast('Withdrawal updated successfully ✓');
+    } else {
+      window.dataStore.addPartnerWithdrawal({
+        partnerId,
+        amount,
+        date,
+        paymentMethod,
+        notes
+      });
+      e.target.reset();
+      document.getElementById('wd-date').value = new Date().toISOString().split('T')[0];
+      this.closeModalDirect('modal-withdrawal');
+      const pName = partnerId === 'partner1' ? window.dataStore.data.settings.partner1Name : window.dataStore.data.settings.partner2Name;
+      this.showToast(`Withdrawal of ₹${amount.toLocaleString('en-IN')} recorded for ${pName} ✓`);
+    }
   },
 
   handleSaveFundTransaction(e) {
@@ -621,19 +942,31 @@ const App = {
       return;
     }
 
-    window.dataStore.addCompanyFundTransaction({
-      type,
-      category,
-      description,
-      amount,
-      date
-    });
-
-    e.target.reset();
-    document.getElementById('fund-date').value = new Date().toISOString().split('T')[0];
-    this.closeModalDirect('modal-fund');
-
-    this.showToast(type === 'usage' ? `Fund use of ₹${amount.toLocaleString('en-IN')} recorded ✓` : `Fund addition of ₹${amount.toLocaleString('en-IN')} recorded ✓`);
+    if (this.editingFundId) {
+      window.dataStore.updateCompanyFundLedger(this.editingFundId, {
+        type,
+        category,
+        description,
+        amount,
+        date
+      });
+      this.editingFundId = null;
+      e.target.reset();
+      this.closeModalDirect('modal-fund');
+      this.showToast('Company Fund record updated ✓');
+    } else {
+      window.dataStore.addCompanyFundTransaction({
+        type,
+        category,
+        description,
+        amount,
+        date
+      });
+      e.target.reset();
+      document.getElementById('fund-date').value = new Date().toISOString().split('T')[0];
+      this.closeModalDirect('modal-fund');
+      this.showToast(type === 'usage' ? `Fund use of ₹${amount.toLocaleString('en-IN')} recorded ✓` : `Fund addition of ₹${amount.toLocaleString('en-IN')} recorded ✓`);
+    }
   },
 
   // Direct quick action on project card: Mark as Paid
@@ -725,6 +1058,9 @@ const App = {
                 </div>
                 <div style="display: flex; align-items: center; gap: 8px;">
                   <div class="tx-amount income">+${FinanceEngine.formatINR(i.amount)}</div>
+                  <button class="edit-btn" onclick="App.editProjectIncome('${proj.id}', '${i.id}')" title="Edit payment">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                  </button>
                   <button class="delete-btn" onclick="App.deleteProjectIncome('${proj.id}', '${i.id}')" title="Delete payment">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                   </button>
@@ -749,6 +1085,9 @@ const App = {
                 </div>
                 <div style="display: flex; align-items: center; gap: 8px;">
                   <div class="tx-amount expense">−${FinanceEngine.formatINR(e.amount)}</div>
+                  <button class="edit-btn" onclick="App.editProjectExpense('${proj.id}', '${e.id}')" title="Edit expense">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                  </button>
                   <button class="delete-btn" onclick="App.deleteProjectExpense('${proj.id}', '${e.id}')" title="Delete expense">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                   </button>
@@ -758,10 +1097,14 @@ const App = {
         </div>
       </div>
 
-      <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border-subtle);">
-        <button class="btn btn-outline" style="width: 100%; color: #ef4444; border-color: rgba(239, 68, 68, 0.35); font-size: 13px;" onclick="App.deleteProject('${proj.id}', '${proj.name}')">
+      <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border-subtle); display: flex; gap: 10px;">
+        <button class="btn btn-outline" style="flex: 1; font-size: 13px;" onclick="App.openEditProjectModal('${proj.id}')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+          Edit Project
+        </button>
+        <button class="btn btn-outline" style="flex: 1; color: #ef4444; border-color: rgba(239, 68, 68, 0.35); font-size: 13px;" onclick="App.deleteProject('${proj.id}', '${proj.name}')">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-          Delete This Entire Project
+          Delete Project
         </button>
       </div>
     `;
@@ -861,8 +1204,11 @@ const App = {
               </div>
             </div>
           </div>
-          <div style="display: flex; align-items: center; gap: 10px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
             <div class="tx-amount ${colorClass}">${sign}${FinanceEngine.formatINR(tx.amount)}</div>
+            <button class="edit-btn" onclick="App.editItem('${collection}', '${tx.id}')" title="Edit this transaction">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+            </button>
             <button class="delete-btn" onclick="App.deleteItem('${collection}', '${tx.id}')" title="Delete this activity">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
             </button>
@@ -951,6 +1297,9 @@ const App = {
               ` : `
                 <span style="font-size: 11px; font-weight: 700; color: var(--accent-income);">Fully Settled ✓</span>
               `}
+              <button class="edit-btn" onclick="App.openEditProjectModal('${proj.id}')" title="Edit Project">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+              </button>
               <button class="delete-btn" onclick="App.deleteProject('${proj.id}', '${proj.name}')" title="Delete Project">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
               </button>
@@ -1651,8 +2000,11 @@ const App = {
             </div>
           </div>
         </div>
-        <div style="display: flex; align-items: center; gap: 10px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
           <div class="tx-amount income">+${FinanceEngine.formatINR(i.amount)}</div>
+          <button class="edit-btn" onclick="App.openEditIncomeModal('${i.id}')" title="Edit Revenue">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+          </button>
           <button class="delete-btn" onclick="App.deleteItem('income', '${i.id}')" title="Delete">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
           </button>
@@ -1692,8 +2044,11 @@ const App = {
             </div>
           </div>
         </div>
-        <div style="display: flex; align-items: center; gap: 10px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
           <div class="tx-amount expense">−${FinanceEngine.formatINR(e.amount)}</div>
+          <button class="edit-btn" onclick="App.openEditExpenseModal('${e.id}')" title="Edit Expense">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+          </button>
           <button class="delete-btn" onclick="App.deleteItem('expenses', '${e.id}')" title="Delete">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
           </button>
@@ -1754,8 +2109,11 @@ const App = {
             </div>
           </div>
         </div>
-        <div style="display: flex; align-items: center; gap: 10px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
           <div class="tx-amount" style="color: #f87171;">−${FinanceEngine.formatINR(w.amount)}</div>
+          <button class="edit-btn" onclick="App.openEditWithdrawalModal('${w.id}')" title="Edit withdrawal">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+          </button>
           <button class="delete-btn" onclick="App.deleteItem('withdrawals', '${w.id}')" title="Delete withdrawal">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
           </button>
@@ -1797,8 +2155,11 @@ const App = {
               </div>
             </div>
           </div>
-          <div style="display: flex; align-items: center; gap: 10px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
             <div class="tx-amount" style="color: ${color};">${sign}${FinanceEngine.formatINR(entry.amount)}</div>
+            <button class="edit-btn" onclick="App.openEditFundTransactionModal('${entry.id}')" title="Edit fund record">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+            </button>
             <button class="delete-btn" onclick="App.deleteItem('companyFundLedger', '${entry.id}')" title="Delete fund entry">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
             </button>

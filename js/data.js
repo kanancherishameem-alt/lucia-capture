@@ -748,6 +748,137 @@ class DataStore {
     return { invoice: inv, incomeRecord };
   }
 
+  updateProject(id, updatedData) {
+    const proj = (this.data.projects || []).find(p => p.id === id);
+    if (!proj) return null;
+
+    const oldName = proj.name;
+
+    if (updatedData.packageAmount !== undefined) updatedData.packageAmount = Number(updatedData.packageAmount) || 0;
+    if (updatedData.receivedAmount !== undefined) updatedData.receivedAmount = Number(updatedData.receivedAmount) || 0;
+
+    Object.assign(proj, updatedData);
+
+    // If name or client changed, synchronize linked records
+    if (updatedData.name && updatedData.name !== oldName) {
+      (this.data.income || []).forEach(i => {
+        if (i.projectId === id) {
+          i.projectName = updatedData.name;
+          if (updatedData.clientName) i.clientName = updatedData.clientName;
+        }
+      });
+      (this.data.expenses || []).forEach(e => {
+        if (e.projectId === id) {
+          e.projectName = updatedData.name;
+        }
+      });
+      (this.data.invoices || []).forEach(inv => {
+        if (inv.projectId === id) {
+          inv.projectName = updatedData.name;
+          if (updatedData.clientName) inv.clientName = updatedData.clientName;
+        }
+      });
+    }
+
+    this.save();
+    return proj;
+  }
+
+  updateIncome(id, updatedData) {
+    const inc = (this.data.income || []).find(i => i.id === id);
+    if (!inc) return null;
+
+    const oldAmount = Number(inc.amount) || 0;
+    const oldProjectId = inc.projectId;
+    const newAmount = Number(updatedData.amount) || 0;
+    const newProjectId = updatedData.projectId || null;
+
+    // Adjust project receivedAmount
+    if (oldProjectId === newProjectId) {
+      if (newProjectId) {
+        const proj = (this.data.projects || []).find(p => p.id === newProjectId);
+        if (proj) {
+          const delta = newAmount - oldAmount;
+          proj.receivedAmount = Math.max(0, (Number(proj.receivedAmount) || 0) + delta);
+          if (proj.receivedAmount >= proj.packageAmount && proj.status === 'Payment Pending') {
+            proj.status = 'Completed';
+          } else if (proj.receivedAmount < proj.packageAmount && proj.status === 'Completed') {
+            proj.status = 'Payment Pending';
+          }
+        }
+      }
+    } else {
+      // Switched project
+      if (oldProjectId) {
+        const oldProj = (this.data.projects || []).find(p => p.id === oldProjectId);
+        if (oldProj) {
+          oldProj.receivedAmount = Math.max(0, (Number(oldProj.receivedAmount) || 0) - oldAmount);
+          if (oldProj.receivedAmount < oldProj.packageAmount && oldProj.status === 'Completed') {
+            oldProj.status = 'Payment Pending';
+          }
+        }
+      }
+      if (newProjectId) {
+        const newProj = (this.data.projects || []).find(p => p.id === newProjectId);
+        if (newProj) {
+          newProj.receivedAmount = (Number(newProj.receivedAmount) || 0) + newAmount;
+          if (newProj.receivedAmount >= newProj.packageAmount && newProj.status === 'Payment Pending') {
+            newProj.status = 'Completed';
+          }
+        }
+      }
+    }
+
+    Object.assign(inc, updatedData);
+    inc.amount = newAmount;
+
+    this.save();
+    return inc;
+  }
+
+  updateExpense(id, updatedData) {
+    const exp = (this.data.expenses || []).find(e => e.id === id);
+    if (!exp) return null;
+
+    if (updatedData.amount !== undefined) updatedData.amount = Number(updatedData.amount) || 0;
+
+    let projName = updatedData.projectName;
+    if (updatedData.projectId && !projName) {
+      const proj = (this.data.projects || []).find(p => p.id === updatedData.projectId);
+      if (proj) projName = proj.name;
+    }
+    if (projName) updatedData.projectName = projName;
+
+    Object.assign(exp, updatedData);
+    this.save();
+    return exp;
+  }
+
+  updateWithdrawal(id, updatedData) {
+    const wd = (this.data.withdrawals || []).find(w => w.id === id);
+    if (!wd) return null;
+
+    if (updatedData.amount !== undefined) updatedData.amount = Number(updatedData.amount) || 0;
+    if (updatedData.partnerId) {
+      updatedData.partnerName = updatedData.partnerId === 'partner1' ? this.data.settings.partner1Name : this.data.settings.partner2Name;
+    }
+
+    Object.assign(wd, updatedData);
+    this.save();
+    return wd;
+  }
+
+  updateCompanyFundLedger(id, updatedData) {
+    const entry = (this.data.companyFundLedger || []).find(e => e.id === id);
+    if (!entry) return null;
+
+    if (updatedData.amount !== undefined) updatedData.amount = Number(updatedData.amount) || 0;
+
+    Object.assign(entry, updatedData);
+    this.save();
+    return entry;
+  }
+
   deleteItem(collectionName, id) {
     if (this.data[collectionName]) {
       const target = this.data[collectionName].find(item => item.id === id);

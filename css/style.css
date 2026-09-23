@@ -1104,6 +1104,39 @@ html, body {
   transform: scale(0.95);
 }
 
+.edit-btn {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-full);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.edit-btn:hover {
+  color: #4A8DF8;
+  border-color: rgba(74, 141, 248, 0.45);
+  background: rgba(14, 82, 184, 0.22);
+  transform: scale(1.08);
+}
+
+.edit-btn:active {
+  transform: scale(0.95);
+}
+
+.tx-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
 /* Quick Add Hub Sheet (4 big buttons) */
 .quick-add-grid {
   display: grid;
