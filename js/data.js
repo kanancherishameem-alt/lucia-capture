@@ -32,7 +32,14 @@ function getDefaultData() {
       },
       partner1MonthlySalary: 10000,
       partner2MonthlySalary: 10000,
-      initialCompanyFundBalance: 185000 // With fund uses (₹95,000) and net profit share (₹30,000), total balance = ₹1,20,000
+      initialCompanyFundBalance: 185000, // With fund uses (₹95,000) and net profit share (₹30,000), total balance = ₹1,20,000
+      security: {
+        enabled: true,
+        email: 'lucia@studio.com',
+        password: 'lucia',
+        pin: '1234',
+        defaultMode: 'pin' // 'pin' or 'password'
+      }
     },
 
     // Projects: Photography & Videography gigs
@@ -331,6 +338,18 @@ class DataStore {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
         this.data = JSON.parse(stored);
+        // Ensure security settings exist if upgrading from older store version
+        if (!this.data.settings || !this.data.settings.security) {
+          if (!this.data.settings) this.data.settings = {};
+          this.data.settings.security = {
+            enabled: true,
+            email: 'lucia@studio.com',
+            password: 'lucia',
+            pin: '1234',
+            defaultMode: 'pin'
+          };
+          this.save();
+        }
       } else {
         this.resetToDefaults();
       }
@@ -522,6 +541,11 @@ class DataStore {
 
   updateSettings(newSettings) {
     this.data.settings = { ...this.data.settings, ...newSettings };
+    this.save();
+  }
+
+  updateSecuritySettings(newSec) {
+    this.data.settings.security = { ...this.data.settings.security, ...newSec };
     this.save();
   }
 

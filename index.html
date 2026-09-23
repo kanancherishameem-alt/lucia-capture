@@ -11,6 +11,85 @@
 </head>
 <body>
 
+  <!-- ================= AUTHENTICATION / APP LOCK SCREEN ================= -->
+  <div id="auth-screen" class="auth-overlay">
+    <div class="auth-card" id="auth-card-box">
+      <img src="lucia_logo.png" alt="Lucia Logo" class="auth-logo" onerror="this.style.display='none'">
+      <div class="auth-title">LUCIA FINANCE</div>
+
+      <!-- PIN / Passkey Mode View -->
+      <div id="auth-mode-pin">
+        <div class="auth-subtitle">Enter your 4-digit Passkey to unlock</div>
+
+        <!-- 4 Animated Dots -->
+        <div class="pin-dots-container">
+          <div class="pin-dot" id="pindot-0"></div>
+          <div class="pin-dot" id="pindot-1"></div>
+          <div class="pin-dot" id="pindot-2"></div>
+          <div class="pin-dot" id="pindot-3"></div>
+        </div>
+
+        <div class="auth-error" id="auth-pin-error"></div>
+
+        <!-- Tactile Numeric Keypad -->
+        <div class="keypad-grid">
+          <button type="button" class="keypad-btn" onclick="App.handlePinDigit('1')">1</button>
+          <button type="button" class="keypad-btn" onclick="App.handlePinDigit('2')">2</button>
+          <button type="button" class="keypad-btn" onclick="App.handlePinDigit('3')">3</button>
+          <button type="button" class="keypad-btn" onclick="App.handlePinDigit('4')">4</button>
+          <button type="button" class="keypad-btn" onclick="App.handlePinDigit('5')">5</button>
+          <button type="button" class="keypad-btn" onclick="App.handlePinDigit('6')">6</button>
+          <button type="button" class="keypad-btn" onclick="App.handlePinDigit('7')">7</button>
+          <button type="button" class="keypad-btn" onclick="App.handlePinDigit('8')">8</button>
+          <button type="button" class="keypad-btn" onclick="App.handlePinDigit('9')">9</button>
+          <button type="button" class="keypad-btn action-btn" onclick="App.clearPin()">Clear</button>
+          <button type="button" class="keypad-btn" onclick="App.handlePinDigit('0')">0</button>
+          <button type="button" class="keypad-btn action-btn" onclick="App.handlePinBackspace()" title="Delete">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"></path><line x1="18" y1="9" x2="12" y2="15"></line><line x1="12" y1="9" x2="18" y2="15"></line></svg>
+          </button>
+        </div>
+
+        <button type="button" class="auth-switch-btn" onclick="App.switchAuthMode('password')">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+          Unlock with Email & Password
+        </button>
+      </div>
+
+      <!-- Email & Password Mode View -->
+      <div id="auth-mode-password" style="display: none;">
+        <div class="auth-subtitle">Sign in with studio email & password</div>
+
+        <form id="form-login-auth" onsubmit="App.handlePasswordLogin(event)">
+          <div class="form-group" style="text-align: left;">
+            <label class="form-label">Email Address</label>
+            <input type="email" class="form-input" id="auth-login-email" placeholder="lucia@studio.com" required autocomplete="username">
+          </div>
+
+          <div class="form-group" style="text-align: left;">
+            <label class="form-label">Password</label>
+            <div class="password-input-wrapper">
+              <input type="password" class="form-input" id="auth-login-password" placeholder="••••••" required autocomplete="current-password">
+              <button type="button" class="btn-toggle-eye" onclick="App.togglePasswordVisibility('auth-login-password', this)" title="Show/Hide">
+                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="auth-error" id="auth-password-error"></div>
+
+          <button type="submit" class="btn btn-gold" style="width: 100%; padding: 13px; font-size: 14px; margin-top: 10px;">
+            Sign In & Unlock
+          </button>
+        </form>
+
+        <button type="button" class="auth-switch-btn" onclick="App.switchAuthMode('pin')">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>
+          Use Quick Passkey / PIN Pad
+        </button>
+      </div>
+    </div>
+  </div>
+
   <div class="app-container">
 
     <!-- Sticky Header -->
@@ -39,6 +118,9 @@
         <button class="btn btn-gold btn-sm d-none-mobile" onclick="App.openQuickHubModal()">
           <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
           Add
+        </button>
+        <button class="icon-btn" onclick="App.lockApp()" title="Lock App">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
         </button>
         <button class="icon-btn" onclick="App.navigateTo('settings')" title="Settings">
           <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
@@ -534,6 +616,51 @@
               <input type="number" step="0.01" min="0" max="100" class="form-input" id="set-pct-cf" value="33.34" oninput="App.validatePercentages()" required>
             </div>
             <button type="submit" class="btn btn-gold" id="btn-save-pct">Save Percentages</button>
+          </form>
+        <!-- Security & Passkey Settings -->
+        <div class="content-box" style="max-width: 650px; margin-bottom: 24px;">
+          <div class="card-title-row">
+            <h2>Security & App Passkey</h2>
+            <span class="badge-tag" id="settings-security-badge">Protected</span>
+          </div>
+          <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;">
+            Manage the lock screen, 4-digit Passkey PIN, and studio email/password.
+          </p>
+
+          <form id="form-settings-security" onsubmit="App.saveSecuritySettings(event)">
+            <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; padding: 6px 0 12px 0;">
+              <div>
+                <label class="form-label" style="margin-bottom: 2px;">Enable Lock Screen</label>
+                <div style="font-size: 12px; color: var(--text-muted);">Require passkey or password when opening app</div>
+              </div>
+              <input type="checkbox" id="set-sec-enabled" style="width: 20px; height: 20px; accent-color: var(--gold-primary);" checked>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">4-Digit Passkey / PIN</label>
+              <input type="password" inputmode="numeric" maxlength="4" pattern="[0-9]{4}" class="form-input" id="set-sec-pin" value="1234" placeholder="1234" required>
+              <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">4 numeric digits used for instant unlock on numeric pad</div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Studio Email Address</label>
+              <input type="email" class="form-input" id="set-sec-email" value="lucia@studio.com" required>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Account Password</label>
+              <div class="password-input-wrapper">
+                <input type="password" class="form-input" id="set-sec-password" value="lucia" required>
+                <button type="button" class="btn-toggle-eye" onclick="App.togglePasswordVisibility('set-sec-password', this)">
+                  <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                </button>
+              </div>
+            </div>
+
+            <div style="display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap;">
+              <button type="submit" class="btn btn-gold">Save Security Settings</button>
+              <button type="button" class="btn btn-outline" onclick="App.lockApp()">Lock App Now</button>
+            </div>
           </form>
         </div>
 

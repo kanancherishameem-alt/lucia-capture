@@ -9,8 +9,13 @@ const App = {
   reportPeriod: 'this-month',
   selectedProjectFilter: 'all',
   selectedExpenseCategory: 'all',
+  enteredPin: '',
+  authMode: 'pin',
 
   init() {
+    // Check authentication
+    this.checkAuth();
+
     // Subscribe to data store updates
     window.dataStore.subscribe(() => {
       App.renderAll();
@@ -29,6 +34,197 @@ const App = {
     window.addEventListener('resize', () => {
       App.renderCharts();
     });
+
+    // Keyboard listener for PIN lock screen
+    window.addEventListener('keydown', (e) => {
+      const authOverlay = document.getElementById('auth-screen');
+      if (authOverlay && !authOverlay.classList.contains('hidden') && App.authMode === 'pin') {
+        if (/^[0-9]$/.test(e.key)) {
+          App.handlePinDigit(e.key);
+        } else if (e.key === 'Backspace') {
+          App.handlePinBackspace();
+        } else if (e.key === 'Escape') {
+          App.clearPin();
+        }
+      }
+    });
+  },
+
+  // --- AUTHENTICATION & SECURITY ---
+
+  checkAuth() {
+    const sec = window.dataStore.data.settings?.security || { enabled: true, pin: '1234', defaultMode: 'pin' };
+    const authOverlay = document.getElementById('auth-screen');
+    if (!authOverlay) return;
+
+    if (!sec.enabled) {
+      authOverlay.classList.add('hidden');
+      return;
+    }
+
+    const isAuthed = sessionStorage.getItem('lucia_authenticated');
+    if (isAuthed === 'true') {
+      authOverlay.classList.add('hidden');
+    } else {
+      this.enteredPin = '';
+      this.updatePinDots();
+      this.switchAuthMode(sec.defaultMode || 'pin');
+      authOverlay.classList.remove('hidden');
+    }
+  },
+
+  handlePinDigit(digit) {
+    if (this.enteredPin.length >= 4) return;
+    this.enteredPin += digit;
+    this.updatePinDots();
+    const errorEl = document.getElementById('auth-pin-error');
+    if (errorEl) errorEl.textContent = '';
+
+    if (this.enteredPin.length === 4) {
+      setTimeout(() => {
+        this.validatePin();
+      }, 120);
+    }
+  },
+
+  handlePinBackspace() {
+    if (this.enteredPin.length > 0) {
+      this.enteredPin = this.enteredPin.slice(0, -1);
+      this.updatePinDots();
+      const errorEl = document.getElementById('auth-pin-error');
+      if (errorEl) errorEl.textContent = '';
+    }
+  },
+
+  clearPin() {
+    this.enteredPin = '';
+    this.updatePinDots();
+    const errorEl = document.getElementById('auth-pin-error');
+    if (errorEl) errorEl.textContent = '';
+  },
+
+  updatePinDots() {
+    for (let i = 0; i < 4; i++) {
+      const dot = document.getElementById(`pindot-${i}`);
+      if (dot) {
+        dot.classList.toggle('filled', i < this.enteredPin.length);
+      }
+    }
+  },
+
+  validatePin() {
+    const sec = window.dataStore.data.settings?.security || { pin: '1234' };
+    const correctPin = String(sec.pin || '1234');
+
+    if (this.enteredPin === correctPin) {
+      this.unlockApp();
+    } else {
+      const card = document.getElementById('auth-card-box');
+      const errorEl = document.getElementById('auth-pin-error');
+      if (card) {
+        card.classList.remove('shake');
+        void card.offsetWidth;
+        card.classList.add('shake');
+      }
+      if (errorEl) {
+        errorEl.textContent = 'Incorrect PIN. Please try again.';
+      }
+      setTimeout(() => {
+        this.clearPin();
+      }, 600);
+    }
+  },
+
+  switchAuthMode(mode) {
+    this.authMode = mode;
+    const pinMode = document.getElementById('auth-mode-pin');
+    const pwdMode = document.getElementById('auth-mode-password');
+    const pinError = document.getElementById('auth-pin-error');
+    const pwdError = document.getElementById('auth-password-error');
+    if (pinError) pinError.textContent = '';
+    if (pwdError) pwdError.textContent = '';
+
+    if (mode === 'password') {
+      if (pinMode) pinMode.style.display = 'none';
+      if (pwdMode) pwdMode.style.display = 'block';
+      setTimeout(() => {
+        const emailInp = document.getElementById('auth-login-email');
+        if (emailInp) emailInp.focus();
+      }, 50);
+    } else {
+      if (pinMode) pinMode.style.display = 'block';
+      if (pwdMode) pwdMode.style.display = 'none';
+      this.clearPin();
+    }
+  },
+
+  handlePasswordLogin(e) {
+    if (e) e.preventDefault();
+    const sec = window.dataStore.data.settings?.security || { email: 'lucia@studio.com', password: 'lucia' };
+    const emailInp = document.getElementById('auth-login-email');
+    const pwdInp = document.getElementById('auth-login-password');
+    const errorEl = document.getElementById('auth-password-error');
+
+    const emailVal = (emailInp ? emailInp.value : '').trim().toLowerCase();
+    const pwdVal = pwdInp ? pwdInp.value : '';
+
+    const correctEmail = (sec.email || 'lucia@studio.com').trim().toLowerCase();
+    const correctPassword = sec.password || 'lucia';
+
+    if (emailVal === correctEmail && pwdVal === correctPassword) {
+      if (errorEl) errorEl.textContent = '';
+      this.unlockApp();
+    } else {
+      const card = document.getElementById('auth-card-box');
+      if (card) {
+        card.classList.remove('shake');
+        void card.offsetWidth;
+        card.classList.add('shake');
+      }
+      if (errorEl) {
+        errorEl.textContent = 'Invalid email or password. Please try again.';
+      }
+    }
+  },
+
+  unlockApp() {
+    sessionStorage.setItem('lucia_authenticated', 'true');
+    const authOverlay = document.getElementById('auth-screen');
+    if (authOverlay) {
+      authOverlay.classList.add('hidden');
+    }
+    this.enteredPin = '';
+    this.updatePinDots();
+    const pinError = document.getElementById('auth-pin-error');
+    const pwdError = document.getElementById('auth-password-error');
+    if (pinError) pinError.textContent = '';
+    if (pwdError) pwdError.textContent = '';
+    this.showToast('Unlocked successfully ✓');
+  },
+
+  lockApp() {
+    sessionStorage.removeItem('lucia_authenticated');
+    this.enteredPin = '';
+    this.updatePinDots();
+    const sec = window.dataStore.data.settings?.security || { defaultMode: 'pin' };
+    this.switchAuthMode(sec.defaultMode || 'pin');
+    const authOverlay = document.getElementById('auth-screen');
+    if (authOverlay) {
+      authOverlay.classList.remove('hidden');
+    }
+    this.showToast('App Locked 🔒');
+  },
+
+  togglePasswordVisibility(inputId, btnEl) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    const isPwd = input.type === 'password';
+    input.type = isPwd ? 'text' : 'password';
+    if (btnEl) {
+      btnEl.innerHTML = isPwd
+        ? `<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>`
+        : `<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>`;
+    }
   },
 
   // --- NAVIGATION ---
@@ -991,6 +1187,36 @@ const App = {
       cf.value = pcts.companyFund;
     }
     this.validatePercentages();
+
+    // Security Settings
+    const sec = window.dataStore.data.settings?.security || {
+      enabled: true,
+      pin: '1234',
+      email: 'lucia@studio.com',
+      password: 'lucia'
+    };
+    const secEnabled = document.getElementById('set-sec-enabled');
+    const secPin = document.getElementById('set-sec-pin');
+    const secEmail = document.getElementById('set-sec-email');
+    const secPassword = document.getElementById('set-sec-password');
+    const secBadge = document.getElementById('settings-security-badge');
+
+    if (secEnabled) secEnabled.checked = !!sec.enabled;
+    if (secPin) secPin.value = sec.pin || '1234';
+    if (secEmail) secEmail.value = sec.email || 'lucia@studio.com';
+    if (secPassword) secPassword.value = sec.password || 'lucia';
+
+    if (secBadge) {
+      if (sec.enabled) {
+        secBadge.textContent = 'Active 🔒';
+        secBadge.style.color = 'var(--gold-primary)';
+        secBadge.style.borderColor = 'rgba(212, 175, 55, 0.4)';
+      } else {
+        secBadge.textContent = 'Disabled';
+        secBadge.style.color = 'var(--text-muted)';
+        secBadge.style.borderColor = 'var(--border-subtle)';
+      }
+    }
   },
 
   validatePercentages() {
@@ -1026,6 +1252,39 @@ const App = {
     });
 
     this.showToast('Profit distribution percentages updated ✓');
+  },
+
+  saveSecuritySettings(e) {
+    if (e) e.preventDefault();
+    const enabled = document.getElementById('set-sec-enabled')?.checked ?? true;
+    const pin = (document.getElementById('set-sec-pin')?.value || '').trim();
+    const email = (document.getElementById('set-sec-email')?.value || '').trim();
+    const password = document.getElementById('set-sec-password')?.value || '';
+
+    if (!/^[0-9]{4}$/.test(pin)) {
+      alert('PIN must be exactly 4 digits (e.g. 1234).');
+      return;
+    }
+
+    if (!email || !email.includes('@')) {
+      alert('Please enter a valid email address.');
+      return;
+    }
+
+    if (!password) {
+      alert('Password cannot be empty.');
+      return;
+    }
+
+    window.dataStore.updateSecuritySettings({
+      enabled,
+      pin,
+      email,
+      password
+    });
+
+    this.renderSettings();
+    this.showToast('Security settings updated ✓');
   },
 
   deleteItem(collection, id) {
