@@ -1808,7 +1808,7 @@ const App = {
       <div class="sheet-summary-layout">
         <div class="sheet-payment-info">
           <h5>Studio Payment & Settlement Details</h5>
-          <div><strong>UPI ID:</strong> <span style="font-family: var(--font-mono); color: #0E52B8; font-weight: 700;">${billing.upiId}</span></div>
+          <div><strong>UPI ID:</strong> <span style="font-family: var(--font-mono); color: #0B2B20; font-weight: 800;">${billing.upiId}</span></div>
           <div style="margin-top: 4px;"><strong>Bank:</strong> ${billing.bankName}</div>
           <div><strong>Account No:</strong> ${billing.accountNumber}</div>
           <div><strong>IFSC / Branch:</strong> ${billing.ifsc}</div>
@@ -1855,7 +1855,7 @@ const App = {
         <div class="sheet-signature-line">
           <div class="sheet-sig-box"></div>
           <div>Authorized Signatory</div>
-          <div style="font-weight: 700; color: #000926;">${billing.studioName}</div>
+          <div style="font-weight: 700; color: #03140E;">${billing.studioName}</div>
         </div>
       </div>
     `;

@@ -4,37 +4,37 @@
    ========================================================================== */
 
 :root {
-  /* Color Palette - Midnight Blue, Ice Frost & Royal Cobalt */
-  --bg-primary: #000926;
-  --bg-secondary: #051336;
-  --bg-card: #0a1b4d;
-  --bg-card-hover: #0f2466;
-  --bg-input: #08163f;
-  --bg-glass: rgba(0, 9, 38, 0.88);
+  /* Color Palette - Emerald Forest & Champagne Gold */
+  --bg-primary: #03140E;
+  --bg-secondary: #072118;
+  --bg-card: #0B2B20;
+  --bg-card-hover: #103B2C;
+  --bg-input: #061C14;
+  --bg-glass: rgba(3, 20, 14, 0.88);
 
-  /* Primary Brand Accent (Cobalt Blue #0E52B8) */
-  --gold-primary: #0E52B8;
-  --gold-light: #3D7FE8;
-  --gold-dark: #093C8A;
-  --gold-glow: rgba(14, 82, 184, 0.38);
-  --gold-subtle: rgba(14, 82, 184, 0.16);
-  --gold-border: rgba(14, 82, 184, 0.45);
+  /* Primary Brand Accent (Champagne Gold / Antique Brass) */
+  --gold-primary: #C5A059;
+  --gold-light: #E2C285;
+  --gold-dark: #9E7D38;
+  --gold-glow: rgba(197, 160, 89, 0.38);
+  --gold-subtle: rgba(197, 160, 89, 0.16);
+  --gold-border: rgba(197, 160, 89, 0.42);
 
-  /* Neutrals & Text (#D6E6F3 & #A6C5D8) */
-  --text-white: #D6E6F3;
-  --text-primary: #D6E6F3;
-  --text-secondary: #A6C5D8;
-  --text-muted: #6b8fa7;
-  --border-subtle: rgba(166, 197, 216, 0.18);
-  --border-focus: rgba(14, 82, 184, 0.7);
+  /* Neutrals & Text (Pearl Ivory & Soft Sage Mist) */
+  --text-white: #F5EFE6;
+  --text-primary: #F5EFE6;
+  --text-secondary: #9BB3A8;
+  --text-muted: #6C857B;
+  --border-subtle: rgba(155, 179, 168, 0.18);
+  --border-focus: rgba(197, 160, 89, 0.7);
 
   /* Functional Accents */
   --accent-income: #10b981;
-  --accent-income-bg: rgba(16, 185, 129, 0.12);
-  --accent-expense: #ef4444;
-  --accent-expense-bg: rgba(239, 68, 68, 0.12);
+  --accent-income-bg: rgba(16, 185, 129, 0.14);
+  --accent-expense: #f87171;
+  --accent-expense-bg: rgba(248, 113, 113, 0.14);
   --accent-warning: #f59e0b;
-  --accent-info: #0E52B8;
+  --accent-info: #C5A059;
 
   /* Typography */
   --font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", "Segoe UI", Roboto, sans-serif;
@@ -281,7 +281,7 @@ html, body {
   border-radius: var(--radius-full);
   background: linear-gradient(135deg, var(--gold-light) 0%, var(--gold-primary) 100%);
   border: 3px solid var(--bg-primary);
-  color: #ffffff;
+  color: #03140E;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -729,7 +729,8 @@ html, body {
 
 .btn-gold {
   background: linear-gradient(135deg, var(--gold-light) 0%, var(--gold-primary) 100%);
-  color: #ffffff;
+  color: #03140E;
+  font-weight: 800;
   box-shadow: 0 2px 10px var(--gold-glow);
 }
 
@@ -1120,9 +1121,9 @@ html, body {
 }
 
 .edit-btn:hover {
-  color: #4A8DF8;
-  border-color: rgba(74, 141, 248, 0.45);
-  background: rgba(14, 82, 184, 0.22);
+  color: var(--gold-primary);
+  border-color: var(--gold-border);
+  background: var(--gold-subtle);
   transform: scale(1.08);
 }
 
@@ -1356,7 +1357,7 @@ html, body {
   position: fixed;
   inset: 0;
   z-index: 10000;
-  background: radial-gradient(circle at 50% 25%, #051336 0%, #000926 85%);
+  background: radial-gradient(circle at 50% 25%, #0B2B20 0%, #03140E 85%);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
   display: flex;
@@ -1377,11 +1378,11 @@ html, body {
 .auth-card {
   width: 100%;
   max-width: 380px;
-  background: rgba(5, 19, 54, 0.96);
+  background: rgba(7, 33, 24, 0.96);
   border: 1px solid var(--gold-border);
   border-radius: var(--radius-xl);
   padding: 36px 26px 28px 26px;
-  box-shadow: 0 20px 60px rgba(0, 9, 38, 0.95), 0 0 35px rgba(14, 82, 184, 0.25);
+  box-shadow: 0 20px 60px rgba(3, 20, 14, 0.95), 0 0 35px var(--gold-glow);
   text-align: center;
   position: relative;
   overflow: hidden;
@@ -1414,7 +1415,7 @@ html, body {
   width: auto;
   object-fit: contain;
   margin-bottom: 12px;
-  filter: drop-shadow(0 0 14px rgba(14, 82, 184, 0.6));
+  filter: drop-shadow(0 0 14px var(--gold-glow));
 }
 
 .auth-title {
@@ -1422,7 +1423,7 @@ html, body {
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  background: linear-gradient(135deg, #D6E6F3 30%, var(--gold-light) 100%);
+  background: linear-gradient(135deg, #F5EFE6 30%, var(--gold-light) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   margin-bottom: 4px;
@@ -1447,7 +1448,7 @@ html, body {
   width: 16px;
   height: 16px;
   border-radius: var(--radius-full);
-  border: 2px solid rgba(14, 82, 184, 0.45);
+  border: 2px solid rgba(197, 160, 89, 0.45);
   background: transparent;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -1471,7 +1472,7 @@ html, body {
 .keypad-btn {
   aspect-ratio: 1;
   border-radius: var(--radius-full);
-  background: #08163f;
+  background: #061C14;
   border: 1px solid var(--border-subtle);
   color: var(--text-white);
   font-size: 22px;
@@ -1486,15 +1487,15 @@ html, body {
 }
 
 .keypad-btn:hover {
-  background: rgba(14, 82, 184, 0.25);
+  background: rgba(197, 160, 89, 0.22);
   border-color: var(--gold-border);
-  color: #ffffff;
+  color: var(--gold-light);
   transform: scale(1.05);
 }
 
 .keypad-btn:active {
   transform: scale(0.92);
-  background: rgba(14, 82, 184, 0.4);
+  background: rgba(197, 160, 89, 0.38);
 }
 
 .keypad-btn.action-btn {
@@ -1583,7 +1584,7 @@ html, body {
 
 .invoice-card:hover {
   border-color: var(--gold-border);
-  box-shadow: 0 8px 24px rgba(0, 9, 38, 0.6);
+  box-shadow: 0 8px 24px rgba(3, 20, 14, 0.6);
 }
 
 .invoice-header-row {
@@ -1740,7 +1741,7 @@ html, body {
   justify-content: space-between;
   align-items: flex-start;
   padding-bottom: 20px;
-  border-bottom: 2.5px solid #0E52B8;
+  border-bottom: 2.5px solid var(--gold-primary);
   margin-bottom: 24px;
 }
 
@@ -1755,7 +1756,7 @@ html, body {
   font-size: 20px;
   font-weight: 900;
   letter-spacing: 0.08em;
-  color: #000926;
+  color: #03140E;
 }
 
 .sheet-brand-sub {
@@ -1773,7 +1774,7 @@ html, body {
   font-size: 22px;
   font-weight: 900;
   letter-spacing: 0.06em;
-  color: #0E52B8;
+  color: #0B2B20;
   text-transform: uppercase;
 }
 
@@ -1804,7 +1805,7 @@ html, body {
 .sheet-party-box .name {
   font-size: 15px;
   font-weight: 800;
-  color: #000926;
+  color: #03140E;
   margin-bottom: 4px;
 }
 
@@ -1821,15 +1822,15 @@ html, body {
 }
 
 .sheet-table th {
-  background: #f0f5fc;
-  color: #0E52B8;
+  background: #f2f7f4;
+  color: #0B2B20;
   font-size: 11px;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   padding: 10px 14px;
   text-align: left;
-  border-bottom: 2px solid #0E52B8;
+  border-bottom: 2px solid #C5A059;
 }
 
 .sheet-table td {
@@ -1862,14 +1863,14 @@ html, body {
 .sheet-payment-info h5 {
   font-size: 12px;
   font-weight: 800;
-  color: #0E52B8;
+  color: #0B2B20;
   margin-bottom: 8px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
 .sheet-totals-box {
-  background: #f0f5fc;
+  background: #f2f7f4;
   border-radius: 8px;
   padding: 14px 16px;
 }
@@ -1885,7 +1886,7 @@ html, body {
 .sheet-totals-row.grand-total {
   font-size: 16px;
   font-weight: 900;
-  color: #000926;
+  color: #03140E;
   padding-top: 8px;
   border-top: 1px solid #cbd5e1;
   margin-top: 6px;
@@ -1894,9 +1895,9 @@ html, body {
 .sheet-totals-row.balance-due {
   font-size: 16px;
   font-weight: 900;
-  color: #0E52B8;
+  color: #9E7D38;
   padding-top: 8px;
-  border-top: 2px solid #0E52B8;
+  border-top: 2px solid #C5A059;
   margin-top: 6px;
 }
 
