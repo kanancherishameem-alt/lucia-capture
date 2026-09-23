@@ -18,6 +18,7 @@ const App = {
   editingProjectId: null,
   editingWithdrawalId: null,
   editingFundId: null,
+  sharingReceiptData: null,
   enteredPin: '',
   authMode: 'pin',
 
@@ -1041,6 +1042,10 @@ const App = {
           <span style="color: var(--gold-primary); font-weight: 700; font-size: 14px;">Net Project Profit</span>
           <span style="font-size: 18px; font-weight: 900; color: var(--gold-primary);">${FinanceEngine.formatINR(profit)}</span>
         </div>
+        <button class="btn btn-outline btn-sm" onclick="App.openShareReceiptModal('${proj.id}', 'project')" style="margin-top: 12px; width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px; color: var(--gold-primary); border-color: var(--gold-border);">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+          Share Project Bill Receipt
+        </button>
       </div>
 
       <div style="margin-bottom: 20px;">
@@ -1056,8 +1061,12 @@ const App = {
                     <div class="tx-meta">${i.date} • <span class="method-tag">${i.paymentMethod}</span></div>
                   </div>
                 </div>
-                <div style="display: flex; align-items: center; gap: 8px;">
+                <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
                   <div class="tx-amount income">+${FinanceEngine.formatINR(i.amount)}</div>
+                  <button class="btn-share-icon" onclick="App.openShareReceiptModal('${i.id}', 'payment')" title="Share Payment Receipt">
+                    <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+                    Receipt
+                  </button>
                   <button class="edit-btn" onclick="App.editProjectIncome('${proj.id}', '${i.id}')" title="Edit payment">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                   </button>
@@ -1204,8 +1213,14 @@ const App = {
               </div>
             </div>
           </div>
-          <div style="display: flex; align-items: center; gap: 8px;">
+          <div style="display: flex; align-items: center; gap: 6px;">
             <div class="tx-amount ${colorClass}">${sign}${FinanceEngine.formatINR(tx.amount)}</div>
+            ${isInc ? `
+              <button class="btn-share-icon" onclick="App.openShareReceiptModal('${tx.id}', 'payment')" title="Share Payment Receipt">
+                <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+                Receipt
+              </button>
+            ` : ''}
             <button class="edit-btn" onclick="App.editItem('${collection}', '${tx.id}')" title="Edit this transaction">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
             </button>
@@ -1286,9 +1301,13 @@ const App = {
 
           <div class="project-card-actions" onclick="event.stopPropagation()">
             <span style="font-size: 11px; color: var(--text-muted);">${proj.location || 'Studio'}</span>
-            <div style="display: flex; gap: 8px; align-items: center;">
+            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
               <button class="btn btn-outline btn-sm" onclick="App.handleProjectInvoiceClick('${proj.id}')" title="Generate or View Client Bill">
                 📄 Bill
+              </button>
+              <button class="btn btn-outline btn-sm" onclick="App.openShareReceiptModal('${proj.id}', 'project')" title="Share Bill Receipt" style="color: var(--gold-primary); border-color: var(--gold-border);">
+                <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+                Share
               </button>
               ${pending > 0 ? `
                 <button class="btn btn-gold btn-sm" onclick="App.quickMarkPaid('${proj.id}')">
@@ -1409,7 +1428,11 @@ const App = {
             <div style="display: flex; gap: 8px; flex-wrap: wrap;">
               <button class="btn btn-gold btn-sm" onclick="App.openInvoicePreview('${inv.id}')">
                 <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                View / Print Bill
+                View / Print
+              </button>
+              <button class="btn btn-outline btn-sm" onclick="App.openShareReceiptModal('${inv.id}', 'invoice')" style="color: var(--gold-primary); border-color: var(--gold-border);">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+                Share Bill
               </button>
               ${!isPaid ? `
                 <button class="btn btn-outline btn-sm" onclick="App.openRecordInvoicePaymentModal('${inv.id}')" style="color: #34D399; border-color: rgba(52, 211, 153, 0.4);">
@@ -1899,10 +1922,270 @@ const App = {
       this.showToast('Bill summary copied! Opening WhatsApp...');
     }
 
-    const cleanPhone = (inv.clientPhone || '').replace(/[^0-9]/g, '');
-    const phoneParam = cleanPhone.length >= 10 ? cleanPhone : '';
-    const url = `https://wa.me/${phoneParam}?text=${encodeURIComponent(text)}`;
+    let cleanPhone = (inv.clientPhone || '').replace(/[^0-9]/g, '');
+    if (cleanPhone.length === 10) {
+      cleanPhone = '91' + cleanPhone;
+    }
+    const url = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`;
     window.open(url, '_blank');
+  },
+
+  // --- BILL & RECEIPT SHARING CONTROLLER ---
+
+  openShareReceiptModal(id, type = 'invoice') {
+    let receiptData = null;
+
+    if (type === 'invoice') {
+      const inv = (window.dataStore.data.invoices || []).find(i => i.id === id);
+      if (!inv) return;
+      receiptData = {
+        type: 'invoice',
+        id: inv.id,
+        title: 'Tax Invoice & Bill',
+        number: inv.invoiceNumber,
+        clientName: inv.clientName,
+        clientPhone: inv.clientPhone || '',
+        projectName: inv.projectName || '',
+        date: inv.issueDate,
+        dueDate: inv.dueDate,
+        totalAmount: inv.totalAmount,
+        paidAmount: inv.paidAmount,
+        balanceDue: inv.balanceDue,
+        notes: inv.notes
+      };
+    } else if (type === 'project') {
+      const proj = (window.dataStore.data.projects || []).find(p => p.id === id);
+      if (!proj) return;
+      const pkg = Number(proj.packageAmount) || 0;
+      const rcv = Number(proj.receivedAmount) || 0;
+      receiptData = {
+        type: 'project',
+        id: proj.id,
+        title: 'Project Bill Statement',
+        number: proj.name,
+        clientName: proj.clientName,
+        clientPhone: proj.clientPhone || '',
+        projectName: proj.name,
+        date: proj.eventDate,
+        totalAmount: pkg,
+        paidAmount: rcv,
+        balanceDue: Math.max(0, pkg - rcv),
+        notes: proj.location ? `Shoot Location: ${proj.location}` : ''
+      };
+    } else if (type === 'payment') {
+      const inc = (window.dataStore.data.income || []).find(i => i.id === id);
+      if (!inc) return;
+      const proj = (window.dataStore.data.projects || []).find(p => p.id === inc.projectId);
+      receiptData = {
+        type: 'payment',
+        id: inc.id,
+        title: 'Payment Received Receipt',
+        number: `REC-${inc.id.slice(-6).toUpperCase()}`,
+        clientName: proj ? proj.clientName : (inc.notes || 'Studio Client'),
+        clientPhone: proj ? (proj.clientPhone || '') : '',
+        projectName: proj ? proj.name : '',
+        date: inc.date,
+        amountReceived: inc.amount,
+        paymentMethod: inc.paymentMethod || 'UPI',
+        totalAmount: proj ? (Number(proj.packageAmount) || 0) : inc.amount,
+        paidAmount: proj ? (Number(proj.receivedAmount) || 0) : inc.amount,
+        balanceDue: proj ? Math.max(0, (Number(proj.packageAmount) || 0) - (Number(proj.receivedAmount) || 0)) : 0,
+        notes: inc.notes
+      };
+    }
+
+    if (!receiptData) return;
+    this.sharingReceiptData = receiptData;
+
+    const billing = window.dataStore.data.settings?.billing || {
+      studioName: 'LUCIA PHOTOGRAPHY & VIDEOGRAPHY',
+      upiId: 'lucia@okaxis'
+    };
+
+    const previewEl = document.getElementById('share-receipt-preview');
+    if (previewEl) {
+      previewEl.innerHTML = `
+        <div class="share-receipt-header">
+          <div class="share-receipt-brand">${billing.studioName}</div>
+          <div class="share-receipt-type">${receiptData.title}</div>
+        </div>
+
+        <div class="share-receipt-meta">
+          <span>Ref / Number:</span>
+          <strong>${receiptData.number}</strong>
+        </div>
+        <div class="share-receipt-meta">
+          <span>Client:</span>
+          <strong>${receiptData.clientName}</strong>
+        </div>
+        ${receiptData.projectName ? `
+        <div class="share-receipt-meta">
+          <span>Project:</span>
+          <strong>${receiptData.projectName}</strong>
+        </div>` : ''}
+        <div class="share-receipt-meta">
+          <span>Date:</span>
+          <strong>${receiptData.date}</strong>
+        </div>
+
+        <div class="share-receipt-divider"></div>
+
+        <div class="share-receipt-totals">
+          ${receiptData.amountReceived !== undefined ? `
+            <div class="share-receipt-row" style="color: var(--accent-income); font-weight: 800; font-size: 15px;">
+              <span>Amount Received:</span>
+              <span>+${FinanceEngine.formatINR(receiptData.amountReceived)}</span>
+            </div>
+            <div class="share-receipt-row" style="font-size: 11px; color: var(--text-secondary); margin-bottom: 4px;">
+              <span>Payment Mode:</span>
+              <span>${receiptData.paymentMethod || 'UPI'}</span>
+            </div>
+          ` : ''}
+          <div class="share-receipt-row">
+            <span>Package / Total:</span>
+            <span>${FinanceEngine.formatINR(receiptData.totalAmount)}</span>
+          </div>
+          <div class="share-receipt-row" style="color: var(--accent-income);">
+            <span>Total Paid to Date:</span>
+            <span>${FinanceEngine.formatINR(receiptData.paidAmount)}</span>
+          </div>
+          <div class="share-receipt-row balance-due">
+            <span>Balance Due:</span>
+            <span>${FinanceEngine.formatINR(receiptData.balanceDue)}</span>
+          </div>
+        </div>
+
+        <div class="share-receipt-upi">
+          <div>Pay via UPI: <strong>${billing.upiId}</strong></div>
+          ${billing.bankName ? `<div style="margin-top: 3px; font-size: 10px; color: var(--text-muted);">${billing.bankName} • A/C: ${billing.accountNumber} • IFSC: ${billing.ifsc}</div>` : ''}
+        </div>
+      `;
+    }
+
+    const phoneInput = document.getElementById('share-receipt-phone');
+    if (phoneInput) {
+      phoneInput.value = receiptData.clientPhone || '';
+    }
+
+    const titleEl = document.getElementById('share-receipt-modal-title');
+    if (titleEl) {
+      titleEl.textContent = `Share ${receiptData.title}`;
+    }
+
+    this.openModal('modal-share-receipt');
+  },
+
+  generateReceiptText(r) {
+    if (!r) return '';
+    const billing = window.dataStore.data.settings?.billing || {
+      studioName: 'LUCIA PHOTOGRAPHY & VIDEOGRAPHY',
+      upiId: 'lucia@okaxis'
+    };
+
+    let text = `📸 *${billing.studioName}* 📸\n` +
+      `✨ *${r.title.toUpperCase()}*\n` +
+      `━━━━━━━━━━━━━━━━━━━━━━\n` +
+      `📄 *Ref:* ${r.number}\n` +
+      `👤 *Client:* ${r.clientName}\n` +
+      (r.projectName ? `🎬 *Project:* ${r.projectName}\n` : '') +
+      `📅 *Date:* ${r.date}\n` +
+      `━━━━━━━━━━━━━━━━━━━━━━\n`;
+
+    if (r.amountReceived !== undefined) {
+      text += `🟢 *Amount Received:* ${FinanceEngine.formatINR(r.amountReceived)} (${r.paymentMethod || 'UPI'})\n`;
+    }
+
+    text += `💰 *Grand Total:* ${FinanceEngine.formatINR(r.totalAmount)}\n` +
+      `✅ *Paid to Date:* ${FinanceEngine.formatINR(r.paidAmount)}\n` +
+      `⚠️ *Balance Due:* ${FinanceEngine.formatINR(r.balanceDue)}\n` +
+      `━━━━━━━━━━━━━━━━━━━━━━\n` +
+      `🏦 *Payment Settlement Details:*\n` +
+      `▸ *UPI ID:* ${billing.upiId}\n`;
+
+    if (billing.bankName && billing.accountNumber) {
+      text += `▸ *Bank:* ${billing.bankName}\n` +
+        `▸ *Account No:* ${billing.accountNumber}\n` +
+        `▸ *IFSC:* ${billing.ifsc}\n`;
+    }
+
+    text += `━━━━━━━━━━━━━━━━━━━━━━\n` +
+      `Thank you for choosing ${billing.studioName}! 🎞️✨`;
+
+    return text;
+  },
+
+  sendReceiptWhatsApp() {
+    if (!this.sharingReceiptData) return;
+    const phoneInput = document.getElementById('share-receipt-phone');
+    const phone = phoneInput ? phoneInput.value.trim() : (this.sharingReceiptData.clientPhone || '');
+    let cleanPhone = phone.replace(/[^0-9]/g, '');
+    if (cleanPhone.length === 10) {
+      cleanPhone = '91' + cleanPhone;
+    }
+
+    const text = this.generateReceiptText(this.sharingReceiptData);
+
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).catch(() => {});
+      this.showToast('Receipt text copied! Opening WhatsApp...');
+    }
+
+    const url = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank');
+  },
+
+  async sendReceiptNative() {
+    if (!this.sharingReceiptData) return;
+    const text = this.generateReceiptText(this.sharingReceiptData);
+    const title = `${this.sharingReceiptData.title} - ${this.sharingReceiptData.number}`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: title,
+          text: text
+        });
+        this.showToast('Receipt shared successfully ✓');
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          this.copyReceiptText();
+        }
+      }
+    } else {
+      this.copyReceiptText();
+    }
+  },
+
+  copyReceiptText() {
+    if (!this.sharingReceiptData) return;
+    const text = this.generateReceiptText(this.sharingReceiptData);
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(() => {
+        this.showToast('Receipt copied to clipboard! Ready to paste & send ✓');
+      }).catch(() => {
+        this.showToast('Receipt text copied to clipboard ✓');
+      });
+    } else {
+      this.showToast('Receipt text ready to send');
+    }
+  },
+
+  viewReceiptFullInvoice() {
+    if (!this.sharingReceiptData) return;
+    const data = this.sharingReceiptData;
+    this.closeModalDirect('modal-share-receipt');
+    if (data.type === 'invoice') {
+      this.openInvoicePreview(data.id);
+    } else if (data.type === 'project') {
+      this.handleProjectInvoiceClick(data.id);
+    } else {
+      const inv = (window.dataStore.data.invoices || [])[0];
+      if (inv) {
+        this.openInvoicePreview(inv.id);
+      } else {
+        this.showToast('Full print view is available under Invoices tab');
+      }
+    }
   },
 
   openRecordInvoicePaymentModal(invoiceId) {
@@ -2000,8 +2283,12 @@ const App = {
             </div>
           </div>
         </div>
-        <div style="display: flex; align-items: center; gap: 8px;">
+        <div style="display: flex; align-items: center; gap: 6px;">
           <div class="tx-amount income">+${FinanceEngine.formatINR(i.amount)}</div>
+          <button class="btn-share-icon" onclick="App.openShareReceiptModal('${i.id}', 'payment')" title="Share Payment Receipt">
+            <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+            Receipt
+          </button>
           <button class="edit-btn" onclick="App.openEditIncomeModal('${i.id}')" title="Edit Revenue">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
           </button>

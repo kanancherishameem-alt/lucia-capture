@@ -1349,10 +1349,14 @@
             <svg width="20" height="20" fill="none" stroke="var(--gold-primary)" stroke-width="2.5" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
             <span style="font-weight: 800; font-size: 14px; color: var(--text-white);" id="preview-toolbar-title">Invoice Preview</span>
           </div>
-          <div style="display: flex; gap: 8px;">
+          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
             <button class="btn btn-gold btn-sm" onclick="App.printInvoice()">
               <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
               Print / Save PDF
+            </button>
+            <button class="btn btn-outline btn-sm" onclick="App.openShareReceiptModal(App.previewingInvoiceId, 'invoice')" style="color: var(--gold-primary); border-color: var(--gold-border);">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+              Share Receipt
             </button>
             <button class="btn btn-outline btn-sm" onclick="App.shareInvoiceWhatsApp()">
               <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
@@ -1419,6 +1423,60 @@
             Save Payment & Update Invoice
           </button>
         </form>
+      </div>
+    </div>
+
+    <!-- 12. Bill & Payment Receipt Sharing Modal -->
+    <div id="modal-share-receipt" class="modal-overlay" onclick="App.closeModal(event, 'modal-share-receipt')">
+      <div class="modal-sheet" style="max-width: 520px;" onclick="event.stopPropagation()">
+        <div class="modal-header">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <svg width="20" height="20" fill="none" stroke="var(--gold-primary)" stroke-width="2.5" viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+            <div class="modal-title" id="share-receipt-modal-title">Share Bill Receipt</div>
+          </div>
+          <button class="modal-close-btn" onclick="App.closeModalDirect('modal-share-receipt')">✕</button>
+        </div>
+
+        <!-- Receipt Live Preview Card -->
+        <div class="share-receipt-preview" id="share-receipt-preview">
+          <!-- Populated dynamically with elegant receipt format -->
+        </div>
+
+        <!-- Recipient Phone & Actions -->
+        <div style="margin-top: 16px;">
+          <div class="form-group" style="margin-bottom: 14px;">
+            <label class="form-label" style="display: flex; justify-content: space-between; align-items: center;">
+              <span>Client Mobile / WhatsApp</span>
+              <span style="font-size: 11px; color: var(--gold-light);">Auto-detects country code</span>
+            </label>
+            <div style="position: relative;">
+              <input type="tel" class="form-input" id="share-receipt-phone" placeholder="e.g. 9876543210" style="padding-left: 38px;">
+              <span style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 14px;">📱</span>
+            </div>
+          </div>
+
+          <div class="share-actions-grid">
+            <button class="btn btn-whatsapp" onclick="App.sendReceiptWhatsApp()">
+              <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M20.52 3.449A11.93 11.93 0 0012.06 0C5.46 0 .09 5.37.09 11.97c0 2.11.55 4.16 1.6 5.97L0 24l6.23-1.63a11.96 11.96 0 005.83 1.5h.01c6.6 0 11.97-5.37 11.97-11.97 0-3.2-.1.25-6.23-1.63zM12.06 21.87h-.01c-1.8 0-3.56-.48-5.11-1.39l-.37-.22-3.79.99 1.01-3.69-.24-.38a9.92 9.92 0 01-1.52-5.21c0-5.49 4.47-9.96 9.96-9.96 2.66 0 5.16 1.04 7.04 2.92a9.89 9.89 0 012.92 7.04c0 5.49-4.47 9.96-9.96 9.96zm5.46-7.46c-.3-.15-1.77-.87-2.04-.97-.28-.1-.48-.15-.68.15-.2.3-.77.97-.95 1.17-.17.2-.35.22-.65.07-.3-.15-1.27-.47-2.42-1.49-.89-.8-1.5-1.78-1.67-2.08-.18-.3-.02-.46.13-.61.14-.13.3-.35.45-.52.15-.18.2-.3.3-.5.1-.2.05-.38-.02-.53-.08-.15-.68-1.64-.93-2.25-.24-.59-.49-.51-.68-.52h-.58c-.2 0-.52.07-.79.38-.28.3-1.05 1.03-1.05 2.51s1.08 2.91 1.23 3.11c.15.2 2.12 3.24 5.14 4.54.72.31 1.28.5 1.72.64.72.23 1.38.2 1.9.12.58-.09 1.77-.72 2.02-1.42.25-.7.25-1.3.17-1.42-.07-.12-.27-.2-.57-.35z"/></svg>
+              <span>WhatsApp Receipt</span>
+            </button>
+
+            <button class="btn btn-gold" onclick="App.sendReceiptNative()">
+              <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+              <span>Share via App</span>
+            </button>
+
+            <button class="btn btn-outline" onclick="App.copyReceiptText()">
+              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+              <span>Copy Bill Text</span>
+            </button>
+
+            <button class="btn btn-outline" onclick="App.viewReceiptFullInvoice()">
+              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+              <span>Full Print / PDF</span>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
 
