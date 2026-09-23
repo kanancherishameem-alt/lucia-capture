@@ -39,6 +39,18 @@ function getDefaultData() {
         password: 'lucia',
         pin: '1234',
         defaultMode: 'pin' // 'pin' or 'password'
+      },
+      billing: {
+        studioName: 'LUCIA PHOTOGRAPHY & VIDEOGRAPHY',
+        tagline: 'Cinematic Visuals & Luxury Wedding Capture',
+        address: 'Studio Lucia, Mavoor Road, Calicut, Kerala 673004',
+        phone: '+91 98470 12345 / +91 94460 54321',
+        email: 'lucia@studio.com',
+        upiId: 'lucia@okaxis',
+        bankName: 'HDFC Bank',
+        accountNumber: '50200012345678',
+        ifsc: 'HDFC0001234',
+        branch: 'Calicut Main'
       }
     },
 
@@ -319,6 +331,63 @@ function getDefaultData() {
         date: `${monthPrefix}-14`,
         paymentMethod: 'Bank'
       }
+    ],
+
+    // Invoices: Client Bills & Quotations
+    invoices: [
+      {
+        id: 'inv-1',
+        invoiceNumber: 'LUCIA-INV-001',
+        projectId: 'proj-1',
+        projectName: 'Aswathi Wedding',
+        clientName: 'Aswathi & Kiran',
+        clientPhone: '+91 98470 12345',
+        clientEmail: 'aswathi.kiran@gmail.com',
+        clientAddress: 'Calicut, Kerala',
+        issueDate: `${monthPrefix}-10`,
+        dueDate: `${monthPrefix}-25`,
+        status: 'Partial',
+        items: [
+          { description: 'Full Day Traditional Wedding Photography (2 Candid Shooters)', quantity: 1, rate: 25000, amount: 25000 },
+          { description: 'Cinematic 4K Highlights Video & Drone Coverage', quantity: 1, rate: 20000, amount: 20000 },
+          { description: 'Premium Matte Photo Album (40 Pages)', quantity: 1, rate: 5000, amount: 5000 }
+        ],
+        subtotal: 50000,
+        discountAmount: 0,
+        taxPercent: 0,
+        taxAmount: 0,
+        totalAmount: 50000,
+        paidAmount: 30000,
+        balanceDue: 20000,
+        paymentTerms: '50% advance on booking, balance on deliverables handover.',
+        notes: 'Thank you for choosing Lucia Photography & Videography!'
+      },
+      {
+        id: 'inv-2',
+        invoiceNumber: 'LUCIA-INV-002',
+        projectId: 'proj-2',
+        projectName: 'Rahul & Sneha Pre-wedding',
+        clientName: 'Rahul Menon',
+        clientPhone: '+91 94460 54321',
+        clientEmail: 'rahul.menon@outlook.com',
+        clientAddress: 'Wayanad, Kerala',
+        issueDate: `${monthPrefix}-05`,
+        dueDate: `${monthPrefix}-12`,
+        status: 'Paid',
+        items: [
+          { description: '2-Day Cinematic Outdoor Shoot in Wayanad', quantity: 1, rate: 35000, amount: 35000 },
+          { description: 'Instagram Reel Teasers & Aerial 4K Drone Shoot', quantity: 1, rate: 10000, amount: 10000 }
+        ],
+        subtotal: 45000,
+        discountAmount: 0,
+        taxPercent: 0,
+        taxAmount: 0,
+        totalAmount: 45000,
+        paidAmount: 45000,
+        balanceDue: 0,
+        paymentTerms: 'Payment completed in full.',
+        notes: 'All high-res deliverables and video cuts transferred.'
+      }
     ]
   };
 }
@@ -338,9 +407,10 @@ class DataStore {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
         this.data = JSON.parse(stored);
+        if (!this.data.settings) this.data.settings = {};
+
         // Ensure security settings exist if upgrading from older store version
-        if (!this.data.settings || !this.data.settings.security) {
-          if (!this.data.settings) this.data.settings = {};
+        if (!this.data.settings.security) {
           this.data.settings.security = {
             enabled: true,
             email: 'lucia@studio.com',
@@ -348,6 +418,29 @@ class DataStore {
             pin: '1234',
             defaultMode: 'pin'
           };
+          this.save();
+        }
+
+        // Ensure billing profile exists
+        if (!this.data.settings.billing) {
+          this.data.settings.billing = {
+            studioName: 'LUCIA PHOTOGRAPHY & VIDEOGRAPHY',
+            tagline: 'Cinematic Visuals & Luxury Wedding Capture',
+            address: 'Studio Lucia, Mavoor Road, Calicut, Kerala 673004',
+            phone: '+91 98470 12345 / +91 94460 54321',
+            email: 'lucia@studio.com',
+            upiId: 'lucia@okaxis',
+            bankName: 'HDFC Bank',
+            accountNumber: '50200012345678',
+            ifsc: 'HDFC0001234',
+            branch: 'Calicut Main'
+          };
+          this.save();
+        }
+
+        // Ensure invoices collection exists
+        if (!this.data.invoices) {
+          this.data.invoices = [];
           this.save();
         }
       } else {
@@ -549,6 +642,112 @@ class DataStore {
     this.save();
   }
 
+  updateBillingSettings(newBilling) {
+    if (!this.data.settings.billing) this.data.settings.billing = {};
+    this.data.settings.billing = { ...this.data.settings.billing, ...newBilling };
+    this.save();
+  }
+
+  getNextInvoiceNumber() {
+    const list = this.data.invoices || [];
+    const count = list.length + 1;
+    return `LUCIA-INV-${String(count).padStart(3, '0')}`;
+  }
+
+  addInvoice(invoiceData) {
+    if (!this.data.invoices) this.data.invoices = [];
+    const newInv = {
+      id: 'inv-' + Date.now(),
+      invoiceNumber: invoiceData.invoiceNumber || this.getNextInvoiceNumber(),
+      projectId: invoiceData.projectId || '',
+      projectName: invoiceData.projectName || '',
+      clientName: invoiceData.clientName || 'Valued Client',
+      clientPhone: invoiceData.clientPhone || '',
+      clientEmail: invoiceData.clientEmail || '',
+      clientAddress: invoiceData.clientAddress || '',
+      issueDate: invoiceData.issueDate || new Date().toISOString().split('T')[0],
+      dueDate: invoiceData.dueDate || new Date().toISOString().split('T')[0],
+      status: invoiceData.status || 'Pending',
+      items: Array.isArray(invoiceData.items) ? invoiceData.items : [],
+      subtotal: Number(invoiceData.subtotal) || 0,
+      discountAmount: Number(invoiceData.discountAmount) || 0,
+      taxPercent: Number(invoiceData.taxPercent) || 0,
+      taxAmount: Number(invoiceData.taxAmount) || 0,
+      totalAmount: Number(invoiceData.totalAmount) || 0,
+      paidAmount: Number(invoiceData.paidAmount) || 0,
+      balanceDue: Number(invoiceData.balanceDue) || 0,
+      paymentTerms: invoiceData.paymentTerms || '',
+      notes: invoiceData.notes || ''
+    };
+
+    this.data.invoices.unshift(newInv);
+    this.save();
+    return newInv;
+  }
+
+  updateInvoice(id, updatedData) {
+    if (!this.data.invoices) return null;
+    const index = this.data.invoices.findIndex(inv => inv.id === id);
+    if (index === -1) return null;
+
+    this.data.invoices[index] = {
+      ...this.data.invoices[index],
+      ...updatedData
+    };
+    this.save();
+    return this.data.invoices[index];
+  }
+
+  deleteInvoice(id) {
+    if (!this.data.invoices) return false;
+    this.data.invoices = this.data.invoices.filter(inv => inv.id !== id);
+    this.save();
+    return true;
+  }
+
+  recordInvoicePayment({ invoiceId, amount, date, paymentMethod, notes }) {
+    if (!this.data.invoices) return null;
+    const inv = this.data.invoices.find(i => i.id === invoiceId);
+    if (!inv) return null;
+
+    const payAmt = Number(amount) || 0;
+    if (payAmt <= 0) return null;
+
+    const newPaid = (Number(inv.paidAmount) || 0) + payAmt;
+    const newBalance = Math.max(0, (Number(inv.totalAmount) || 0) - newPaid);
+    inv.paidAmount = newPaid;
+    inv.balanceDue = newBalance;
+    inv.status = newBalance <= 0 ? 'Paid' : 'Partial';
+
+    // If linked to a project, update project's received amount & status
+    if (inv.projectId) {
+      const proj = (this.data.projects || []).find(p => p.id === inv.projectId);
+      if (proj) {
+        proj.receivedAmount = (Number(proj.receivedAmount) || 0) + payAmt;
+        if (proj.receivedAmount >= proj.packageAmount && proj.status === 'Payment Pending') {
+          proj.status = 'Completed';
+        }
+      }
+    }
+
+    // Automatically record a revenue record
+    const incomeRecord = {
+      id: 'inc-' + Date.now(),
+      projectId: inv.projectId || null,
+      projectName: inv.projectName || `Invoice ${inv.invoiceNumber}`,
+      clientName: inv.clientName || '',
+      amount: payAmt,
+      date: date || new Date().toISOString().split('T')[0],
+      paymentMethod: paymentMethod || 'UPI',
+      notes: notes || `Payment for Invoice ${inv.invoiceNumber}`
+    };
+    if (!this.data.income) this.data.income = [];
+    this.data.income.unshift(incomeRecord);
+
+    this.save();
+    return { invoice: inv, incomeRecord };
+  }
+
   deleteItem(collectionName, id) {
     if (this.data[collectionName]) {
       const target = this.data[collectionName].find(item => item.id === id);
@@ -586,6 +785,7 @@ class DataStore {
 
   clearAllData() {
     this.data.projects = [];
+    this.data.invoices = [];
     this.data.income = [];
     this.data.expenses = [];
     this.data.partnerSalaries = [];

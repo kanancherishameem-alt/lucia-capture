@@ -205,6 +205,64 @@ const FinanceEngine = {
       filteredIncomeCount: filteredIncome.length,
       filteredExpensesCount: filteredExpenses.length
     };
+  },
+
+  // --- INVOICE & BILLING CALCULATIONS ---
+
+  calculateInvoiceTotals(items = [], discount = 0, taxPercent = 0, paidAmount = 0) {
+    const validItems = Array.isArray(items) ? items : [];
+    const subtotal = validItems.reduce((sum, item) => {
+      const qty = Number(item.quantity) || 0;
+      const rate = Number(item.rate) || 0;
+      return sum + (qty * rate);
+    }, 0);
+
+    const disc = Math.min(subtotal, Math.max(0, Number(discount) || 0));
+    const taxableAmount = Math.max(0, subtotal - disc);
+    const taxPct = Math.max(0, Number(taxPercent) || 0);
+    const taxAmount = Math.round(taxableAmount * (taxPct / 100));
+    const totalAmount = taxableAmount + taxAmount;
+    const paid = Math.max(0, Number(paidAmount) || 0);
+    const balanceDue = Math.max(0, totalAmount - paid);
+
+    let status = 'Pending';
+    if (balanceDue <= 0 && totalAmount > 0) {
+      status = 'Paid';
+    } else if (paid > 0) {
+      status = 'Partial';
+    }
+
+    return {
+      subtotal,
+      discount: disc,
+      taxableAmount,
+      taxPercent: taxPct,
+      taxAmount,
+      totalAmount,
+      paidAmount: paid,
+      balanceDue,
+      status
+    };
+  },
+
+  computeInvoiceSummary(invoices = []) {
+    const list = Array.isArray(invoices) ? invoices : [];
+    const totalInvoiced = list.reduce((sum, inv) => sum + (Number(inv.totalAmount) || 0), 0);
+    const totalReceived = list.reduce((sum, inv) => sum + (Number(inv.paidAmount) || 0), 0);
+    const totalOutstanding = list.reduce((sum, inv) => sum + (Number(inv.balanceDue) || 0), 0);
+    const countPaid = list.filter(inv => inv.status === 'Paid' || (Number(inv.balanceDue) || 0) <= 0).length;
+    const countPartial = list.filter(inv => inv.status === 'Partial').length;
+    const countPending = list.filter(inv => inv.status === 'Pending').length;
+
+    return {
+      totalInvoiced,
+      totalReceived,
+      totalOutstanding,
+      countPaid,
+      countPartial,
+      countPending,
+      totalCount: list.length
+    };
   }
 };
 

@@ -9,6 +9,10 @@ const App = {
   reportPeriod: 'this-month',
   selectedProjectFilter: 'all',
   selectedExpenseCategory: 'all',
+  selectedInvoiceFilter: 'all',
+  invoiceLineItems: [],
+  editingInvoiceId: null,
+  previewingInvoiceId: null,
   enteredPin: '',
   authMode: 'pin',
 
@@ -241,7 +245,7 @@ const App = {
     document.querySelectorAll('.bottom-tab').forEach(tab => {
       const tabView = tab.getAttribute('data-view');
       const isActive = tabView === viewName || 
-        (tabView === 'finance' && (viewName === 'income' || viewName === 'expenses' || viewName === 'company-fund')) ||
+        (tabView === 'finance' && (viewName === 'income' || viewName === 'expenses' || viewName === 'company-fund' || viewName === 'invoices')) ||
         (tabView === 'more' && (viewName === 'partners' || viewName === 'reports' || viewName === 'settings'));
       tab.classList.toggle('active', isActive);
     });
@@ -373,7 +377,7 @@ const App = {
     if (!select) return;
     const projects = window.dataStore.data.projects || [];
 
-    let options = '<option value="">-- Direct Studio Income (No Project) --</option>';
+    let options = '<option value="">-- Direct Studio Revenue (No Project) --</option>';
     projects.forEach(p => {
       const pending = Math.max(0, p.packageAmount - p.receivedAmount);
       const pendingTxt = pending > 0 ? ` (Pending: ₹${pending.toLocaleString('en-IN')})` : ' (Fully Paid)';
@@ -439,7 +443,7 @@ const App = {
     e.preventDefault();
     const projSelect = document.getElementById('inc-project');
     const projectId = projSelect.value;
-    let projectName = 'Direct Studio Income';
+    let projectName = 'Direct Studio Revenue';
     let clientName = '';
 
     if (projectId) {
@@ -476,7 +480,7 @@ const App = {
     this.closeModalDirect('modal-income');
 
     // Prompt requested exact toast:
-    this.showToast('Income added successfully ✓');
+    this.showToast('Revenue added successfully ✓');
   },
 
   handleSaveExpense(e) {
@@ -643,9 +647,9 @@ const App = {
       return;
     }
 
-    if (confirm(`Mark "${proj.name}" as fully paid? This will record ₹${pending.toLocaleString('en-IN')} as received income.`)) {
+    if (confirm(`Mark "${proj.name}" as fully paid? This will record ₹${pending.toLocaleString('en-IN')} as received revenue.`)) {
       window.dataStore.markProjectPaid(projectId, 'UPI');
-      this.showToast(`Income added successfully ✓ (₹${pending.toLocaleString('en-IN')})`);
+      this.showToast(`Revenue added successfully ✓ (₹${pending.toLocaleString('en-IN')})`);
     }
   },
 
@@ -707,9 +711,9 @@ const App = {
       </div>
 
       <div style="margin-bottom: 20px;">
-        <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 10px; color: var(--text-white);">Income Received (${projectIncomes.length})</h4>
+        <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 10px; color: var(--text-white);">Revenue Received (${projectIncomes.length})</h4>
         <div class="transaction-list">
-          ${projectIncomes.length === 0 ? '<div style="font-size: 12px; color: var(--text-muted);">No income logged yet</div>' : 
+          ${projectIncomes.length === 0 ? '<div style="font-size: 12px; color: var(--text-muted);">No revenue logged yet</div>' : 
             projectIncomes.map(i => `
               <div class="transaction-item" style="padding: 10px 12px;">
                 <div class="transaction-left">
@@ -771,6 +775,7 @@ const App = {
   renderAll() {
     this.renderHome();
     this.renderProjects();
+    this.renderInvoices();
     this.renderIncome();
     this.renderExpenses();
     this.renderPartners();
@@ -838,7 +843,7 @@ const App = {
 
     container.innerHTML = combined.map(tx => {
       const isInc = tx.txType === 'income';
-      const title = isInc ? (tx.projectName || tx.clientName || 'Studio Income') : (tx.category + (tx.projectName ? ` (${tx.projectName})` : ''));
+      const title = isInc ? (tx.projectName || tx.clientName || 'Studio Revenue') : (tx.category + (tx.projectName ? ` (${tx.projectName})` : ''));
       const sign = isInc ? '+' : '−';
       const colorClass = isInc ? 'income' : 'expense';
       const collection = isInc ? 'income' : 'expenses';
@@ -936,6 +941,9 @@ const App = {
           <div class="project-card-actions" onclick="event.stopPropagation()">
             <span style="font-size: 11px; color: var(--text-muted);">${proj.location || 'Studio'}</span>
             <div style="display: flex; gap: 8px; align-items: center;">
+              <button class="btn btn-outline btn-sm" onclick="App.handleProjectInvoiceClick('${proj.id}')" title="Generate or View Client Bill">
+                📄 Bill
+              </button>
               ${pending > 0 ? `
                 <button class="btn btn-gold btn-sm" onclick="App.quickMarkPaid('${proj.id}')">
                   Mark as Paid
@@ -961,6 +969,660 @@ const App = {
     this.renderProjects();
   },
 
+  handleProjectInvoiceClick(projectId) {
+    const invoices = window.dataStore.data.invoices || [];
+    const existing = invoices.find(inv => inv.projectId === projectId);
+    if (existing) {
+      this.openInvoicePreview(existing.id);
+    } else {
+      this.openCreateInvoiceModal(projectId);
+    }
+  },
+
+  // --- INVOICES & BILLING CONTROLLER ---
+
+  renderInvoices() {
+    const listContainer = document.getElementById('invoices-list-container');
+    if (!listContainer) return;
+
+    const invoices = window.dataStore.data.invoices || [];
+    const summary = FinanceEngine.computeInvoiceSummary(invoices);
+
+    // Update KPI stat cards
+    const totalEl = document.getElementById('inv-stat-total');
+    const paidEl = document.getElementById('inv-stat-paid');
+    const dueEl = document.getElementById('inv-stat-due');
+    const countEl = document.getElementById('inv-stat-count');
+
+    if (totalEl) totalEl.textContent = FinanceEngine.formatINR(summary.totalInvoiced);
+    if (paidEl) paidEl.textContent = FinanceEngine.formatINR(summary.totalReceived);
+    if (dueEl) dueEl.textContent = FinanceEngine.formatINR(summary.totalOutstanding);
+    if (countEl) countEl.textContent = `${summary.totalCount} Invoices (${summary.countPaid} Paid, ${summary.countPending + summary.countPartial} Due)`;
+
+    // Filter invoices
+    let filtered = invoices;
+    if (this.selectedInvoiceFilter === 'paid') {
+      filtered = invoices.filter(inv => inv.status === 'Paid' || (Number(inv.balanceDue) || 0) <= 0);
+    } else if (this.selectedInvoiceFilter === 'pending') {
+      filtered = invoices.filter(inv => inv.status !== 'Paid' && (Number(inv.balanceDue) || 0) > 0);
+    }
+
+    if (filtered.length === 0) {
+      listContainer.innerHTML = '<div class="empty-state">No invoices found. Tap "+ Create Invoice" above to generate a client bill.</div>';
+      return;
+    }
+
+    listContainer.innerHTML = filtered.map(inv => {
+      const isPaid = inv.status === 'Paid' || (Number(inv.balanceDue) || 0) <= 0;
+      const isPartial = inv.status === 'Partial';
+      const badgeClass = isPaid ? 'badge-paid' : (isPartial ? 'badge-partial' : 'badge-pending');
+      const badgeText = isPaid ? 'Fully Paid' : (isPartial ? 'Partially Paid' : 'Payment Due');
+
+      return `
+        <div class="invoice-card">
+          <div class="invoice-header-row">
+            <div class="invoice-num-group">
+              <span class="invoice-number-tag">${inv.invoiceNumber}</span>
+              <span class="${badgeClass}">${badgeText}</span>
+            </div>
+            <div style="font-size: 12px; color: var(--text-secondary);">
+              Due: <strong style="color: ${isPaid ? 'var(--accent-income)' : '#fbbf24'};">${inv.dueDate}</strong>
+            </div>
+          </div>
+
+          <div>
+            <h3 style="font-size: 16px; font-weight: 800; color: var(--text-white); margin-bottom: 2px;">
+              ${inv.clientName}
+            </h3>
+            <div style="font-size: 12px; color: var(--text-secondary);">
+              ${inv.projectName ? `<span>Project: <strong>${inv.projectName}</strong></span> • ` : ''}
+              ${inv.clientPhone ? `<span>${inv.clientPhone}</span> • ` : ''}
+              <span>Issued: ${inv.issueDate}</span>
+            </div>
+          </div>
+
+          <div class="invoice-meta-grid">
+            <div class="invoice-meta-item">
+              <div class="label">Total Amount</div>
+              <div class="val">${FinanceEngine.formatINR(inv.totalAmount)}</div>
+            </div>
+            <div class="invoice-meta-item">
+              <div class="label">Amount Paid</div>
+              <div class="val" style="color: var(--accent-income);">${FinanceEngine.formatINR(inv.paidAmount)}</div>
+            </div>
+            <div class="invoice-meta-item">
+              <div class="label">Balance Due</div>
+              <div class="val" style="color: ${isPaid ? 'var(--text-muted)' : '#fbbf24'};">${FinanceEngine.formatINR(inv.balanceDue)}</div>
+            </div>
+          </div>
+
+          <div class="invoice-actions-row">
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+              <button class="btn btn-gold btn-sm" onclick="App.openInvoicePreview('${inv.id}')">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                View / Print Bill
+              </button>
+              ${!isPaid ? `
+                <button class="btn btn-outline btn-sm" onclick="App.openRecordInvoicePaymentModal('${inv.id}')" style="color: #34D399; border-color: rgba(52, 211, 153, 0.4);">
+                  <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                  Record Payment
+                </button>
+              ` : ''}
+            </div>
+
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <button class="btn btn-outline btn-sm" onclick="App.openEditInvoiceModal('${inv.id}')" title="Edit Invoice">
+                Edit
+              </button>
+              <button class="delete-btn" onclick="App.deleteInvoice('${inv.id}', '${inv.invoiceNumber}')" title="Delete Invoice">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  },
+
+  filterInvoices(status) {
+    this.selectedInvoiceFilter = status;
+    document.querySelectorAll('#invoice-status-filter .pill-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.getAttribute('data-status') === status);
+    });
+    this.renderInvoices();
+  },
+
+  openCreateInvoiceFromHub() {
+    this.closeModalDirect('modal-quick-hub');
+    this.openCreateInvoiceModal();
+  },
+
+  populateInvoiceProjectDropdown(selectedProjectId = null) {
+    const select = document.getElementById('inv-project');
+    if (!select) return;
+    const projects = window.dataStore.data.projects || [];
+    let options = '<option value="">-- Direct Client (No Project) --</option>';
+    projects.forEach(p => {
+      const isSel = p.id === selectedProjectId ? 'selected' : '';
+      options += `<option value="${p.id}" ${isSel}>${p.name} (${p.clientName})</option>`;
+    });
+    select.innerHTML = options;
+  },
+
+  openCreateInvoiceModal(projectId = null) {
+    this.editingInvoiceId = null;
+    const form = document.getElementById('form-invoice');
+    if (form) form.reset();
+
+    const titleEl = document.getElementById('invoice-modal-title');
+    if (titleEl) titleEl.textContent = 'Create Client Invoice';
+
+    document.getElementById('inv-edit-id').value = '';
+    document.getElementById('inv-num').value = window.dataStore.getNextInvoiceNumber();
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    const due = new Date();
+    due.setDate(due.getDate() + 15);
+    const dueStr = due.toISOString().split('T')[0];
+
+    document.getElementById('inv-issue-date').value = todayStr;
+    document.getElementById('inv-due-date').value = dueStr;
+    document.getElementById('inv-discount').value = '0';
+    document.getElementById('inv-tax-pct').value = '0';
+    document.getElementById('inv-paid').value = '0';
+
+    this.populateInvoiceProjectDropdown(projectId);
+
+    if (projectId) {
+      const p = (window.dataStore.data.projects || []).find(proj => proj.id === projectId);
+      if (p) {
+        document.getElementById('inv-client').value = p.clientName || '';
+        document.getElementById('inv-phone').value = p.clientPhone || '';
+        document.getElementById('inv-address').value = p.location || '';
+        document.getElementById('inv-paid').value = p.receivedAmount || 0;
+        this.invoiceLineItems = [
+          { description: `${p.name} - Photography & Videography Package`, quantity: 1, rate: p.packageAmount || 0 }
+        ];
+      } else {
+        this.invoiceLineItems = [{ description: '', quantity: 1, rate: 0 }];
+      }
+    } else {
+      this.invoiceLineItems = [{ description: '', quantity: 1, rate: 0 }];
+    }
+
+    this.renderLineItemRows();
+    this.updateInvoiceCalculations();
+    this.openModal('modal-invoice');
+  },
+
+  openEditInvoiceModal(invoiceId) {
+    const inv = (window.dataStore.data.invoices || []).find(i => i.id === invoiceId);
+    if (!inv) return;
+
+    this.editingInvoiceId = invoiceId;
+    const titleEl = document.getElementById('invoice-modal-title');
+    if (titleEl) titleEl.textContent = `Edit Invoice ${inv.invoiceNumber}`;
+
+    document.getElementById('inv-edit-id').value = inv.id;
+    document.getElementById('inv-num').value = inv.invoiceNumber;
+    this.populateInvoiceProjectDropdown(inv.projectId);
+    document.getElementById('inv-client').value = inv.clientName || '';
+    document.getElementById('inv-phone').value = inv.clientPhone || '';
+    document.getElementById('inv-email').value = inv.clientEmail || '';
+    document.getElementById('inv-address').value = inv.clientAddress || '';
+    document.getElementById('inv-issue-date').value = inv.issueDate || '';
+    document.getElementById('inv-due-date').value = inv.dueDate || '';
+    document.getElementById('inv-discount').value = inv.discountAmount || 0;
+    document.getElementById('inv-tax-pct').value = inv.taxPercent || 0;
+    document.getElementById('inv-paid').value = inv.paidAmount || 0;
+    document.getElementById('inv-status').value = inv.status || 'Pending';
+    document.getElementById('inv-notes').value = inv.notes || '';
+
+    this.invoiceLineItems = (inv.items && inv.items.length > 0)
+      ? JSON.parse(JSON.stringify(inv.items))
+      : [{ description: '', quantity: 1, rate: 0 }];
+
+    this.renderLineItemRows();
+    this.updateInvoiceCalculations();
+    this.openModal('modal-invoice');
+  },
+
+  handleInvoiceProjectSelect() {
+    const select = document.getElementById('inv-project');
+    const projId = select ? select.value : '';
+    if (!projId) return;
+
+    const p = (window.dataStore.data.projects || []).find(proj => proj.id === projId);
+    if (p) {
+      const clientInp = document.getElementById('inv-client');
+      const phoneInp = document.getElementById('inv-phone');
+      const addrInp = document.getElementById('inv-address');
+      const paidInp = document.getElementById('inv-paid');
+
+      if (clientInp && !clientInp.value) clientInp.value = p.clientName || '';
+      if (phoneInp && !phoneInp.value) phoneInp.value = p.clientPhone || '';
+      if (addrInp && !addrInp.value) addrInp.value = p.location || '';
+      if (paidInp && (!paidInp.value || paidInp.value === '0')) paidInp.value = p.receivedAmount || 0;
+
+      if (this.invoiceLineItems.length === 1 && !this.invoiceLineItems[0].description) {
+        this.invoiceLineItems[0] = {
+          description: `${p.name} - Photography & Videography Package`,
+          quantity: 1,
+          rate: p.packageAmount || 0
+        };
+        this.renderLineItemRows();
+        this.updateInvoiceCalculations();
+      }
+    }
+  },
+
+  addLineItem(desc = '', qty = 1, rate = 0) {
+    this.invoiceLineItems.push({ description: desc, quantity: qty, rate: rate });
+    this.renderLineItemRows();
+    this.updateInvoiceCalculations();
+  },
+
+  removeLineItem(index) {
+    if (this.invoiceLineItems.length <= 1) {
+      this.invoiceLineItems = [{ description: '', quantity: 1, rate: 0 }];
+    } else {
+      this.invoiceLineItems.splice(index, 1);
+    }
+    this.renderLineItemRows();
+    this.updateInvoiceCalculations();
+  },
+
+  handleLineItemChange(index, field, value) {
+    if (!this.invoiceLineItems[index]) return;
+    if (field === 'description') {
+      this.invoiceLineItems[index].description = value;
+    } else if (field === 'quantity') {
+      this.invoiceLineItems[index].quantity = Number(value) || 1;
+    } else if (field === 'rate') {
+      this.invoiceLineItems[index].rate = Number(value) || 0;
+    }
+    this.updateInvoiceCalculations();
+
+    const rowTotalEl = document.getElementById(`line-item-total-${index}`);
+    if (rowTotalEl) {
+      const q = this.invoiceLineItems[index].quantity || 0;
+      const r = this.invoiceLineItems[index].rate || 0;
+      rowTotalEl.textContent = FinanceEngine.formatINR(q * r);
+    }
+  },
+
+  renderLineItemRows() {
+    const container = document.getElementById('invoice-line-items');
+    if (!container) return;
+
+    container.innerHTML = this.invoiceLineItems.map((item, idx) => {
+      const q = Number(item.quantity) || 1;
+      const r = Number(item.rate) || 0;
+      const rowAmt = q * r;
+
+      return `
+        <div class="line-item-row">
+          <div class="desc-col">
+            <input type="text" class="form-input" placeholder="Service (e.g. Wedding Shoot, 4K Drone, Album)" 
+              value="${item.description ? item.description.replace(/"/g, '&quot;') : ''}" 
+              oninput="App.handleLineItemChange(${idx}, 'description', this.value)" required>
+          </div>
+          <div>
+            <input type="number" min="1" class="form-input" placeholder="Qty" value="${q}" 
+              oninput="App.handleLineItemChange(${idx}, 'quantity', this.value)" required>
+          </div>
+          <div>
+            <input type="number" min="0" class="form-input" placeholder="Rate (₹)" value="${r}" 
+              oninput="App.handleLineItemChange(${idx}, 'rate', this.value)" required>
+          </div>
+          <div style="font-weight: 700; font-size: 13px; text-align: right; padding-right: 6px; color: var(--text-white);" id="line-item-total-${idx}">
+            ${FinanceEngine.formatINR(rowAmt)}
+          </div>
+          <div>
+            <button type="button" class="line-item-delete-btn" onclick="App.removeLineItem(${idx})" title="Remove service">✕</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  },
+
+  updateInvoiceCalculations() {
+    const discount = parseFloat(document.getElementById('inv-discount')?.value) || 0;
+    const taxPct = parseFloat(document.getElementById('inv-tax-pct')?.value) || 0;
+    const paid = parseFloat(document.getElementById('inv-paid')?.value) || 0;
+
+    const totals = FinanceEngine.calculateInvoiceTotals(this.invoiceLineItems, discount, taxPct, paid);
+
+    const subEl = document.getElementById('inv-calc-subtotal');
+    const totEl = document.getElementById('inv-calc-total');
+    const balEl = document.getElementById('inv-calc-balance');
+    const statusSelect = document.getElementById('inv-status');
+
+    if (subEl) subEl.textContent = FinanceEngine.formatINR(totals.subtotal);
+    if (totEl) totEl.textContent = FinanceEngine.formatINR(totals.totalAmount);
+    if (balEl) balEl.textContent = FinanceEngine.formatINR(totals.balanceDue);
+    if (statusSelect && !this.editingInvoiceId) {
+      statusSelect.value = totals.status;
+    }
+  },
+
+  handleSaveInvoice(e) {
+    e.preventDefault();
+    const invoiceNumber = document.getElementById('inv-num').value.trim();
+    const projectId = document.getElementById('inv-project').value || '';
+    let projectName = '';
+    if (projectId) {
+      const p = (window.dataStore.data.projects || []).find(proj => proj.id === projectId);
+      if (p) projectName = p.name;
+    }
+
+    const clientName = document.getElementById('inv-client').value.trim();
+    const clientPhone = document.getElementById('inv-phone').value.trim();
+    const clientEmail = document.getElementById('inv-email').value.trim();
+    const clientAddress = document.getElementById('inv-address').value.trim();
+    const issueDate = document.getElementById('inv-issue-date').value;
+    const dueDate = document.getElementById('inv-due-date').value;
+    const discountAmount = parseFloat(document.getElementById('inv-discount').value) || 0;
+    const taxPercent = parseFloat(document.getElementById('inv-tax-pct').value) || 0;
+    const paidAmount = parseFloat(document.getElementById('inv-paid').value) || 0;
+    const status = document.getElementById('inv-status').value;
+    const notes = document.getElementById('inv-notes').value.trim();
+
+    const items = this.invoiceLineItems.filter(item => (item.description || '').trim().length > 0);
+    if (items.length === 0) {
+      alert('Please add at least one service item to the invoice.');
+      return;
+    }
+
+    const totals = FinanceEngine.calculateInvoiceTotals(items, discountAmount, taxPercent, paidAmount);
+
+    const invoicePayload = {
+      invoiceNumber,
+      projectId,
+      projectName,
+      clientName,
+      clientPhone,
+      clientEmail,
+      clientAddress,
+      issueDate,
+      dueDate,
+      status: status || totals.status,
+      items,
+      subtotal: totals.subtotal,
+      discountAmount: totals.discount,
+      taxPercent: totals.taxPercent,
+      taxAmount: totals.taxAmount,
+      totalAmount: totals.totalAmount,
+      paidAmount: totals.paidAmount,
+      balanceDue: totals.balanceDue,
+      notes
+    };
+
+    if (this.editingInvoiceId) {
+      window.dataStore.updateInvoice(this.editingInvoiceId, invoicePayload);
+      this.showToast('Invoice updated successfully ✓');
+    } else {
+      window.dataStore.addInvoice(invoicePayload);
+      this.showToast('Invoice generated successfully ✓');
+    }
+
+    this.closeModalDirect('modal-invoice');
+    this.renderInvoices();
+  },
+
+  openInvoicePreview(invoiceId) {
+    const inv = (window.dataStore.data.invoices || []).find(i => i.id === invoiceId);
+    if (!inv) return;
+
+    this.previewingInvoiceId = invoiceId;
+    const billing = window.dataStore.data.settings?.billing || {
+      studioName: 'LUCIA PHOTOGRAPHY & VIDEOGRAPHY',
+      tagline: 'Cinematic Visuals & Luxury Wedding Capture',
+      address: 'Studio Lucia, Mavoor Road, Calicut, Kerala 673004',
+      phone: '+91 98470 12345 / +91 94460 54321',
+      email: 'lucia@studio.com',
+      upiId: 'lucia@okaxis',
+      bankName: 'HDFC Bank',
+      accountNumber: '50200012345678',
+      ifsc: 'HDFC0001234 (Calicut)'
+    };
+
+    const isPaid = inv.status === 'Paid' || (Number(inv.balanceDue) || 0) <= 0;
+    const isPartial = inv.status === 'Partial';
+    const stampText = isPaid ? 'PAID IN FULL' : (isPartial ? 'PARTIALLY PAID' : 'PAYMENT DUE');
+    const stampColor = isPaid ? '#10b981' : (isPartial ? '#fbbf24' : '#ef4444');
+
+    const sheetContainer = document.getElementById('invoice-sheet');
+    if (!sheetContainer) return;
+
+    sheetContainer.innerHTML = `
+      <div class="sheet-header">
+        <div>
+          <img src="lucia_logo.png" alt="Lucia Logo" class="sheet-brand-logo" onerror="this.style.display='none'">
+          <div class="sheet-brand-name">${billing.studioName}</div>
+          <div class="sheet-brand-sub">${billing.tagline}</div>
+          <div class="sheet-brand-sub" style="margin-top: 4px;">
+            ${billing.address}<br>
+            Phone: ${billing.phone} • Email: ${billing.email}
+          </div>
+        </div>
+        <div class="sheet-badge-title">
+          <div class="sheet-tax-title">INVOICE</div>
+          <div class="sheet-inv-num">${inv.invoiceNumber}</div>
+          <div style="font-size: 11px; color: #718096; margin-top: 4px;">Issue: ${inv.issueDate}</div>
+          <div style="font-size: 11px; color: #718096;">Due: ${inv.dueDate}</div>
+          <div style="display: inline-block; margin-top: 8px; padding: 4px 10px; border-radius: 4px; border: 1.5px solid ${stampColor}; color: ${stampColor}; font-weight: 800; font-size: 11px; letter-spacing: 0.08em;">
+            ${stampText}
+          </div>
+        </div>
+      </div>
+
+      <div class="sheet-parties-grid">
+        <div class="sheet-party-box">
+          <h4>Billed To (Client):</h4>
+          <div class="name">${inv.clientName}</div>
+          ${inv.projectName ? `<div class="detail"><strong>Event / Project:</strong> ${inv.projectName}</div>` : ''}
+          ${inv.clientPhone ? `<div class="detail"><strong>Phone:</strong> ${inv.clientPhone}</div>` : ''}
+          ${inv.clientEmail ? `<div class="detail"><strong>Email:</strong> ${inv.clientEmail}</div>` : ''}
+          ${inv.clientAddress ? `<div class="detail"><strong>Location:</strong> ${inv.clientAddress}</div>` : ''}
+        </div>
+        <div class="sheet-party-box" style="text-align: right;">
+          <h4>Invoice Summary:</h4>
+          <div class="detail"><strong>Invoice Number:</strong> ${inv.invoiceNumber}</div>
+          <div class="detail"><strong>Date of Issue:</strong> ${inv.issueDate}</div>
+          <div class="detail"><strong>Payment Due:</strong> ${inv.dueDate}</div>
+          <div class="detail"><strong>Status:</strong> ${inv.status}</div>
+        </div>
+      </div>
+
+      <table class="sheet-table">
+        <thead>
+          <tr>
+            <th style="width: 50%;">Service Description</th>
+            <th class="num" style="width: 15%;">Qty</th>
+            <th class="num" style="width: 15%;">Rate (₹)</th>
+            <th class="num" style="width: 20%;">Amount (₹)</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${(inv.items || []).map(item => `
+            <tr>
+              <td>${item.description}</td>
+              <td class="num">${item.quantity}</td>
+              <td class="num">${FinanceEngine.formatINR(item.rate, false)}</td>
+              <td class="num" style="font-weight: 700;">${FinanceEngine.formatINR(item.quantity * item.rate, false)}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+
+      <div class="sheet-summary-layout">
+        <div class="sheet-payment-info">
+          <h5>Studio Payment & Settlement Details</h5>
+          <div><strong>UPI ID:</strong> <span style="font-family: var(--font-mono); color: #0E52B8; font-weight: 700;">${billing.upiId}</span></div>
+          <div style="margin-top: 4px;"><strong>Bank:</strong> ${billing.bankName}</div>
+          <div><strong>Account No:</strong> ${billing.accountNumber}</div>
+          <div><strong>IFSC / Branch:</strong> ${billing.ifsc}</div>
+          ${inv.notes ? `<div style="margin-top: 8px; font-style: italic; color: #4a5568;">"${inv.notes}"</div>` : ''}
+        </div>
+
+        <div class="sheet-totals-box">
+          <div class="sheet-totals-row">
+            <span>Subtotal:</span>
+            <span>${FinanceEngine.formatINR(inv.subtotal)}</span>
+          </div>
+          ${(inv.discountAmount > 0) ? `
+            <div class="sheet-totals-row" style="color: #ef4444;">
+              <span>Discount:</span>
+              <span>−${FinanceEngine.formatINR(inv.discountAmount)}</span>
+            </div>
+          ` : ''}
+          ${(inv.taxAmount > 0) ? `
+            <div class="sheet-totals-row">
+              <span>GST (${inv.taxPercent}%):</span>
+              <span>+${FinanceEngine.formatINR(inv.taxAmount)}</span>
+            </div>
+          ` : ''}
+          <div class="sheet-totals-row grand-total">
+            <span>Grand Total:</span>
+            <span>${FinanceEngine.formatINR(inv.totalAmount)}</span>
+          </div>
+          <div class="sheet-totals-row" style="color: #10b981; margin-top: 6px;">
+            <span>Advance / Paid:</span>
+            <span>${FinanceEngine.formatINR(inv.paidAmount)}</span>
+          </div>
+          <div class="sheet-totals-row balance-due">
+            <span>Balance Due:</span>
+            <span>${FinanceEngine.formatINR(inv.balanceDue)}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="sheet-footer">
+        <div>
+          <div>Thank you for choosing ${billing.studioName}!</div>
+          <div style="color: #a0aec0; margin-top: 2px;">This is a computer-generated invoice and needs no physical seal.</div>
+        </div>
+        <div class="sheet-signature-line">
+          <div class="sheet-sig-box"></div>
+          <div>Authorized Signatory</div>
+          <div style="font-weight: 700; color: #000926;">${billing.studioName}</div>
+        </div>
+      </div>
+    `;
+
+    this.openModal('modal-invoice-preview');
+  },
+
+  printInvoice() {
+    document.body.classList.add('printing-invoice');
+    window.print();
+    setTimeout(() => {
+      document.body.classList.remove('printing-invoice');
+    }, 1000);
+  },
+
+  shareInvoiceWhatsApp(invoiceId) {
+    const id = invoiceId || this.previewingInvoiceId;
+    const inv = (window.dataStore.data.invoices || []).find(i => i.id === id);
+    if (!inv) return;
+
+    const billing = window.dataStore.data.settings?.billing || {
+      studioName: 'LUCIA PHOTOGRAPHY & VIDEOGRAPHY',
+      upiId: 'lucia@okaxis'
+    };
+
+    const text = `*${billing.studioName}* 📸✨\n` +
+      `*INVOICE: ${inv.invoiceNumber}*\n` +
+      `Client: ${inv.clientName}\n` +
+      (inv.projectName ? `Project: ${inv.projectName}\n` : '') +
+      `Date: ${inv.issueDate}\n` +
+      `---------------------------\n` +
+      `Grand Total: ${FinanceEngine.formatINR(inv.totalAmount)}\n` +
+      `Paid to Date: ${FinanceEngine.formatINR(inv.paidAmount)}\n` +
+      `*Balance Due: ${FinanceEngine.formatINR(inv.balanceDue)}*\n` +
+      `---------------------------\n` +
+      `Pay via UPI: ${billing.upiId}\n` +
+      `Thank you for your business!`;
+
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text);
+      this.showToast('Bill summary copied! Opening WhatsApp...');
+    }
+
+    const cleanPhone = (inv.clientPhone || '').replace(/[^0-9]/g, '');
+    const phoneParam = cleanPhone.length >= 10 ? cleanPhone : '';
+    const url = `https://wa.me/${phoneParam}?text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank');
+  },
+
+  openRecordInvoicePaymentModal(invoiceId) {
+    const inv = (window.dataStore.data.invoices || []).find(i => i.id === invoiceId);
+    if (!inv) return;
+
+    document.getElementById('inv-pay-invoice-id').value = inv.id;
+    const infoBox = document.getElementById('inv-pay-info-box');
+    if (infoBox) {
+      infoBox.innerHTML = `
+        <div style="font-weight: 800; font-size: 14px; color: var(--text-white);">${inv.invoiceNumber} — ${inv.clientName}</div>
+        <div style="color: var(--text-secondary); margin-top: 4px;">
+          Total: ${FinanceEngine.formatINR(inv.totalAmount)} • Paid: ${FinanceEngine.formatINR(inv.paidAmount)} • 
+          <strong style="color: #fbbf24;">Outstanding Due: ${FinanceEngine.formatINR(inv.balanceDue)}</strong>
+        </div>
+      `;
+    }
+
+    const amountInp = document.getElementById('inv-pay-amount');
+    if (amountInp) amountInp.value = inv.balanceDue;
+
+    const dateInp = document.getElementById('inv-pay-date');
+    if (dateInp) dateInp.value = new Date().toISOString().split('T')[0];
+
+    const hint = document.getElementById('inv-pay-balance-hint');
+    if (hint) hint.textContent = `Current balance due: ${FinanceEngine.formatINR(inv.balanceDue)}`;
+
+    this.selectPaymentMethod('invpay', 'UPI');
+    this.openModal('modal-invoice-payment');
+  },
+
+  handleSaveInvoicePayment(e) {
+    e.preventDefault();
+    const invoiceId = document.getElementById('inv-pay-invoice-id').value;
+    const amount = FinanceEngine.parseINR(document.getElementById('inv-pay-amount').value);
+    const date = document.getElementById('inv-pay-date').value;
+    const paymentMethod = document.getElementById('inv-pay-method').value || 'UPI';
+    const notes = document.getElementById('inv-pay-notes').value.trim();
+
+    if (!amount || amount <= 0) {
+      alert('Please enter a valid payment amount.');
+      return;
+    }
+
+    const res = window.dataStore.recordInvoicePayment({
+      invoiceId,
+      amount,
+      date,
+      paymentMethod,
+      notes
+    });
+
+    if (res) {
+      this.closeModalDirect('modal-invoice-payment');
+      this.showToast(`Payment of ${FinanceEngine.formatINR(amount)} recorded & Revenue updated ✓`);
+      this.renderAll();
+    } else {
+      alert('Failed to record payment on invoice.');
+    }
+  },
+
+  deleteInvoice(invoiceId, invoiceNumber) {
+    if (confirm(`Are you sure you want to delete invoice "${invoiceNumber}"?`)) {
+      window.dataStore.deleteInvoice(invoiceId);
+      this.showToast(`Invoice "${invoiceNumber}" deleted ✓`);
+      this.renderInvoices();
+    }
+  },
+
   renderIncome() {
     const listContainer = document.getElementById('income-list-container');
     const totalEl = document.getElementById('income-page-total');
@@ -971,7 +1633,7 @@ const App = {
     if (totalEl) totalEl.textContent = FinanceEngine.formatINR(total);
 
     if (income.length === 0) {
-      listContainer.innerHTML = '<div class="empty-state">No income logged yet.</div>';
+      listContainer.innerHTML = '<div class="empty-state">No revenue logged yet.</div>';
       return;
     }
 
@@ -980,7 +1642,7 @@ const App = {
         <div class="transaction-left">
           <div class="tx-icon income">+</div>
           <div>
-            <div class="tx-title">${i.projectName || 'Studio Direct Collection'}</div>
+            <div class="tx-title">${i.projectName || 'Studio Direct Revenue'}</div>
             <div class="tx-meta">
               <span>${i.date}</span>
               <span class="method-tag">${i.paymentMethod}</span>
@@ -1217,6 +1879,28 @@ const App = {
         secBadge.style.borderColor = 'var(--border-subtle)';
       }
     }
+
+    // Billing & Invoicing Profile
+    const bill = window.dataStore.data.settings?.billing || {};
+    const bStudio = document.getElementById('set-bill-studio');
+    const bTagline = document.getElementById('set-bill-tagline');
+    const bAddress = document.getElementById('set-bill-address');
+    const bPhone = document.getElementById('set-bill-phone');
+    const bEmail = document.getElementById('set-bill-email');
+    const bUpi = document.getElementById('set-bill-upi');
+    const bBank = document.getElementById('set-bill-bank');
+    const bAcc = document.getElementById('set-bill-acc');
+    const bIfsc = document.getElementById('set-bill-ifsc');
+
+    if (bStudio && bill.studioName) bStudio.value = bill.studioName;
+    if (bTagline && bill.tagline) bTagline.value = bill.tagline;
+    if (bAddress && bill.address) bAddress.value = bill.address;
+    if (bPhone && bill.phone) bPhone.value = bill.phone;
+    if (bEmail && bill.email) bEmail.value = bill.email;
+    if (bUpi && bill.upiId) bUpi.value = bill.upiId;
+    if (bBank && bill.bankName) bBank.value = bill.bankName;
+    if (bAcc && bill.accountNumber) bAcc.value = bill.accountNumber;
+    if (bIfsc && bill.ifsc) bIfsc.value = bill.ifsc;
   },
 
   validatePercentages() {
@@ -1287,13 +1971,42 @@ const App = {
     this.showToast('Security settings updated ✓');
   },
 
+  saveBillingSettings(e) {
+    if (e) e.preventDefault();
+    const studioName = (document.getElementById('set-bill-studio')?.value || '').trim();
+    const tagline = (document.getElementById('set-bill-tagline')?.value || '').trim();
+    const address = (document.getElementById('set-bill-address')?.value || '').trim();
+    const phone = (document.getElementById('set-bill-phone')?.value || '').trim();
+    const email = (document.getElementById('set-bill-email')?.value || '').trim();
+    const upiId = (document.getElementById('set-bill-upi')?.value || '').trim();
+    const bankName = (document.getElementById('set-bill-bank')?.value || '').trim();
+    const accountNumber = (document.getElementById('set-bill-acc')?.value || '').trim();
+    const ifsc = (document.getElementById('set-bill-ifsc')?.value || '').trim();
+
+    window.dataStore.updateBillingSettings({
+      studioName,
+      tagline,
+      address,
+      phone,
+      email,
+      upiId,
+      bankName,
+      accountNumber,
+      ifsc
+    });
+
+    this.renderSettings();
+    this.showToast('Studio Billing Profile updated ✓');
+  },
+
   deleteItem(collection, id) {
     let itemLabel = 'activity';
-    if (collection === 'income') itemLabel = 'income record';
+    if (collection === 'income') itemLabel = 'revenue record';
     else if (collection === 'expenses') itemLabel = 'expense record';
     else if (collection === 'withdrawals') itemLabel = 'partner withdrawal';
     else if (collection === 'companyFundLedger') itemLabel = 'company fund record';
     else if (collection === 'projects') itemLabel = 'project';
+    else if (collection === 'invoices') itemLabel = 'invoice';
 
     if (confirm(`Are you sure you want to delete this ${itemLabel}? All balances will recalculate automatically.`)) {
       window.dataStore.deleteItem(collection, id);
@@ -1312,7 +2025,7 @@ const App = {
   },
 
   deleteProjectIncome(projectId, incomeId) {
-    if (confirm('Delete this income payment? Project received amount and pending dues will recalculate.')) {
+    if (confirm('Delete this revenue payment? Project received amount and pending dues will recalculate.')) {
       window.dataStore.deleteItem('income', incomeId);
       this.showToast('Payment deleted ✓');
       this.viewProjectDetails(projectId);
@@ -1416,7 +2129,7 @@ const App = {
     let csv = 'Type,ID,Date,Category/Project,Client,Payment Method,Amount,Notes\n';
 
     income.forEach(i => {
-      csv += `"Income","${i.id}","${i.date}","${i.projectName}","${i.clientName || ''}","${i.paymentMethod}","${i.amount}","${(i.notes || '').replace(/"/g, '""')}"\n`;
+      csv += `"Revenue","${i.id}","${i.date}","${i.projectName}","${i.clientName || ''}","${i.paymentMethod}","${i.amount}","${(i.notes || '').replace(/"/g, '""')}"\n`;
     });
 
     expenses.forEach(e => {

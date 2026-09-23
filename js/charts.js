@@ -1,10 +1,10 @@
 /**
  * LUCIA FINANCE - Lightweight Canvas Charting Engine
- * Zero dependencies, high-DPI crisp rendering, premium dark/gold theme.
+ * Zero dependencies, high-DPI crisp rendering, Midnight Cobalt & Ice Blue theme.
  */
 
 const LuciaCharts = {
-  // Render Financial Bar Chart (Income vs Expense vs Net Profit)
+  // Render Financial Bar Chart (Revenue vs Expense vs Net Profit)
   renderFinancialBars(canvasId, data) {
     const canvas = document.getElementById(canvasId);
     if (!canvas) return;
@@ -24,10 +24,10 @@ const LuciaCharts = {
     ctx.clearRect(0, 0, width, height);
 
     const items = [
-      { label: 'Income', value: Math.max(0, data.income || 0), color: '#10B981', gradient: ['#10B981', '#059669'] },
+      { label: 'Revenue', value: Math.max(0, data.income || 0), color: '#10B981', gradient: ['#34D399', '#059669'] },
       { label: 'Expenses', value: Math.max(0, data.expenses || 0), color: '#EF4444', gradient: ['#F87171', '#DC2626'] },
       { label: 'Salaries', value: Math.max(0, data.salaries || 0), color: '#8B5CF6', gradient: ['#A78BFA', '#7C3AED'] },
-      { label: 'Net Profit', value: Math.max(0, data.netProfit || 0), color: '#D4AF37', gradient: ['#F5D77F', '#B38B1C'] }
+      { label: 'Net Profit', value: Math.max(0, data.netProfit || 0), color: '#0E52B8', gradient: ['#4A8DF8', '#0E52B8'] }
     ];
 
     const maxValue = Math.max(...items.map(i => i.value), 10000) * 1.15;
@@ -39,7 +39,7 @@ const LuciaCharts = {
     const spacing = chartWidth / items.length;
 
     // Draw baseline
-    ctx.strokeStyle = '#27272A';
+    ctx.strokeStyle = 'rgba(166, 197, 216, 0.2)';
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(padding.left, height - padding.bottom);
@@ -71,7 +71,7 @@ const LuciaCharts = {
       ctx.fill();
 
       // Top value text
-      ctx.fillStyle = '#FFFFFF';
+      ctx.fillStyle = '#D6E6F3';
       ctx.font = '600 11px system-ui, -apple-system, sans-serif';
       ctx.textAlign = 'center';
       const shortVal = item.value >= 100000 
@@ -80,7 +80,7 @@ const LuciaCharts = {
       ctx.fillText(shortVal, x + barWidth / 2, y - 8);
 
       // Label below bar
-      ctx.fillStyle = '#9CA3AF';
+      ctx.fillStyle = '#A6C5D8';
       ctx.font = '500 11px system-ui, -apple-system, sans-serif';
       ctx.fillText(item.label, x + barWidth / 2, height - padding.bottom + 18);
     });
@@ -115,7 +115,7 @@ const LuciaCharts = {
     const total = entries.reduce((s, [, v]) => s + v, 0);
 
     if (total === 0 || entries.length === 0) {
-      ctx.fillStyle = '#71717A';
+      ctx.fillStyle = '#A6C5D8';
       ctx.font = '13px system-ui, -apple-system, sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText('No expenses recorded for this period', width / 2, height / 2);
@@ -123,13 +123,13 @@ const LuciaCharts = {
     }
 
     const colors = [
-      '#D4AF37', // Gold
-      '#60A5FA', // Blue
-      '#F472B6', // Pink
+      '#0E52B8', // Royal Cobalt
+      '#3D7FE8', // Light Blue
+      '#38BDF8', // Sky Blue
       '#34D399', // Emerald
       '#A78BFA', // Violet
       '#FBBF24', // Amber
-      '#9CA3AF'  // Gray
+      '#A6C5D8'  // Soft Slate
     ];
 
     const centerX = width * 0.35;
@@ -154,12 +154,12 @@ const LuciaCharts = {
     });
 
     // Center total text
-    ctx.fillStyle = '#FFFFFF';
+    ctx.fillStyle = '#D6E6F3';
     ctx.font = '700 14px system-ui, -apple-system, sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText('Total', centerX, centerY - 6);
-    ctx.fillStyle = '#D4AF37';
-    ctx.font = '600 12px system-ui, -apple-system, sans-serif';
+    ctx.fillStyle = '#0E52B8';
+    ctx.font = '700 13px system-ui, -apple-system, sans-serif';
     ctx.fillText(`₹${(total / 1000).toFixed(0)}k`, centerX, centerY + 12);
 
     // Legend on the right side
@@ -178,7 +178,7 @@ const LuciaCharts = {
       ctx.fill();
 
       // Text
-      ctx.fillStyle = '#E5E7EB';
+      ctx.fillStyle = '#D6E6F3';
       ctx.font = '500 11px system-ui, -apple-system, sans-serif';
       ctx.textAlign = 'left';
       ctx.fillText(`${cat} (${pct}%)`, legendX + 12, legendY + 4);
