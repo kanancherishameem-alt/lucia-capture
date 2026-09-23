@@ -2006,6 +2006,7 @@ const App = {
     if (previewEl) {
       previewEl.innerHTML = `
         <div class="share-receipt-header">
+          <img src="lucia_logo.png" alt="Lucia Logo" style="height: 44px; width: auto; object-fit: contain; margin: 0 auto 8px; display: block; filter: drop-shadow(0 0 10px rgba(197, 160, 89, 0.4));" onerror="this.style.display='none'">
           <div class="share-receipt-brand">${billing.studioName}</div>
           <div class="share-receipt-type">${receiptData.title}</div>
         </div>
