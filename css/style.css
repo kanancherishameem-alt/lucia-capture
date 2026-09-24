@@ -389,7 +389,7 @@ html, body {
 
 @media (min-width: 1024px) {
   .hero-stats-grid {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(3, 1fr);
   }
 }
 
@@ -2175,4 +2175,204 @@ html, body {
   border-color: var(--gold-border);
   background: var(--gold-subtle);
   transform: scale(1.04);
+}
+
+/* Universal Back Button */
+.btn-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  padding: 8px 14px;
+  border-radius: var(--radius-full);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  margin-right: 12px;
+  box-shadow: var(--shadow-sm);
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.btn-back:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--gold-border);
+  color: var(--gold-primary);
+  transform: translateX(-2px);
+}
+
+.btn-back svg {
+  transition: transform var(--transition-fast);
+  color: var(--gold-primary);
+}
+
+.btn-back:hover svg {
+  transform: translateX(-3px);
+}
+
+/* Notification Bell & Badge */
+.notif-bell-btn {
+  position: relative;
+}
+
+.notif-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #EF4444;
+  color: #FFFFFF;
+  font-size: 10px;
+  font-weight: 800;
+  min-width: 18px;
+  height: 18px;
+  line-height: 18px;
+  text-align: center;
+  border-radius: 9px;
+  padding: 0 4px;
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.7);
+  animation: pulseBadge 2.2s infinite ease-in-out;
+}
+
+@keyframes pulseBadge {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.18); }
+}
+
+/* Notification Popup Cards */
+.notif-filter-pills {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.notif-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 480px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.notif-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  transition: all var(--transition-fast);
+}
+
+.notif-card:hover {
+  border-color: var(--gold-border);
+  background: var(--bg-card-hover);
+}
+
+.notif-card.urgent {
+  border-left: 4px solid #EF4444;
+}
+
+.notif-card.warning {
+  border-left: 4px solid #F59E0B;
+}
+
+.notif-card.info {
+  border-left: 4px solid #10B981;
+}
+
+.notif-icon-box {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 16px;
+}
+
+.notif-icon-work { background: rgba(16, 185, 129, 0.15); color: #34D399; }
+.notif-icon-due { background: rgba(239, 68, 68, 0.15); color: #F87171; }
+.notif-icon-exp { background: rgba(245, 158, 11, 0.15); color: #FBBF24; }
+
+.notif-card-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.notif-card-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.notif-card-desc {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.notif-card-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+  font-size: 11px;
+}
+
+.notif-badge-tag {
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  font-weight: 600;
+  font-size: 10px;
+}
+
+.notif-badge-tag.today { background: rgba(239, 68, 68, 0.2); color: #F87171; }
+.notif-badge-tag.upcoming { background: rgba(16, 185, 129, 0.2); color: #34D399; }
+.notif-badge-tag.due { background: rgba(245, 158, 11, 0.2); color: #FBBF24; }
+
+/* Unified Billing Hub Tab Pills */
+.billing-nav-pills {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 18px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.billing-tab-pill {
+  padding: 8px 16px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--transition-fast);
+}
+
+.billing-tab-pill:hover {
+  border-color: var(--gold-border);
+  color: var(--text-primary);
+}
+
+.billing-tab-pill.active {
+  background: var(--gold-subtle);
+  border-color: var(--gold-border);
+  color: var(--gold-primary);
+  box-shadow: 0 0 12px rgba(197, 160, 89, 0.2);
 }

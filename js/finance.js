@@ -2,10 +2,10 @@
  * LUCIA FINANCE - Core Financial Logic Engine
  * 
  * Financial Rules:
- * 1. Net Profit = Total Income - Business Expenses - Partner Salaries
+ * 1. Net Profit = Total Revenue - Business Expenses
  * 2. Net Profit is split according to settings percentages (default: 33.33% Shameem, 33.33% Shiyan, 33.34% Company Fund)
  * 3. Exact rounding handling: distributed total must strictly equal Net Profit.
- * 4. Partner Available Balance = Base Salary + Earned Profit Share - Withdrawals
+ * 4. Partner Available Balance = Earned Profit Share - Withdrawals
  * 5. Company Fund Balance = Base/Added Funds + Cumulative Company Profit Share - Fund Expenditures
  */
 
@@ -38,12 +38,11 @@ const FinanceEngine = {
     return isNaN(num) ? 0 : Math.round(num);
   },
 
-  // Calculate net profit
-  calculateNetProfit(totalIncome, businessExpenses, partnerSalaries) {
+  // Calculate net profit (Revenue - Expenses)
+  calculateNetProfit(totalIncome, businessExpenses) {
     const income = Number(totalIncome) || 0;
     const expenses = Number(businessExpenses) || 0;
-    const salaries = Number(partnerSalaries) || 0;
-    return income - expenses - salaries;
+    return income - expenses;
   },
 
   /**
@@ -121,13 +120,8 @@ const FinanceEngine = {
     const filteredExpenses = expenses.filter(item => matchDate(item.date));
     const totalExpenses = filteredExpenses.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
 
-    // Filter partner salaries for the selected period
-    // Partner salaries can be logged per month or configured monthly base
-    const filteredSalaries = partnerSalaries.filter(item => matchDate(item.date));
-    const totalSalaries = filteredSalaries.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
-
-    // Net Profit calculation
-    const netProfit = this.calculateNetProfit(totalIncome, totalExpenses, totalSalaries);
+    // Net Profit calculation (Revenue - Expenses)
+    const netProfit = this.calculateNetProfit(totalIncome, totalExpenses);
 
     // Profit Distribution
     const distribution = this.distributeProfit(netProfit, settings.profitPercentages);
@@ -158,36 +152,28 @@ const FinanceEngine = {
     // To ensure consistency, calculate all-time net profit company fund share:
     const allTimeIncome = income.reduce((sum, i) => sum + (Number(i.amount) || 0), 0);
     const allTimeExpenses = expenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
-    const allTimeSalaries = partnerSalaries.reduce((sum, s) => sum + (Number(s.amount) || 0), 0);
-    const allTimeNetProfit = this.calculateNetProfit(allTimeIncome, allTimeExpenses, allTimeSalaries);
+    const allTimeNetProfit = this.calculateNetProfit(allTimeIncome, allTimeExpenses);
     const allTimeDistribution = this.distributeProfit(allTimeNetProfit, settings.profitPercentages);
 
     const totalCompanyFundBalance = companyFundBalance + allTimeDistribution.companyFund;
 
-    // Partner balances calculation (all-time available = total salary + total profit share - total withdrawals)
-    const p1Salaries = partnerSalaries.filter(s => s.partnerId === 'partner1').reduce((sum, s) => sum + (Number(s.amount) || 0), 0);
-    const p2Salaries = partnerSalaries.filter(s => s.partnerId === 'partner2').reduce((sum, s) => sum + (Number(s.amount) || 0), 0);
-
+    // Partner balances calculation (all-time available = total profit share - total withdrawals)
     const p1Withdrawals = withdrawals.filter(w => w.partnerId === 'partner1').reduce((sum, w) => sum + (Number(w.amount) || 0), 0);
     const p2Withdrawals = withdrawals.filter(w => w.partnerId === 'partner2').reduce((sum, w) => sum + (Number(w.amount) || 0), 0);
 
     const partner1Stats = {
       name: settings.partner1Name || 'Shameem',
-      salary: p1Salaries,
       profitShare: allTimeDistribution.partner1,
       withdrawn: p1Withdrawals,
       available: allTimeDistribution.partner1 - p1Withdrawals,
-      periodSalary: filteredSalaries.filter(s => s.partnerId === 'partner1').reduce((sum, s) => sum + (Number(s.amount) || 0), 0),
       periodProfitShare: distribution.partner1
     };
 
     const partner2Stats = {
       name: settings.partner2Name || 'Shiyan',
-      salary: p2Salaries,
       profitShare: allTimeDistribution.partner2,
       withdrawn: p2Withdrawals,
       available: allTimeDistribution.partner2 - p2Withdrawals,
-      periodSalary: filteredSalaries.filter(s => s.partnerId === 'partner2').reduce((sum, s) => sum + (Number(s.amount) || 0), 0),
       periodProfitShare: distribution.partner2
     };
 

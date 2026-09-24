@@ -26,7 +26,6 @@ const LuciaCharts = {
     const items = [
       { label: 'Revenue', value: Math.max(0, data.income || 0), color: '#10B981', gradient: ['#34D399', '#059669'] },
       { label: 'Expenses', value: Math.max(0, data.expenses || 0), color: '#EF4444', gradient: ['#F87171', '#DC2626'] },
-      { label: 'Salaries', value: Math.max(0, data.salaries || 0), color: '#8B5CF6', gradient: ['#A78BFA', '#7C3AED'] },
       { label: 'Net Profit', value: Math.max(0, data.netProfit || 0), color: '#C5A059', gradient: ['#E2C285', '#C5A059'] }
     ];
 

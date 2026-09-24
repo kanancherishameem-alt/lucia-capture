@@ -18,37 +18,34 @@ def distribute_profit(net_profit, p1_pct=33.33, p2_pct=33.33, cf_pct=33.34):
     return p1_share, p2_share, cf_share, p1_share + p2_share + cf_share
 
 def test_profit_split_example():
-    # Prompt example:
-    # Income = 2,00,000, Expenses = 50,000, Salaries = 30,000 => Net Profit = 1,20,000
+    # Example:
+    # Revenue = 2,00,000, Expenses = 50,000 => Net Profit = 1,50,000 (No salary deduction)
     income = 200000
     expenses = 50000
-    salaries = 30000
-    net_profit = income - expenses - salaries
-    assert net_profit == 120000, f"Expected 120000, got {net_profit}"
+    net_profit = income - expenses
+    assert net_profit == 150000, f"Expected 150000, got {net_profit}"
 
     p1, p2, cf, total = distribute_profit(net_profit, 33.33, 33.33, 33.34)
     print(f"Example Test: Net Profit={net_profit} -> Shameem={p1}, Shiyan={p2}, Company Fund={cf}, Total={total}")
-    assert p1 == 39996, f"Expected 39996, got {p1}"
-    assert p2 == 39996, f"Expected 39996, got {p2}"
-    assert cf == 40008, f"Expected 40008, got {cf}"
+    assert p1 == 49995, f"Expected 49995, got {p1}"
+    assert p2 == 49995, f"Expected 49995, got {p2}"
+    assert cf == 50010, f"Expected 50010, got {cf}"
     assert total == net_profit, f"Distributed total {total} must strictly match net profit {net_profit}"
 
 def test_default_this_month():
     # This month:
-    # Income: 1,50,000, Expenses: 40,000, Salaries: 20,000 => Net Profit: 90,000
+    # Revenue: 1,50,000, Expenses: 40,000 => Net Profit: 1,10,000
     income = 150000
     expenses = 40000
-    salaries = 20000
-    net_profit = income - expenses - salaries
-    assert net_profit == 90000, f"Expected 90000, got {net_profit}"
+    net_profit = income - expenses
+    assert net_profit == 110000, f"Expected 110000, got {net_profit}"
 
     p1, p2, cf, total = distribute_profit(net_profit, 33.33, 33.33, 33.34)
     print(f"This Month Test: Net Profit={net_profit} -> Shameem={p1}, Shiyan={p2}, Company Fund={cf}, Total={total}")
-    # Under strict 33.33% / 33.33% / 33.34% formula:
-    assert p1 == 29997, f"Expected 29997, got {p1}"
-    assert p2 == 29997, f"Expected 29997, got {p2}"
-    assert cf == 30006, f"Expected 30006, got {cf}"
-    assert total == 90000, f"Expected 90000, got {total}"
+    assert p1 == 36663, f"Expected 36663, got {p1}"
+    assert p2 == 36663, f"Expected 36663, got {p2}"
+    assert cf == 36674, f"Expected 36674, got {cf}"
+    assert total == 110000, f"Expected 110000, got {total}"
 
 def test_partner_available_balances():
     # Shameem: Salary: 20000, Profit: 30000, Withdrawn: 10000 => Available: 20000

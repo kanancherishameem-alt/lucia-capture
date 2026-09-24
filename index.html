@@ -106,8 +106,7 @@
       <nav class="desktop-nav">
         <button class="nav-link active" data-view="home" onclick="App.navigateTo('home')">Home</button>
         <button class="nav-link" data-view="projects" onclick="App.navigateTo('projects')">Projects</button>
-        <button class="nav-link" data-view="invoices" onclick="App.navigateTo('invoices')">Invoices</button>
-        <button class="nav-link" data-view="income" onclick="App.navigateTo('income')">Revenue</button>
+        <button class="nav-link" data-view="invoices" onclick="App.navigateTo('invoices')">Revenue & Bills</button>
         <button class="nav-link" data-view="expenses" onclick="App.navigateTo('expenses')">Expenses</button>
         <button class="nav-link" data-view="partners" onclick="App.navigateTo('partners')">Partners</button>
         <button class="nav-link" data-view="company-fund" onclick="App.navigateTo('company-fund')">Company Fund</button>
@@ -116,6 +115,15 @@
 
       <!-- Header Quick Actions -->
       <div class="header-actions">
+        <!-- Notification Bell -->
+        <button class="icon-btn notif-bell-btn" onclick="App.openNotificationsModal()" title="Notifications & Alerts">
+          <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+          </svg>
+          <span class="notif-badge" id="header-notif-badge" style="display: none;">0</span>
+        </button>
+
         <button class="btn btn-gold btn-sm d-none-mobile" onclick="App.openQuickHubModal()">
           <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
           Add
@@ -146,7 +154,7 @@
           </div>
         </div>
 
-        <!-- 4 Top Stat Cards: THIS MONTH -->
+        <!-- 3 Top Stat Cards: THIS MONTH -->
         <div class="hero-stats-grid">
           <div class="stat-card">
             <div class="stat-header">
@@ -170,17 +178,6 @@
             <div class="stat-footer">Shoots, travel, gear, editing & overhead</div>
           </div>
 
-          <div class="stat-card">
-            <div class="stat-header">
-              <span class="stat-label">Salaries</span>
-              <div class="stat-icon purple">
-                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="7" r="4"></circle><path d="M5.5 21a8.38 8.38 0 0 1 13 0"></path></svg>
-              </div>
-            </div>
-            <div class="stat-value" id="home-stat-salaries">₹20,000</div>
-            <div class="stat-footer">Partner fixed monthly draw</div>
-          </div>
-
           <div class="stat-card highlight-gold">
             <div class="stat-header">
               <span class="stat-label">Net Profit</span>
@@ -188,8 +185,8 @@
                 <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"></path><line x1="12" y1="6" x2="12" y2="8"></line><line x1="12" y1="16" x2="12" y2="18"></line></svg>
               </div>
             </div>
-            <div class="stat-value gold" id="home-stat-netprofit">₹90,000</div>
-            <div class="stat-footer">Revenue − Expenses − Salaries</div>
+            <div class="stat-value gold" id="home-stat-netprofit">₹1,10,000</div>
+            <div class="stat-footer">Revenue − Business Expenses</div>
           </div>
         </div>
 
@@ -282,9 +279,15 @@
       <!-- ================= 2. PROJECTS ================= -->
       <section id="view-projects" class="view-section">
         <div class="section-header">
-          <div class="section-title-group">
-            <h1>Photography & Videography Projects</h1>
-            <p>Track packages, collections, pending dues, and shoot expenses</p>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <button class="btn-back" onclick="App.goBack()" title="Go Back">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M19 12H5m7 7l-7-7 7-7"/></svg>
+              <span>Back</span>
+            </button>
+            <div class="section-title-group">
+              <h1>Photography & Videography Projects</h1>
+              <p>Track packages, collections, pending dues, and shoot expenses</p>
+            </div>
           </div>
           <button class="btn btn-gold" onclick="App.openModal('modal-project')">
             + New Project
@@ -305,38 +308,58 @@
         </div>
       </section>
 
-      <!-- ================= INVOICES & BILLING ================= -->
+      <!-- ================= 3. REVENUE & CLIENT BILLING HUB ================= -->
       <section id="view-invoices" class="view-section">
         <div class="section-header">
-          <div class="section-title-group">
-            <h1>Invoices & Client Billing</h1>
-            <p>Create itemized quotes, bills, track collections, and print luxury client receipts</p>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <button class="btn-back" onclick="App.goBack()" title="Go Back">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M19 12H5m7 7l-7-7 7-7"/></svg>
+              <span>Back</span>
+            </button>
+            <div class="section-title-group">
+              <h1>Revenue & Client Billing</h1>
+              <p>Single hub for client invoices, direct revenue, receipts & pending dues</p>
+            </div>
           </div>
-          <button class="btn btn-gold" onclick="App.openCreateInvoiceModal()">
-            + Create Invoice
-          </button>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <button class="btn btn-outline btn-sm" onclick="App.openModal('modal-income')">
+              + Add Revenue
+            </button>
+            <button class="btn btn-gold btn-sm" onclick="App.openCreateInvoiceModal()">
+              + Create Invoice
+            </button>
+          </div>
         </div>
 
-        <!-- 3 Top KPI Cards for Invoices -->
-        <div class="hero-stats-grid" style="margin-bottom: 20px;">
+        <!-- Top KPI Cards for Combined Revenue & Billing Hub -->
+        <div class="hero-stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin-bottom: 20px;">
+          <div class="stat-card">
+            <div class="stat-header">
+              <span class="stat-label">Total Revenue</span>
+              <div class="stat-icon green">₹</div>
+            </div>
+            <div class="stat-value" id="inv-stat-revenue">₹0</div>
+            <div class="stat-footer">Direct payments & advances</div>
+          </div>
+
           <div class="stat-card">
             <div class="stat-header">
               <span class="stat-label">Total Invoiced</span>
               <div class="stat-icon" style="color: var(--gold-light);">₹</div>
             </div>
             <div class="stat-value" id="inv-stat-total">₹0</div>
-            <div class="stat-footer" id="inv-stat-count">0 Invoices generated</div>
+            <div class="stat-footer" id="inv-stat-count">0 Invoices created</div>
           </div>
 
           <div class="stat-card">
             <div class="stat-header">
-              <span class="stat-label">Collected Revenue</span>
+              <span class="stat-label">Collected On Bills</span>
               <div class="stat-icon green">
                 <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg>
               </div>
             </div>
             <div class="stat-value" id="inv-stat-paid">₹0</div>
-            <div class="stat-footer">Direct payments & advances</div>
+            <div class="stat-footer">Paid against bills</div>
           </div>
 
           <div class="stat-card">
@@ -351,40 +374,23 @@
           </div>
         </div>
 
-        <!-- Status Filter Pills -->
+        <!-- Segment Pills: All Combined | Invoices & Bills | Revenue Records | Pending Dues -->
+        <div class="billing-nav-pills" id="billing-segment-pills">
+          <button class="billing-tab-pill active" data-tab="all" onclick="App.setBillingTab('all')">All Combined</button>
+          <button class="billing-tab-pill" data-tab="invoices" onclick="App.setBillingTab('invoices')">📄 Invoices & Bills</button>
+          <button class="billing-tab-pill" data-tab="revenue" onclick="App.setBillingTab('revenue')">💰 Revenue Records</button>
+          <button class="billing-tab-pill" data-tab="pending" onclick="App.setBillingTab('pending')">⚠️ Pending Dues</button>
+        </div>
+
+        <!-- Status Filter Pills for Invoices/Revenue -->
         <div class="filter-pills" id="invoice-status-filter" style="margin-bottom: 16px;">
-          <button class="pill-btn active" data-status="all" onclick="App.filterInvoices('all')">All Invoices</button>
+          <button class="pill-btn active" data-status="all" onclick="App.filterInvoices('all')">All</button>
           <button class="pill-btn" data-status="pending" onclick="App.filterInvoices('pending')">Pending & Partial</button>
           <button class="pill-btn" data-status="paid" onclick="App.filterInvoices('paid')">Fully Paid</button>
         </div>
 
-        <!-- Invoices List Container -->
+        <!-- Invoices & Billing List Container -->
         <div id="invoices-list-container">
-          <!-- Dynamically populated -->
-        </div>
-      </section>
-
-      <!-- ================= 3. REVENUE ================= -->
-      <section id="view-income" class="view-section">
-        <div class="section-header">
-          <div class="section-title-group">
-            <h1>Revenue Records</h1>
-            <p>Direct collections, advances, and package settlements</p>
-          </div>
-          <button class="btn btn-gold" onclick="App.openModal('modal-income')">
-            + Add Revenue
-          </button>
-        </div>
-
-        <div class="stat-card" style="margin-bottom: 20px;">
-          <div class="stat-header">
-            <span class="stat-label">Total Recorded Revenue</span>
-            <div class="stat-icon green">₹</div>
-          </div>
-          <div class="stat-value" id="income-page-total">₹1,50,000</div>
-        </div>
-
-        <div class="transaction-list" id="income-list-container">
           <!-- Dynamically populated -->
         </div>
       </section>
@@ -392,9 +398,15 @@
       <!-- ================= 4. EXPENSES ================= -->
       <section id="view-expenses" class="view-section">
         <div class="section-header">
-          <div class="section-title-group">
-            <h1>Studio & Shoot Expenses</h1>
-            <p>Gear rental, travel, editing fees, crew food, and software</p>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <button class="btn-back" onclick="App.goBack()" title="Go Back">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M19 12H5m7 7l-7-7 7-7"/></svg>
+              <span>Back</span>
+            </button>
+            <div class="section-title-group">
+              <h1>Studio & Shoot Expenses</h1>
+              <p>Gear rental, travel, editing fees, crew food, and software</p>
+            </div>
           </div>
           <button class="btn btn-gold" onclick="App.openModal('modal-expense')">
             + Add Expense
@@ -440,9 +452,15 @@
       <!-- ================= 5. PARTNERS ================= -->
       <section id="view-partners" class="view-section">
         <div class="section-header">
-          <div class="section-title-group">
-            <h1>Partners Hub</h1>
-            <p>Salary, earned profit share, and withdrawal ledger</p>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <button class="btn-back" onclick="App.goBack()" title="Go Back">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M19 12H5m7 7l-7-7 7-7"/></svg>
+              <span>Back</span>
+            </button>
+            <div class="section-title-group">
+              <h1>Partners Hub</h1>
+              <p>Earned profit share, distributions, and partner withdrawal ledger</p>
+            </div>
           </div>
           <button class="btn btn-gold" onclick="App.openModal('modal-withdrawal')">
             Record Partner Withdrawal
@@ -467,10 +485,6 @@
             </div>
 
             <div class="partner-breakdown-list">
-              <div class="partner-row">
-                <span class="partner-row-label">Salary Earned</span>
-                <span class="partner-row-val" id="p1-salary">₹20,000</span>
-              </div>
               <div class="partner-row">
                 <span class="partner-row-label">Profit Share</span>
                 <span class="partner-row-val gold" id="p1-profit">₹30,000</span>
@@ -504,10 +518,6 @@
 
             <div class="partner-breakdown-list">
               <div class="partner-row">
-                <span class="partner-row-label">Salary Earned</span>
-                <span class="partner-row-val" id="p2-salary">₹20,000</span>
-              </div>
-              <div class="partner-row">
                 <span class="partner-row-label">Profit Share</span>
                 <span class="partner-row-val gold" id="p2-profit">₹30,000</span>
               </div>
@@ -537,9 +547,15 @@
       <!-- ================= 6. COMPANY FUND ================= -->
       <section id="view-company-fund" class="view-section">
         <div class="section-header">
-          <div class="section-title-group">
-            <h1>Company Fund Reserve</h1>
-            <p>Studio reinvestment pool for camera bodies, prime lenses, and growth</p>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <button class="btn-back" onclick="App.goBack()" title="Go Back">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M19 12H5m7 7l-7-7 7-7"/></svg>
+              <span>Back</span>
+            </button>
+            <div class="section-title-group">
+              <h1>Company Fund Reserve</h1>
+              <p>Studio reinvestment pool for camera bodies, prime lenses, and growth</p>
+            </div>
           </div>
         </div>
 
@@ -581,9 +597,15 @@
       <!-- ================= 7. REPORTS ================= -->
       <section id="view-reports" class="view-section">
         <div class="section-header">
-          <div class="section-title-group">
-            <h1>Studio Financial Reports</h1>
-            <p>Simple monthly summaries without complicated accounting jargon</p>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <button class="btn-back" onclick="App.goBack()" title="Go Back">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M19 12H5m7 7l-7-7 7-7"/></svg>
+              <span>Back</span>
+            </button>
+            <div class="section-title-group">
+              <h1>Studio Financial Reports</h1>
+              <p>Simple monthly summaries without complicated accounting jargon</p>
+            </div>
           </div>
           <div style="display: flex; gap: 8px;">
             <button class="btn btn-outline btn-sm" onclick="App.exportCSV()">Export CSV</button>
@@ -599,7 +621,7 @@
           <button class="pill-btn" data-period="all-time" onclick="App.setReportPeriod('all-time')">All Time</button>
         </div>
 
-        <!-- Detailed Metrics Grid -->
+        <!-- Detailed Metrics Grid (3 Cards) -->
         <div class="hero-stats-grid" style="margin-bottom: 24px;">
           <div class="stat-card">
             <div class="stat-label">Total Revenue</div>
@@ -609,28 +631,24 @@
             <div class="stat-label">Total Expenses</div>
             <div class="stat-value" id="rep-expenses">₹40,000</div>
           </div>
-          <div class="stat-card">
-            <div class="stat-label">Total Salaries</div>
-            <div class="stat-value" id="rep-salaries">₹20,000</div>
-          </div>
           <div class="stat-card highlight-gold">
             <div class="stat-label">Net Profit</div>
-            <div class="stat-value gold" id="rep-profit">₹90,000</div>
+            <div class="stat-value gold" id="rep-profit">₹1,10,000</div>
           </div>
         </div>
 
         <div class="profit-split-grid" style="margin-bottom: 24px;">
           <div class="split-partner-box">
             <div class="split-partner-name">Shameem Share</div>
-            <div class="split-amount" id="rep-shameem">₹30,000</div>
+            <div class="split-amount" id="rep-shameem">₹36,663</div>
           </div>
           <div class="split-partner-box">
             <div class="split-partner-name">Shiyan Share</div>
-            <div class="split-amount" id="rep-shiyan">₹30,000</div>
+            <div class="split-amount" id="rep-shiyan">₹36,663</div>
           </div>
           <div class="split-partner-box">
             <div class="split-partner-name">Company Fund Share</div>
-            <div class="split-amount" id="rep-fund">₹30,000</div>
+            <div class="split-amount" id="rep-fund">₹36,674</div>
           </div>
         </div>
 
@@ -647,9 +665,15 @@
       <!-- ================= 8. SETTINGS ================= -->
       <section id="view-settings" class="view-section">
         <div class="section-header">
-          <div class="section-title-group">
-            <h1>Studio Settings</h1>
-            <p>Customize profit distribution percentages and partner settings</p>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <button class="btn-back" onclick="App.goBack()" title="Go Back">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M19 12H5m7 7l-7-7 7-7"/></svg>
+              <span>Back</span>
+            </button>
+            <div class="section-title-group">
+              <h1>Studio Settings</h1>
+              <p>Customize profit distribution percentages and partner settings</p>
+            </div>
           </div>
         </div>
 
@@ -659,7 +683,7 @@
             <span class="badge-tag" id="settings-pct-status">Sum: 100%</span>
           </div>
           <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;">
-            Set how Net Profit is divided after subtracting business expenses and partner salaries.
+            Set how Net Profit is divided after subtracting business expenses from revenue.
           </p>
 
           <form id="form-settings-percentages" onsubmit="App.savePercentages(event)">
@@ -825,9 +849,9 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
       </button>
 
-      <button class="bottom-tab" data-view="finance" onclick="App.navigateTo('income')">
+      <button class="bottom-tab" data-view="invoices" onclick="App.navigateTo('invoices')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
-        <span>Finance</span>
+        <span>Revenue & Bills</span>
       </button>
 
       <button class="bottom-tab" data-view="more" onclick="App.navigateTo('partners')">
@@ -837,6 +861,34 @@
     </nav>
 
     <!-- ================= MODALS & DRAWERS ================= -->
+
+    <!-- Notifications & Pending Hub Modal -->
+    <div id="modal-notifications" class="modal-overlay" onclick="App.closeModal(event, 'modal-notifications')">
+      <div class="modal-sheet" style="max-width: 580px;" onclick="event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title" style="display: flex; align-items: center; gap: 8px;">
+            <svg width="20" height="20" fill="none" stroke="var(--gold-primary)" stroke-width="2.2" viewBox="0 0 24 24">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+            </svg>
+            Studio Notifications & Alerts
+          </div>
+          <button class="modal-close-btn" onclick="App.closeModalDirect('modal-notifications')">✕</button>
+        </div>
+
+        <!-- Filter tabs for notifications -->
+        <div class="notif-filter-pills" id="notif-category-filter">
+          <button class="billing-tab-pill active" data-cat="all" onclick="App.filterNotifications('all')">All (<span id="notif-count-all">0</span>)</button>
+          <button class="billing-tab-pill" data-cat="work" onclick="App.filterNotifications('work')">📅 Work Dates (<span id="notif-count-work">0</span>)</button>
+          <button class="billing-tab-pill" data-cat="due" onclick="App.filterNotifications('due')">⚠️ Pending Dues (<span id="notif-count-due">0</span>)</button>
+          <button class="billing-tab-pill" data-cat="expense" onclick="App.filterNotifications('expense')">💸 Expenses (<span id="notif-count-exp">0</span>)</button>
+        </div>
+
+        <div class="notif-list" id="notifications-list-container">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+    </div>
 
     <!-- 1. Quick Add Action Hub Modal -->
     <div id="modal-quick-hub" class="modal-overlay" onclick="App.closeModal(event, 'modal-quick-hub')">
@@ -1209,7 +1261,13 @@
     <div id="modal-project-details" class="modal-overlay" onclick="App.closeModal(event, 'modal-project-details')">
       <div class="modal-sheet" onclick="event.stopPropagation()">
         <div class="modal-header">
-          <div class="modal-title" id="detail-proj-name">Project Details</div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <button class="btn-back" onclick="App.closeModalDirect('modal-project-details')" style="padding: 4px 10px; font-size: 12px; margin-right: 4px;" title="Go Back">
+              <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M19 12H5m7 7l-7-7 7-7"/></svg>
+              <span>Back</span>
+            </button>
+            <div class="modal-title" id="detail-proj-name">Project Details</div>
+          </div>
           <button class="modal-close-btn" onclick="App.closeModalDirect('modal-project-details')">✕</button>
         </div>
         <div id="detail-proj-content">

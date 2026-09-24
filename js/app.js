@@ -21,6 +21,9 @@ const App = {
   sharingReceiptData: null,
   enteredPin: '',
   authMode: 'pin',
+  navigationHistory: ['home'],
+  selectedBillingTab: 'all',
+  selectedNotifCategory: 'all',
 
   init() {
     // Check authentication
@@ -43,6 +46,20 @@ const App = {
     // Responsive resize listener for charts
     window.addEventListener('resize', () => {
       App.renderCharts();
+    });
+
+    // Browser popstate listener for back navigation
+    window.addEventListener('popstate', (e) => {
+      const openModal = document.querySelector('.modal-overlay.open');
+      if (openModal && openModal.id !== 'auth-screen') {
+        App.closeModalDirect(openModal.id);
+        return;
+      }
+      if (e.state && e.state.view) {
+        App.navigateTo(e.state.view, false);
+      } else {
+        App.navigateTo('home', false);
+      }
     });
 
     // Keyboard listener for PIN lock screen
@@ -239,7 +256,17 @@ const App = {
 
   // --- NAVIGATION ---
 
-  navigateTo(viewName) {
+  navigateTo(viewName, pushHistory = true) {
+    // If navigating to income, redirect to the unified invoices & revenue hub
+    if (viewName === 'income') viewName = 'invoices';
+
+    if (pushHistory && viewName !== this.currentView) {
+      this.navigationHistory.push(this.currentView);
+      if (window.history && window.history.pushState) {
+        window.history.pushState({ view: viewName }, '', '#' + viewName);
+      }
+    }
+
     this.currentView = viewName;
 
     // Update desktop nav buttons
@@ -251,7 +278,8 @@ const App = {
     document.querySelectorAll('.bottom-tab').forEach(tab => {
       const tabView = tab.getAttribute('data-view');
       const isActive = tabView === viewName || 
-        (tabView === 'finance' && (viewName === 'income' || viewName === 'expenses' || viewName === 'company-fund' || viewName === 'invoices')) ||
+        (tabView === 'finance' && (viewName === 'invoices' || viewName === 'expenses' || viewName === 'company-fund')) ||
+        (tabView === 'invoices' && viewName === 'invoices') ||
         (tabView === 'more' && (viewName === 'partners' || viewName === 'reports' || viewName === 'settings'));
       tab.classList.toggle('active', isActive);
     });
@@ -273,6 +301,31 @@ const App = {
         App.renderCharts();
       }
     }, 50);
+  },
+
+  goBack() {
+    // 1. If any modal or drawer is open, close it first
+    const openModals = document.querySelectorAll('.modal-overlay.open, .modal-overlay.active, .modal-overlay:not(.hidden)');
+    for (const m of openModals) {
+      if (m.id && m.id !== 'auth-screen' && m.style.display !== 'none' && window.getComputedStyle(m).display !== 'none') {
+        this.closeModalDirect(m.id);
+        return;
+      }
+    }
+
+    // 2. Pop navigation history
+    if (this.navigationHistory && this.navigationHistory.length > 0) {
+      const prev = this.navigationHistory.pop();
+      if (prev && prev !== this.currentView) {
+        this.navigateTo(prev, false);
+        return;
+      }
+    }
+
+    // 3. Fallback to home
+    if (this.currentView !== 'home') {
+      this.navigateTo('home', false);
+    }
   },
 
   setHomePeriod(period) {
@@ -1128,12 +1181,12 @@ const App = {
     this.renderHome();
     this.renderProjects();
     this.renderInvoices();
-    this.renderIncome();
     this.renderExpenses();
     this.renderPartners();
     this.renderCompanyFund();
     this.renderReports();
     this.renderSettings();
+    this.updateNotificationBadge();
   },
 
   renderHome() {
@@ -1144,11 +1197,12 @@ const App = {
 
     const financials = FinanceEngine.computeFinancials(window.dataStore.data, filter);
 
-    // Update Top 4 Metric Cards
-    document.getElementById('home-stat-income').textContent = FinanceEngine.formatINR(financials.income);
-    document.getElementById('home-stat-expenses').textContent = FinanceEngine.formatINR(financials.expenses);
-    document.getElementById('home-stat-salaries').textContent = FinanceEngine.formatINR(financials.salaries);
-    document.getElementById('home-stat-netprofit').textContent = FinanceEngine.formatINR(financials.netProfit);
+    // Update Top Metric Cards
+    if (document.getElementById('home-stat-income')) document.getElementById('home-stat-income').textContent = FinanceEngine.formatINR(financials.income);
+    if (document.getElementById('home-stat-expenses')) document.getElementById('home-stat-expenses').textContent = FinanceEngine.formatINR(financials.expenses);
+    const salEl = document.getElementById('home-stat-salaries');
+    if (salEl) salEl.textContent = FinanceEngine.formatINR(financials.salaries);
+    if (document.getElementById('home-stat-netprofit')) document.getElementById('home-stat-netprofit').textContent = FinanceEngine.formatINR(financials.netProfit);
 
     // Update Profit Split
     const p1Name = window.dataStore.data.settings.partner1Name || 'Shameem';
@@ -1349,38 +1403,322 @@ const App = {
 
   // --- INVOICES & BILLING CONTROLLER ---
 
+  setBillingTab(tab) {
+    this.selectedBillingTab = tab;
+    document.querySelectorAll('#billing-segment-pills .billing-tab-pill').forEach(btn => {
+      btn.classList.toggle('active', btn.getAttribute('data-tab') === tab);
+    });
+    this.renderInvoices();
+  },
+
   renderInvoices() {
     const listContainer = document.getElementById('invoices-list-container');
     if (!listContainer) return;
 
     const invoices = window.dataStore.data.invoices || [];
+    const income = window.dataStore.data.income || [];
+    const projects = window.dataStore.data.projects || [];
     const summary = FinanceEngine.computeInvoiceSummary(invoices);
+    const totalRevenue = income.reduce((s, i) => s + (Number(i.amount) || 0), 0);
 
     // Update KPI stat cards
+    const revEl = document.getElementById('inv-stat-revenue');
     const totalEl = document.getElementById('inv-stat-total');
     const paidEl = document.getElementById('inv-stat-paid');
     const dueEl = document.getElementById('inv-stat-due');
     const countEl = document.getElementById('inv-stat-count');
 
+    if (revEl) revEl.textContent = FinanceEngine.formatINR(totalRevenue);
     if (totalEl) totalEl.textContent = FinanceEngine.formatINR(summary.totalInvoiced);
     if (paidEl) paidEl.textContent = FinanceEngine.formatINR(summary.totalReceived);
     if (dueEl) dueEl.textContent = FinanceEngine.formatINR(summary.totalOutstanding);
-    if (countEl) countEl.textContent = `${summary.totalCount} Invoices (${summary.countPaid} Paid, ${summary.countPending + summary.countPartial} Due)`;
+    if (countEl) countEl.textContent = `${summary.totalCount} Invoices created`;
 
-    // Filter invoices
-    let filtered = invoices;
-    if (this.selectedInvoiceFilter === 'paid') {
-      filtered = invoices.filter(inv => inv.status === 'Paid' || (Number(inv.balanceDue) || 0) <= 0);
-    } else if (this.selectedInvoiceFilter === 'pending') {
-      filtered = invoices.filter(inv => inv.status !== 'Paid' && (Number(inv.balanceDue) || 0) > 0);
+    // Toggle status filter visibility: only show for 'invoices' or 'all'
+    const statusFilter = document.getElementById('invoice-status-filter');
+    if (statusFilter) {
+      statusFilter.style.display = (this.selectedBillingTab === 'invoices' || this.selectedBillingTab === 'all') ? 'flex' : 'none';
     }
 
-    if (filtered.length === 0) {
+    if (this.selectedBillingTab === 'revenue') {
+      // Render Direct Revenue records
+      if (income.length === 0) {
+        listContainer.innerHTML = `
+          <div class="empty-state">
+            No direct revenue records logged yet.<br><br>
+            <button class="btn btn-gold btn-sm" onclick="App.openModal('modal-income')">+ Add Revenue</button>
+          </div>
+        `;
+        return;
+      }
+      listContainer.innerHTML = income.map(i => `
+        <div class="transaction-item" style="margin-bottom: 8px;">
+          <div class="transaction-left">
+            <div class="tx-icon income">+</div>
+            <div>
+              <div class="tx-title">${i.projectName || 'Studio Direct Revenue'}</div>
+              <div class="tx-meta">
+                <span>${i.date}</span>
+                <span class="method-tag">${i.paymentMethod}</span>
+                ${i.clientName ? `<span>• ${i.clientName}</span>` : ''}
+                ${i.notes ? `<span>• ${i.notes}</span>` : ''}
+              </div>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+            <div class="tx-amount income">+${FinanceEngine.formatINR(i.amount)}</div>
+            <button class="btn-share-icon" onclick="App.openShareReceiptModal('${i.id}', 'payment')" title="Share Payment Receipt">
+              <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+              Receipt
+            </button>
+            <button class="edit-btn" onclick="App.openEditIncomeModal('${i.id}')" title="Edit Revenue">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+            </button>
+            <button class="delete-btn" onclick="App.deleteItem('income', '${i.id}')" title="Delete">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            </button>
+          </div>
+        </div>
+      `).join('');
+      return;
+    }
+
+    if (this.selectedBillingTab === 'pending') {
+      // Pending dues from both Invoices and Projects
+      const pendingInvoices = invoices.filter(inv => inv.status !== 'Paid' && (Number(inv.balanceDue) || 0) > 0);
+      const pendingProjects = projects.filter(p => {
+        const pkg = Number(p.packageAmount) || 0;
+        const rcv = Number(p.amountReceived) || 0;
+        return (pkg - rcv) > 0 && p.status !== 'Completed';
+      });
+
+      if (pendingInvoices.length === 0 && pendingProjects.length === 0) {
+        listContainer.innerHTML = '<div class="empty-state">🎉 No pending dues! All invoices and projects are fully settled.</div>';
+        return;
+      }
+
+      let html = '';
+      if (pendingInvoices.length > 0) {
+        html += `<h3 style="font-size: 14px; font-weight: 700; color: #fbbf24; margin: 10px 0 12px 0; display: flex; align-items: center; gap: 6px;">
+          <span>⚠️ Outstanding Invoices (${pendingInvoices.length})</span>
+        </h3>`;
+        html += pendingInvoices.map(inv => `
+          <div class="invoice-card" style="border-left: 3px solid #fbbf24;">
+            <div class="invoice-header-row">
+              <div class="invoice-num-group">
+                <span class="invoice-number-tag">${inv.invoiceNumber}</span>
+                <span class="badge-pending">Due: ${inv.dueDate || 'Immediate'}</span>
+              </div>
+              <div class="val" style="color: #fbbf24; font-weight: 800; font-size: 15px;">
+                ${FinanceEngine.formatINR(inv.balanceDue)} Due
+              </div>
+            </div>
+            <div>
+              <h3 style="font-size: 15px; font-weight: 800; color: var(--text-white); margin-bottom: 2px;">
+                ${inv.clientName}
+              </h3>
+              <div style="font-size: 12px; color: var(--text-secondary);">
+                ${inv.projectName ? `<span>Project: ${inv.projectName}</span> • ` : ''}
+                <span>Total: ${FinanceEngine.formatINR(inv.totalAmount)}</span> •
+                <span>Paid: ${FinanceEngine.formatINR(inv.paidAmount)}</span>
+              </div>
+            </div>
+            <div class="invoice-actions-row" style="margin-top: 10px;">
+              <button class="btn-whatsapp" style="padding: 6px 12px; font-size: 12px;" onclick="App.shareInvoiceWhatsApp('${inv.id}')">
+                Send WhatsApp Reminder
+              </button>
+              <div style="display: flex; gap: 8px;">
+                <button class="btn btn-outline btn-sm" onclick="App.openRecordInvoicePaymentModal('${inv.id}')">Record Payment</button>
+                <button class="btn btn-gold btn-sm" onclick="App.openInvoicePreview('${inv.id}')">View</button>
+              </div>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      if (pendingProjects.length > 0) {
+        html += `<h3 style="font-size: 14px; font-weight: 700; color: #fbbf24; margin: 18px 0 12px 0; display: flex; align-items: center; gap: 6px;">
+          <span>⚠️ Pending Project Balances (${pendingProjects.length})</span>
+        </h3>`;
+        html += pendingProjects.map(p => {
+          const pkg = Number(p.packageAmount) || 0;
+          const rcv = Number(p.amountReceived) || 0;
+          const pending = pkg - rcv;
+          return `
+            <div class="invoice-card" style="border-left: 3px solid #f87171;">
+              <div class="invoice-header-row">
+                <span class="invoice-number-tag" style="background: rgba(248, 113, 113, 0.15); color: #f87171;">PROJECT</span>
+                <div class="val" style="color: #f87171; font-weight: 800; font-size: 15px;">
+                  ${FinanceEngine.formatINR(pending)} Due
+                </div>
+              </div>
+              <div>
+                <h3 style="font-size: 15px; font-weight: 800; color: var(--text-white); margin-bottom: 2px;">
+                  ${p.name} (${p.clientName})
+                </h3>
+                <div style="font-size: 12px; color: var(--text-secondary);">
+                  <span>Package: ${FinanceEngine.formatINR(pkg)}</span> •
+                  <span>Collected: ${FinanceEngine.formatINR(rcv)}</span>
+                </div>
+              </div>
+              <div class="invoice-actions-row" style="margin-top: 10px;">
+                <button class="btn-whatsapp" style="padding: 6px 12px; font-size: 12px;" onclick="App.sendProjectWhatsAppReminder('${p.id}')">
+                  Send WhatsApp Reminder
+                </button>
+                <div style="display: flex; gap: 8px;">
+                  <button class="btn btn-outline btn-sm" onclick="App.viewProjectDetails('${p.id}')">View Project</button>
+                  <button class="btn btn-gold btn-sm" onclick="App.quickMarkPaid('${p.id}')">Mark Paid</button>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      listContainer.innerHTML = html;
+      return;
+    }
+
+    // Default 'all' or 'invoices'
+    let filteredInvoices = invoices;
+    if (this.selectedInvoiceFilter === 'paid') {
+      filteredInvoices = invoices.filter(inv => inv.status === 'Paid' || (Number(inv.balanceDue) || 0) <= 0);
+    } else if (this.selectedInvoiceFilter === 'pending') {
+      filteredInvoices = invoices.filter(inv => inv.status !== 'Paid' && (Number(inv.balanceDue) || 0) > 0);
+    }
+
+    if (this.selectedBillingTab === 'all') {
+      // In 'all', combine invoices and direct revenue records
+      let items = [
+        ...filteredInvoices.map(inv => ({ ...inv, itemKind: 'invoice', sortDate: inv.issueDate || '' })),
+        ...income.map(inc => ({ ...inc, itemKind: 'revenue', sortDate: inc.date || '' }))
+      ].sort((a, b) => new Date(b.sortDate) - new Date(a.sortDate));
+
+      if (items.length === 0) {
+        listContainer.innerHTML = '<div class="empty-state">No invoices or revenue records found. Tap "+ Create Invoice" or "+ Add Revenue" above.</div>';
+        return;
+      }
+
+      listContainer.innerHTML = items.map(item => {
+        if (item.itemKind === 'revenue') {
+          return `
+            <div class="transaction-item" style="margin-bottom: 8px;">
+              <div class="transaction-left">
+                <div class="tx-icon income">+</div>
+                <div>
+                  <div class="tx-title" style="display: flex; align-items: center; gap: 6px;">
+                    <span>${item.projectName || 'Studio Direct Revenue'}</span>
+                    <span style="font-size: 9px; padding: 2px 6px; border-radius: 4px; background: rgba(16, 185, 129, 0.2); color: #34d399; font-weight: 700;">REVENUE</span>
+                  </div>
+                  <div class="tx-meta">
+                    <span>${item.date}</span>
+                    <span class="method-tag">${item.paymentMethod}</span>
+                    ${item.clientName ? `<span>• ${item.clientName}</span>` : ''}
+                  </div>
+                </div>
+              </div>
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <div class="tx-amount income">+${FinanceEngine.formatINR(item.amount)}</div>
+                <button class="btn-share-icon" onclick="App.openShareReceiptModal('${item.id}', 'payment')" title="Share Payment Receipt">
+                  <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+                  Receipt
+                </button>
+                <button class="edit-btn" onclick="App.openEditIncomeModal('${item.id}')" title="Edit">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                </button>
+                <button class="delete-btn" onclick="App.deleteItem('income', '${item.id}')" title="Delete">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                </button>
+              </div>
+            </div>
+          `;
+        }
+
+        // Render Invoice Card
+        const inv = item;
+        const isPaid = inv.status === 'Paid' || (Number(inv.balanceDue) || 0) <= 0;
+        const isPartial = inv.status === 'Partial';
+        const badgeClass = isPaid ? 'badge-paid' : (isPartial ? 'badge-partial' : 'badge-pending');
+        const badgeText = isPaid ? 'Fully Paid' : (isPartial ? 'Partially Paid' : 'Payment Due');
+
+        return `
+          <div class="invoice-card">
+            <div class="invoice-header-row">
+              <div class="invoice-num-group">
+                <span class="invoice-number-tag">${inv.invoiceNumber}</span>
+                <span class="${badgeClass}">${badgeText}</span>
+              </div>
+              <div style="font-size: 12px; color: var(--text-secondary);">
+                Due: <strong style="color: ${isPaid ? 'var(--accent-income)' : '#fbbf24'};">${inv.dueDate}</strong>
+              </div>
+            </div>
+
+            <div>
+              <h3 style="font-size: 16px; font-weight: 800; color: var(--text-white); margin-bottom: 2px;">
+                ${inv.clientName}
+              </h3>
+              <div style="font-size: 12px; color: var(--text-secondary);">
+                ${inv.projectName ? `<span>Project: <strong>${inv.projectName}</strong></span> • ` : ''}
+                ${inv.clientPhone ? `<span>${inv.clientPhone}</span> • ` : ''}
+                <span>Issued: ${inv.issueDate}</span>
+              </div>
+            </div>
+
+            <div class="invoice-meta-grid">
+              <div class="invoice-meta-item">
+                <div class="label">Total Amount</div>
+                <div class="val">${FinanceEngine.formatINR(inv.totalAmount)}</div>
+              </div>
+              <div class="invoice-meta-item">
+                <div class="label">Amount Paid</div>
+                <div class="val" style="color: var(--accent-income);">${FinanceEngine.formatINR(inv.paidAmount)}</div>
+              </div>
+              <div class="invoice-meta-item">
+                <div class="label">Balance Due</div>
+                <div class="val" style="color: ${isPaid ? 'var(--text-muted)' : '#fbbf24'};">${FinanceEngine.formatINR(inv.balanceDue)}</div>
+              </div>
+            </div>
+
+            <div class="invoice-actions-row">
+              <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button class="btn btn-gold btn-sm" onclick="App.openInvoicePreview('${inv.id}')">
+                  <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                  View / Print
+                </button>
+                <button class="btn btn-outline btn-sm" onclick="App.openShareReceiptModal('${inv.id}', 'invoice')" style="color: var(--gold-primary); border-color: var(--gold-border);">
+                  <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+                  Share Bill
+                </button>
+                ${!isPaid ? `
+                  <button class="btn btn-outline btn-sm" onclick="App.openRecordInvoicePaymentModal('${inv.id}')" style="color: #34D399; border-color: rgba(52, 211, 153, 0.4);">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    Record Payment
+                  </button>
+                ` : ''}
+              </div>
+
+              <div style="display: flex; gap: 8px; align-items: center;">
+                <button class="btn btn-outline btn-sm" onclick="App.openEditInvoiceModal('${inv.id}')" title="Edit Invoice">
+                  Edit
+                </button>
+                <button class="delete-btn" onclick="App.deleteInvoice('${inv.id}', '${inv.invoiceNumber}')" title="Delete Invoice">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+      return;
+    }
+
+    // Invoices Tab
+    if (filteredInvoices.length === 0) {
       listContainer.innerHTML = '<div class="empty-state">No invoices found. Tap "+ Create Invoice" above to generate a client bill.</div>';
       return;
     }
 
-    listContainer.innerHTML = filtered.map(inv => {
+    listContainer.innerHTML = filteredInvoices.map(inv => {
       const isPaid = inv.status === 'Paid' || (Number(inv.balanceDue) || 0) <= 0;
       const isPartial = inv.status === 'Partial';
       const badgeClass = isPaid ? 'badge-paid' : (isPartial ? 'badge-partial' : 'badge-pending');
@@ -1427,7 +1765,7 @@ const App = {
           <div class="invoice-actions-row">
             <div style="display: flex; gap: 8px; flex-wrap: wrap;">
               <button class="btn btn-gold btn-sm" onclick="App.openInvoicePreview('${inv.id}')">
-                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                 View / Print
               </button>
               <button class="btn btn-outline btn-sm" onclick="App.openShareReceiptModal('${inv.id}', 'invoice')" style="color: var(--gold-primary); border-color: var(--gold-border);">
@@ -2363,14 +2701,12 @@ const App = {
     // Shameem
     document.getElementById('partner1-title-name').textContent = store.settings.partner1Name.toUpperCase();
     document.getElementById('p1-available').textContent = FinanceEngine.formatINR(financials.partner1.available);
-    document.getElementById('p1-salary').textContent = FinanceEngine.formatINR(financials.partner1.salary);
     document.getElementById('p1-profit').textContent = FinanceEngine.formatINR(financials.partner1.profitShare);
     document.getElementById('p1-withdrawn').textContent = FinanceEngine.formatINR(financials.partner1.withdrawn);
 
     // Shiyan
     document.getElementById('partner2-title-name').textContent = store.settings.partner2Name.toUpperCase();
     document.getElementById('p2-available').textContent = FinanceEngine.formatINR(financials.partner2.available);
-    document.getElementById('p2-salary').textContent = FinanceEngine.formatINR(financials.partner2.salary);
     document.getElementById('p2-profit').textContent = FinanceEngine.formatINR(financials.partner2.profitShare);
     document.getElementById('p2-withdrawn').textContent = FinanceEngine.formatINR(financials.partner2.withdrawn);
 
@@ -2475,7 +2811,6 @@ const App = {
 
     document.getElementById('rep-income').textContent = FinanceEngine.formatINR(financials.income);
     document.getElementById('rep-expenses').textContent = FinanceEngine.formatINR(financials.expenses);
-    document.getElementById('rep-salaries').textContent = FinanceEngine.formatINR(financials.salaries);
     document.getElementById('rep-profit').textContent = FinanceEngine.formatINR(financials.netProfit);
 
     document.getElementById('rep-shameem').textContent = FinanceEngine.formatINR(financials.distribution.partner1);
@@ -2792,6 +3127,289 @@ const App = {
     link.setAttribute('download', `lucia_finance_statement_${new Date().toISOString().split('T')[0]}.csv`);
     link.click();
     this.showToast('Statement exported to CSV ✓');
+  },
+
+  // --- NOTIFICATION & REMINDER ENGINE ---
+
+  computeNotifications() {
+    const notifications = [];
+    const { projects = [], invoices = [], expenses = [] } = window.dataStore.data;
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0];
+    const todayTime = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+
+    // 1. Work Dates / Shoot Reminders
+    projects.forEach(p => {
+      const shootDateStr = p.shootDate || p.date;
+      if (shootDateStr) {
+        const parts = shootDateStr.split('-');
+        if (parts.length === 3) {
+          const shootTime = new Date(parts[0], parts[1] - 1, parts[2]).getTime();
+          const diffDays = Math.round((shootTime - todayTime) / (1000 * 60 * 60 * 24));
+
+          if (diffDays === 0) {
+            notifications.push({
+              category: 'work',
+              severity: 'urgent',
+              iconType: 'work',
+              title: `🚨 Shoot Scheduled TODAY: ${p.projectName || p.clientName}`,
+              desc: `Client: ${p.clientName || 'N/A'} • Package: ${FinanceEngine.formatINR(p.packageAmount || 0)}`,
+              meta: `Date: Today (${shootDateStr})`,
+              tag: 'TODAY',
+              tagClass: 'today',
+              actionType: 'project',
+              actionId: p.id
+            });
+          } else if (diffDays === 1) {
+            notifications.push({
+              category: 'work',
+              severity: 'warning',
+              iconType: 'work',
+              title: `📅 Shoot TOMORROW: ${p.projectName || p.clientName}`,
+              desc: `Client: ${p.clientName || 'N/A'} • Package: ${FinanceEngine.formatINR(p.packageAmount || 0)}`,
+              meta: `Date: Tomorrow (${shootDateStr})`,
+              tag: 'TOMORROW',
+              tagClass: 'upcoming',
+              actionType: 'project',
+              actionId: p.id
+            });
+          } else if (diffDays > 1 && diffDays <= 14) {
+            notifications.push({
+              category: 'work',
+              severity: 'info',
+              iconType: 'work',
+              title: `📅 Upcoming Shoot in ${diffDays} Days: ${p.projectName || p.clientName}`,
+              desc: `Scheduled on ${shootDateStr}. Client: ${p.clientName || 'N/A'}`,
+              meta: `Shoot Date: ${shootDateStr}`,
+              tag: `In ${diffDays}d`,
+              tagClass: 'upcoming',
+              actionType: 'project',
+              actionId: p.id
+            });
+          }
+        }
+      }
+
+      if (p.status === 'Ongoing') {
+        notifications.push({
+          category: 'work',
+          severity: 'info',
+          iconType: 'work',
+          title: `🎬 Project In Progress: ${p.projectName || p.clientName}`,
+          desc: `Ongoing status • Package: ${FinanceEngine.formatINR(p.packageAmount || 0)}`,
+          meta: `Status: Ongoing`,
+          tag: 'ONGOING',
+          tagClass: 'upcoming',
+          actionType: 'project',
+          actionId: p.id
+        });
+      }
+    });
+
+    // 2. Pending Dues Reminders
+    invoices.forEach(inv => {
+      const due = Number(inv.balanceDue) || 0;
+      if (due > 0 && inv.status !== 'Paid') {
+        notifications.push({
+          category: 'due',
+          severity: 'urgent',
+          iconType: 'due',
+          title: `⚠️ Pending Bill: ${inv.clientName}`,
+          desc: `Invoice #${inv.invoiceNumber} has an outstanding balance of ${FinanceEngine.formatINR(due)}.`,
+          meta: `Due Date: ${inv.dueDate || 'Immediate'} • Total: ${FinanceEngine.formatINR(inv.totalAmount)}`,
+          tag: `${FinanceEngine.formatINR(due)} Due`,
+          tagClass: 'due',
+          actionType: 'whatsapp-invoice',
+          actionId: inv.id,
+          phone: inv.clientPhone
+        });
+      }
+    });
+
+    projects.forEach(p => {
+      const pkg = Number(p.packageAmount) || 0;
+      const rcv = Number(p.amountReceived) || 0;
+      const pending = pkg - rcv;
+      if (pending > 0 && p.status !== 'Completed') {
+        notifications.push({
+          category: 'due',
+          severity: 'warning',
+          iconType: 'due',
+          title: `⚠️ Project Balance Due: ${p.projectName || p.clientName}`,
+          desc: `${p.clientName || 'Client'} has ${FinanceEngine.formatINR(pending)} unpaid on package of ${FinanceEngine.formatINR(pkg)}.`,
+          meta: `Pending: ${FinanceEngine.formatINR(pending)} • Received: ${FinanceEngine.formatINR(rcv)}`,
+          tag: `${FinanceEngine.formatINR(pending)} Due`,
+          tagClass: 'due',
+          actionType: 'whatsapp-project',
+          actionId: p.id,
+          phone: p.clientPhone
+        });
+      }
+    });
+
+    // 3. Expenses Overview & Recent Entries
+    const currentMonthExpenses = expenses.filter(e => {
+      if (!e.date) return false;
+      const d = new Date(e.date);
+      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    });
+    const monthlyTotal = currentMonthExpenses.reduce((s, e) => s + (Number(e.amount) || 0), 0);
+
+    notifications.push({
+      category: 'expense',
+      severity: 'info',
+      iconType: 'exp',
+      title: `💸 Monthly Studio Expenses`,
+      desc: `Total ${FinanceEngine.formatINR(monthlyTotal)} recorded across ${currentMonthExpenses.length} entries this month.`,
+      meta: `Period: Current Month`,
+      tag: FinanceEngine.formatINR(monthlyTotal),
+      tagClass: 'upcoming',
+      actionType: 'navigate-expenses'
+    });
+
+    // Add recent 3 expense records
+    expenses.slice(0, 3).forEach(e => {
+      notifications.push({
+        category: 'expense',
+        severity: 'info',
+        iconType: 'exp',
+        title: `Expense: ${e.category} (${FinanceEngine.formatINR(e.amount)})`,
+        desc: `${e.date} • ${e.notes || 'Recorded studio expense'}`,
+        meta: `Category: ${e.category} • Method: ${e.paymentMethod || 'Cash'}`,
+        tag: `₹${FinanceEngine.formatINR(e.amount)}`,
+        tagClass: 'due',
+        actionType: 'navigate-expenses'
+      });
+    });
+
+    return notifications;
+  },
+
+  updateNotificationBadge() {
+    const notifs = this.computeNotifications();
+    const count = notifs.length;
+    const badge = document.getElementById('header-notif-badge');
+    if (badge) {
+      if (count > 0) {
+        badge.textContent = count > 99 ? '99+' : count;
+        badge.style.display = 'inline-block';
+      } else {
+        badge.style.display = 'none';
+      }
+    }
+
+    // Also update modal counts if modal is present
+    const cAll = document.getElementById('notif-count-all');
+    const cWork = document.getElementById('notif-count-work');
+    const cDue = document.getElementById('notif-count-due');
+    const cExp = document.getElementById('notif-count-exp');
+
+    if (cAll) cAll.textContent = count;
+    if (cWork) cWork.textContent = notifs.filter(n => n.category === 'work').length;
+    if (cDue) cDue.textContent = notifs.filter(n => n.category === 'due').length;
+    if (cExp) cExp.textContent = notifs.filter(n => n.category === 'expense').length;
+  },
+
+  openNotificationsModal() {
+    this.updateNotificationBadge();
+    this.renderNotificationsList();
+    this.openModal('modal-notifications');
+  },
+
+  filterNotifications(cat) {
+    this.selectedNotifCategory = cat;
+    document.querySelectorAll('#notif-category-filter .billing-tab-pill').forEach(btn => {
+      btn.classList.toggle('active', btn.getAttribute('data-cat') === cat);
+    });
+    this.renderNotificationsList();
+  },
+
+  renderNotificationsList() {
+    const container = document.getElementById('notifications-list-container');
+    if (!container) return;
+
+    let notifs = this.computeNotifications();
+    if (this.selectedNotifCategory && this.selectedNotifCategory !== 'all') {
+      notifs = notifs.filter(n => n.category === this.selectedNotifCategory);
+    }
+
+    if (notifs.length === 0) {
+      container.innerHTML = '<div class="empty-state" style="padding: 24px 10px;">✨ All clear! No pending notifications or alerts in this category.</div>';
+      return;
+    }
+
+    container.innerHTML = notifs.map(n => {
+      let actionBtnHtml = '';
+      if (n.actionType === 'whatsapp-invoice') {
+        actionBtnHtml = `
+          <button class="btn-whatsapp" style="padding: 6px 12px; font-size: 11px; margin-top: 8px;" onclick="App.shareInvoiceWhatsApp('${n.actionId}')">
+            <svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.007c.106.005.249-.04.39.299.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.861.174.086.275.072.376-.044.101-.116.433-.506.549-.68.116-.173.231-.144.39-.086s1.011.477 1.184.564.289.13.332.202c.045.073.045.42-.099.825z"/></svg>
+            Send WhatsApp Reminder
+          </button>
+        `;
+      } else if (n.actionType === 'whatsapp-project') {
+        actionBtnHtml = `
+          <button class="btn-whatsapp" style="padding: 6px 12px; font-size: 11px; margin-top: 8px;" onclick="App.sendProjectWhatsAppReminder('${n.actionId}')">
+            <svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.007c.106.005.249-.04.39.299.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.861.174.086.275.072.376-.044.101-.116.433-.506.549-.68.116-.173.231-.144.39-.086s1.011.477 1.184.564.289.13.332.202c.045.073.045.42-.099.825z"/></svg>
+            Send WhatsApp Reminder
+          </button>
+        `;
+      } else if (n.actionType === 'project') {
+        actionBtnHtml = `
+          <button class="btn btn-outline btn-sm" style="padding: 4px 10px; font-size: 11px; margin-top: 6px;" onclick="App.closeModalDirect('modal-notifications'); App.viewProjectDetails('${n.actionId}')">
+            View Project
+          </button>
+        `;
+      } else if (n.actionType === 'navigate-expenses') {
+        actionBtnHtml = `
+          <button class="btn btn-outline btn-sm" style="padding: 4px 10px; font-size: 11px; margin-top: 6px;" onclick="App.closeModalDirect('modal-notifications'); App.navigateTo('expenses')">
+            Open Expenses
+          </button>
+        `;
+      }
+
+      return `
+        <div class="notif-card ${n.severity}">
+          <div class="notif-icon-box notif-icon-${n.iconType}">
+            ${n.iconType === 'work' ? '📅' : (n.iconType === 'due' ? '⚠️' : '💸')}
+          </div>
+          <div class="notif-card-body">
+            <div class="notif-card-title">
+              <span>${n.title}</span>
+              <span class="notif-badge-tag ${n.tagClass}">${n.tag}</span>
+            </div>
+            <div class="notif-card-desc">${n.desc}</div>
+            <div class="notif-card-meta">
+              <span>${n.meta}</span>
+            </div>
+            ${actionBtnHtml}
+          </div>
+        </div>
+      `;
+    }).join('');
+  },
+
+  sendProjectWhatsAppReminder(projectId) {
+    const proj = (window.dataStore.data.projects || []).find(p => p.id === projectId);
+    if (!proj) return;
+    const pending = (Number(proj.packageAmount) || 0) - (Number(proj.amountReceived) || 0);
+    const billing = window.dataStore.data.settings?.billing || { studioName: 'LUCIA PHOTOGRAPHY & VIDEOGRAPHY' };
+    const text = `*${billing.studioName}* 📸✨\n` +
+      `Hello ${proj.clientName},\n` +
+      `This is a gentle payment reminder regarding *${proj.projectName || proj.name}*.\n` +
+      `Total Package: ${FinanceEngine.formatINR(proj.packageAmount)}\n` +
+      `Amount Received: ${FinanceEngine.formatINR(proj.amountReceived)}\n` +
+      `*Outstanding Balance: ${FinanceEngine.formatINR(pending)}*\n` +
+      `Kindly settle at your earliest convenience. Thank you!`;
+
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text);
+      this.showToast('Reminder copied! Opening WhatsApp...');
+    }
+
+    let cleanPhone = (proj.clientPhone || '').replace(/[^0-9]/g, '');
+    if (cleanPhone.length === 10) cleanPhone = '91' + cleanPhone;
+    window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`, '_blank');
   }
 };
 

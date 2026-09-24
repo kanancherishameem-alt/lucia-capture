@@ -30,8 +30,6 @@ function getDefaultData() {
         partner2: 33.33,
         companyFund: 33.34
       },
-      partner1MonthlySalary: 10000,
-      partner2MonthlySalary: 10000,
       initialCompanyFundBalance: 185000, // With fund uses (₹95,000) and net profit share (₹30,000), total balance = ₹1,20,000
       security: {
         enabled: true,
@@ -226,47 +224,7 @@ function getDefaultData() {
       }
     ],
 
-    // Partner Salaries (Total for this month = ₹20,000)
-    // Shameem = ₹10,000, Shiyan = ₹10,000
-    // Total all-time recorded base salary for partners is ₹20,000 each (matching the prompt's partner card display)
-    partnerSalaries: [
-      {
-        id: 'sal-1',
-        partnerId: 'partner1',
-        partnerName: 'Shameem',
-        amount: 10000,
-        date: `${monthPrefix}-01`,
-        paymentMethod: 'Bank',
-        notes: 'Current month basic salary draw'
-      },
-      {
-        id: 'sal-2',
-        partnerId: 'partner2',
-        partnerName: 'Shiyan',
-        amount: 10000,
-        date: `${monthPrefix}-01`,
-        paymentMethod: 'Bank',
-        notes: 'Current month basic salary draw'
-      },
-      {
-        id: 'sal-3',
-        partnerId: 'partner1',
-        partnerName: 'Shameem',
-        amount: 10000,
-        date: `${currentYear}-01-01`,
-        paymentMethod: 'Bank',
-        notes: 'Previous salary credit'
-      },
-      {
-        id: 'sal-4',
-        partnerId: 'partner2',
-        partnerName: 'Shiyan',
-        amount: 10000,
-        date: `${currentYear}-01-01`,
-        paymentMethod: 'Bank',
-        notes: 'Previous salary credit'
-      }
-    ],
+    partnerSalaries: [],
 
     // Partner Withdrawals (Separate from Salary)
     // Shameem Withdrawn = ₹10,000
@@ -932,8 +890,7 @@ class DataStore {
     // Calculate current net profit share for company fund
     const allTimeIncome = (this.data.income || []).reduce((sum, i) => sum + (Number(i.amount) || 0), 0);
     const allTimeExpenses = (this.data.expenses || []).reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
-    const allTimeSalaries = (this.data.partnerSalaries || []).reduce((sum, s) => sum + (Number(s.amount) || 0), 0);
-    const allTimeNetProfit = FinanceEngine.calculateNetProfit(allTimeIncome, allTimeExpenses, allTimeSalaries);
+    const allTimeNetProfit = FinanceEngine.calculateNetProfit(allTimeIncome, allTimeExpenses);
     const allTimeDist = FinanceEngine.distributeProfit(allTimeNetProfit, this.data.settings.profitPercentages);
     
     // Set initial balance so that initialBalance + companyFundProfitShare = targetBalance
