@@ -359,15 +359,19 @@ const App = {
       // Reset form and reset title/button if opening fresh (not in edit mode)
       if (modalId === 'modal-income' && !this.editingIncomeId) {
         document.getElementById('form-income')?.reset();
+        const editId = document.getElementById('inc-edit-id');
+        if (editId) editId.value = '';
         const dateEl = document.getElementById('inc-date');
         if (dateEl) dateEl.value = new Date().toISOString().split('T')[0];
         const titleEl = document.getElementById('modal-income-title');
-        if (titleEl) titleEl.textContent = 'Add Revenue';
+        if (titleEl) titleEl.innerHTML = `<svg width="20" height="20" fill="none" stroke="var(--gold-primary)" stroke-width="2.2" viewBox="0 0 24 24" style="vertical-align: middle; margin-right: 6px;"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Record Revenue & Client Bill`;
         const btnEl = document.getElementById('btn-save-income');
-        if (btnEl) btnEl.textContent = 'Save Revenue';
+        if (btnEl) btnEl.textContent = 'Save Revenue & Bill';
         const delBtn = document.getElementById('btn-delete-income');
         if (delBtn) delBtn.style.display = 'none';
         this.selectPaymentMethod('inc', 'UPI');
+        this.populateIncomeProjectDropdown();
+        this.updateIncomeLiveBalance();
       } else if (modalId === 'modal-expense' && !this.editingExpenseId) {
         document.getElementById('form-expense')?.reset();
         const dateEl = document.getElementById('exp-date');
@@ -490,15 +494,74 @@ const App = {
     this.openModal('modal-fund');
   },
 
+  openAddIncomeModal(projectId = null) {
+    this.editingIncomeId = null;
+    document.getElementById('form-income')?.reset();
+    const editId = document.getElementById('inc-edit-id');
+    if (editId) editId.value = '';
+
+    const dateEl = document.getElementById('inc-date');
+    if (dateEl) dateEl.value = new Date().toISOString().split('T')[0];
+
+    const titleEl = document.getElementById('modal-income-title');
+    if (titleEl) titleEl.innerHTML = `<svg width="20" height="20" fill="none" stroke="var(--gold-primary)" stroke-width="2.2" viewBox="0 0 24 24" style="vertical-align: middle; margin-right: 6px;"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Record Revenue & Client Bill`;
+
+    const btnEl = document.getElementById('btn-save-income');
+    if (btnEl) btnEl.textContent = 'Save Revenue & Bill';
+
+    const delBtn = document.getElementById('btn-delete-income');
+    if (delBtn) delBtn.style.display = 'none';
+
+    this.selectPaymentMethod('inc', 'UPI');
+    this.populateIncomeProjectDropdown(projectId);
+
+    if (projectId) {
+      const proj = (window.dataStore.data.projects || []).find(p => p.id === projectId);
+      if (proj) {
+        const clientInp = document.getElementById('inc-client-name');
+        if (clientInp) clientInp.value = proj.clientName || '';
+        const phoneInp = document.getElementById('inc-client-phone');
+        if (phoneInp) phoneInp.value = proj.clientPhone || '';
+        const projNameInp = document.getElementById('inc-project-name');
+        if (projNameInp) projNameInp.value = proj.name || '';
+        const totalInp = document.getElementById('inc-total-amount');
+        if (totalInp) totalInp.value = proj.packageAmount || 0;
+        const amtInp = document.getElementById('inc-amount');
+        const pending = Math.max(0, (Number(proj.packageAmount) || 0) - (Number(proj.receivedAmount) || 0));
+        if (amtInp) amtInp.value = pending > 0 ? pending : (proj.packageAmount || 0);
+      }
+    }
+    this.updateIncomeLiveBalance();
+    this.openModal('modal-income');
+  },
+
   openEditIncomeModal(id) {
     const inc = (window.dataStore.data.income || []).find(i => i.id === id);
     if (!inc) return;
 
     this.editingIncomeId = id;
-    this.populateIncomeProjectDropdown();
+    this.populateIncomeProjectDropdown(inc.projectId);
+
+    const editId = document.getElementById('inc-edit-id');
+    if (editId) editId.value = inc.id;
 
     const projSel = document.getElementById('inc-project');
     if (projSel) projSel.value = inc.projectId || '';
+
+    const clientInp = document.getElementById('inc-client-name');
+    if (clientInp) clientInp.value = inc.clientName || '';
+
+    const phoneInp = document.getElementById('inc-client-phone');
+    if (phoneInp) phoneInp.value = inc.clientPhone || '';
+
+    const projNameInp = document.getElementById('inc-project-name');
+    if (projNameInp) projNameInp.value = inc.projectName || '';
+
+    const catSel = document.getElementById('inc-category');
+    if (catSel) catSel.value = inc.category || 'Wedding Shoot';
+
+    const totalInp = document.getElementById('inc-total-amount');
+    if (totalInp) totalInp.value = inc.totalAmount !== undefined ? inc.totalAmount : inc.amount;
 
     const amtInp = document.getElementById('inc-amount');
     if (amtInp) amtInp.value = inc.amount;
@@ -512,13 +575,15 @@ const App = {
     this.selectPaymentMethod('inc', inc.paymentMethod || 'UPI');
 
     const titleEl = document.getElementById('modal-income-title');
-    if (titleEl) titleEl.textContent = 'Edit Revenue Record';
+    if (titleEl) titleEl.innerHTML = `<svg width="20" height="20" fill="none" stroke="var(--gold-primary)" stroke-width="2.2" viewBox="0 0 24 24" style="vertical-align: middle; margin-right: 6px;"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Edit Revenue & Bill Record`;
 
     const btnEl = document.getElementById('btn-save-income');
-    if (btnEl) btnEl.textContent = 'Update Revenue';
+    if (btnEl) btnEl.textContent = 'Update Revenue & Bill';
 
     const delBtn = document.getElementById('btn-delete-income');
     if (delBtn) delBtn.style.display = 'inline-flex';
+
+    this.updateIncomeLiveBalance();
 
     const modal = document.getElementById('modal-income');
     if (modal) {
@@ -833,16 +898,17 @@ const App = {
 
   // --- POPULATE DROPDOWNS ---
 
-  populateIncomeProjectDropdown() {
+  populateIncomeProjectDropdown(selectedProjectId = null) {
     const select = document.getElementById('inc-project');
     if (!select) return;
     const projects = window.dataStore.data.projects || [];
 
-    let options = '<option value="">-- Direct Studio Revenue (No Project) --</option>';
+    let options = '<option value="">-- Direct Client Bill / Custom Event --</option>';
     projects.forEach(p => {
-      const pending = Math.max(0, p.packageAmount - p.receivedAmount);
+      const pending = Math.max(0, (Number(p.packageAmount) || 0) - (Number(p.receivedAmount) || 0));
       const pendingTxt = pending > 0 ? ` (Pending: ₹${pending.toLocaleString('en-IN')})` : ' (Fully Paid)';
-      options += `<option value="${p.id}">${p.name} - ${p.clientName}${pendingTxt}</option>`;
+      const isSel = p.id === selectedProjectId ? 'selected' : '';
+      options += `<option value="${p.id}" ${isSel} data-client="${(p.clientName || '').replace(/"/g, '&quot;')}" data-phone="${(p.clientPhone || '').replace(/"/g, '&quot;')}" data-name="${(p.name || '').replace(/"/g, '&quot;')}" data-package="${p.packageAmount || 0}" data-pending="${pending}">${p.name} - ${p.clientName}${pendingTxt}</option>`;
     });
     select.innerHTML = options;
   },
@@ -879,7 +945,73 @@ const App = {
   },
 
   handleIncomeProjectChange() {
-    // optional helper
+    const select = document.getElementById('inc-project');
+    if (!select) return;
+    const projectId = select.value;
+    if (!projectId) return;
+
+    const opt = select.options[select.selectedIndex];
+    if (!opt) return;
+
+    const client = opt.getAttribute('data-client') || '';
+    const phone = opt.getAttribute('data-phone') || '';
+    const projName = opt.getAttribute('data-name') || '';
+    const pkg = Number(opt.getAttribute('data-package')) || 0;
+    const pending = Number(opt.getAttribute('data-pending')) || 0;
+
+    const clientInp = document.getElementById('inc-client-name');
+    if (clientInp && (!clientInp.value || clientInp.value === 'Studio Client' || clientInp.value === 'Direct Client')) {
+      clientInp.value = client;
+    } else if (clientInp && !clientInp.value) {
+      clientInp.value = client;
+    }
+
+    const phoneInp = document.getElementById('inc-client-phone');
+    if (phoneInp && !phoneInp.value) phoneInp.value = phone;
+
+    const projNameInp = document.getElementById('inc-project-name');
+    if (projNameInp && !projNameInp.value) projNameInp.value = projName;
+
+    const totalInp = document.getElementById('inc-total-amount');
+    if (totalInp && (!totalInp.value || totalInp.value === '0')) totalInp.value = pkg;
+
+    const amtInp = document.getElementById('inc-amount');
+    if (amtInp && (!amtInp.value || amtInp.value === '0')) amtInp.value = pending > 0 ? pending : pkg;
+
+    this.updateIncomeLiveBalance();
+  },
+
+  updateIncomeLiveBalance() {
+    const totalInp = document.getElementById('inc-total-amount');
+    const amtInp = document.getElementById('inc-amount');
+    const totalPrev = document.getElementById('inc-preview-total');
+    const recPrev = document.getElementById('inc-preview-received');
+    const tagPrev = document.getElementById('inc-preview-balance-tag');
+
+    const total = totalInp ? FinanceEngine.parseINR(totalInp.value) || 0 : 0;
+    const received = amtInp ? FinanceEngine.parseINR(amtInp.value) || 0 : 0;
+    const balance = Math.max(0, total - received);
+
+    if (totalPrev) totalPrev.textContent = FinanceEngine.formatINR(total);
+    if (recPrev) recPrev.textContent = FinanceEngine.formatINR(received);
+    if (tagPrev) {
+      if (balance <= 0 && total > 0) {
+        tagPrev.style.background = 'rgba(16, 185, 129, 0.15)';
+        tagPrev.style.color = '#34d399';
+        tagPrev.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+        tagPrev.textContent = 'Fully Settled ✓';
+      } else if (balance > 0) {
+        tagPrev.style.background = 'rgba(251, 191, 36, 0.15)';
+        tagPrev.style.color = '#fbbf24';
+        tagPrev.style.borderColor = 'rgba(251, 191, 36, 0.3)';
+        tagPrev.textContent = `${FinanceEngine.formatINR(balance)} Due`;
+      } else {
+        tagPrev.style.background = 'rgba(255, 255, 255, 0.05)';
+        tagPrev.style.color = 'var(--text-muted)';
+        tagPrev.style.borderColor = 'transparent';
+        tagPrev.textContent = '₹0 Due';
+      }
+    }
   },
 
   handlePayProjectSelected() {
@@ -900,63 +1032,155 @@ const App = {
 
   // --- FORM HANDLERS ---
 
-  handleSaveIncome(e) {
-    e.preventDefault();
+  handleSaveIncome(e, andShareWhatsApp = false) {
+    if (e && e.preventDefault) e.preventDefault();
     const projSelect = document.getElementById('inc-project');
-    const projectId = projSelect.value;
-    let projectName = 'Direct Studio Revenue';
-    let clientName = '';
+    const projectId = projSelect ? projSelect.value : '';
+
+    let clientName = (document.getElementById('inc-client-name')?.value || '').trim();
+    const clientPhone = (document.getElementById('inc-client-phone')?.value || '').trim();
+    let projectName = (document.getElementById('inc-project-name')?.value || '').trim();
+    const category = document.getElementById('inc-category')?.value || 'Wedding Shoot';
 
     if (projectId) {
       const proj = window.dataStore.data.projects.find(p => p.id === projectId);
       if (proj) {
-        projectName = proj.name;
-        clientName = proj.clientName;
+        if (!projectName) projectName = proj.name;
+        if (!clientName) clientName = proj.clientName;
       }
     }
 
-    const amount = FinanceEngine.parseINR(document.getElementById('inc-amount').value);
-    const date = document.getElementById('inc-date').value;
-    const paymentMethod = document.getElementById('inc-method').value || 'UPI';
-    const notes = document.getElementById('inc-notes').value;
+    if (!clientName) {
+      this.showToast('⚠️ Please enter the Client Name');
+      return;
+    }
+    if (!projectName) {
+      projectName = `${clientName} Shoot`;
+    }
 
-    if (!amount || amount <= 0) {
-      this.showToast('⚠️ Please enter a valid revenue amount');
+    const totalAmount = FinanceEngine.parseINR(document.getElementById('inc-total-amount')?.value) || 0;
+    const amount = FinanceEngine.parseINR(document.getElementById('inc-amount')?.value) || 0;
+    const date = document.getElementById('inc-date')?.value || new Date().toISOString().split('T')[0];
+    const paymentMethod = document.getElementById('inc-method')?.value || 'UPI';
+    const notes = (document.getElementById('inc-notes')?.value || '').trim();
+
+    if (amount <= 0) {
+      this.showToast('⚠️ Please enter a valid received amount');
       return;
     }
 
+    const finalTotal = totalAmount > 0 ? totalAmount : amount;
+    const balanceDue = Math.max(0, finalTotal - amount);
+
+    let savedId = null;
+
     if (this.editingIncomeId) {
+      savedId = this.editingIncomeId;
       window.dataStore.updateIncome(this.editingIncomeId, {
         projectId: projectId || null,
         projectName,
         clientName,
+        clientPhone,
+        category,
+        totalAmount: finalTotal,
         amount,
+        balanceDue,
         date,
         paymentMethod,
         notes
       });
       this.editingIncomeId = null;
-      e.target.reset();
+      document.getElementById('form-income')?.reset();
       this.closeModalDirect('modal-income');
-      this.showToast('Revenue record updated ✓');
+      this.showToast('Revenue & Bill updated ✓');
       if (projectId && document.getElementById('modal-project-details')?.classList.contains('open')) {
         this.viewProjectDetails(projectId);
       }
     } else {
-      window.dataStore.addIncome({
-        projectId,
+      const newInc = window.dataStore.addIncome({
+        projectId: projectId || null,
         projectName,
         clientName,
+        clientPhone,
+        category,
+        totalAmount: finalTotal,
         amount,
+        balanceDue,
         date,
         paymentMethod,
         notes
       });
-      e.target.reset();
-      document.getElementById('inc-date').value = new Date().toISOString().split('T')[0];
+      savedId = newInc?.id;
+      document.getElementById('form-income')?.reset();
+      const dateEl = document.getElementById('inc-date');
+      if (dateEl) dateEl.value = new Date().toISOString().split('T')[0];
       this.closeModalDirect('modal-income');
-      this.showToast('Revenue added successfully ✓');
+      this.showToast('Revenue & Bill saved successfully ✓');
     }
+
+    if (andShareWhatsApp && savedId) {
+      setTimeout(() => {
+        this.shareRevenueWhatsApp(savedId);
+      }, 200);
+    }
+  },
+
+  handleSaveAndShareWhatsAppIncome(e) {
+    this.handleSaveIncome(e, true);
+  },
+
+  shareRevenueWhatsApp(incomeId) {
+    const inc = (window.dataStore.data.income || []).find(i => i.id === incomeId);
+    if (!inc) return;
+
+    const billing = window.dataStore.data.settings?.billing || {
+      studioName: 'LUCIA PHOTOGRAPHY & VIDEOGRAPHY',
+      upiId: 'lucia@okaxis'
+    };
+
+    const clientName = inc.clientName || 'Valued Client';
+    const total = (inc.totalAmount !== undefined && inc.totalAmount !== null && inc.totalAmount > 0)
+      ? Number(inc.totalAmount)
+      : Number(inc.amount);
+    const received = Number(inc.amount) || 0;
+    const balance = (inc.balanceDue !== undefined && inc.balanceDue !== null)
+      ? Number(inc.balanceDue)
+      : Math.max(0, total - received);
+    const refNo = `REC-${inc.id.slice(-6).toUpperCase()}`;
+
+    let statusLine = balance > 0 
+      ? `*Balance Due: ${FinanceEngine.formatINR(balance)}*`
+      : `*Status: Fully Settled ✅*`;
+
+    const text = `*${billing.studioName}* 📸✨\n` +
+      `*PAYMENT & BILL RECEIPT: ${refNo}*\n` +
+      `---------------------------\n` +
+      `Client: ${clientName}\n` +
+      (inc.projectName ? `Project: ${inc.projectName}\n` : '') +
+      (inc.category ? `Category: ${inc.category}\n` : '') +
+      `Date: ${inc.date}\n` +
+      `Payment Mode: ${inc.paymentMethod || 'UPI'}\n` +
+      `---------------------------\n` +
+      `Total Package: ${FinanceEngine.formatINR(total)}\n` +
+      `Amount Received: ${FinanceEngine.formatINR(received)}\n` +
+      `${statusLine}\n` +
+      `---------------------------\n` +
+      (balance > 0 ? `Pay remaining via UPI: ${billing.upiId}\n` : '') +
+      `Thank you for choosing ${billing.studioName}!`;
+
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text);
+      this.showToast('Bill summary copied! Opening WhatsApp...');
+    }
+
+    let cleanPhone = (inc.clientPhone || '').replace(/[^0-9]/g, '');
+    if (cleanPhone.length === 10) {
+      cleanPhone = '91' + cleanPhone;
+    }
+    const url = cleanPhone 
+      ? `https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`
+      : `https://wa.me/?text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank');
   },
 
   handleSaveExpense(e) {
@@ -1662,9 +1886,13 @@ const App = {
   // --- INVOICES & BILLING CONTROLLER ---
 
   setBillingTab(tab) {
-    this.selectedBillingTab = tab;
-    document.querySelectorAll('#billing-segment-pills .billing-tab-pill').forEach(btn => {
-      btn.classList.toggle('active', btn.getAttribute('data-tab') === tab);
+    this.filterInvoices(tab === 'revenue' ? 'all' : (tab === 'pending' ? 'pending' : 'all'));
+  },
+
+  filterInvoices(status) {
+    this.selectedInvoiceFilter = status || 'all';
+    document.querySelectorAll('#invoice-status-filter .pill-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.getAttribute('data-status') === this.selectedInvoiceFilter);
     });
     this.renderInvoices();
   },
@@ -1673,378 +1901,158 @@ const App = {
     const listContainer = document.getElementById('invoices-list-container');
     if (!listContainer) return;
 
-    const invoices = window.dataStore.data.invoices || [];
     const income = window.dataStore.data.income || [];
     const projects = window.dataStore.data.projects || [];
-    const summary = FinanceEngine.computeInvoiceSummary(invoices);
-    const totalRevenue = income.reduce((s, i) => s + (Number(i.amount) || 0), 0);
+
+    // KPI Metrics calculation
+    const totalCollected = income.reduce((sum, i) => sum + (Number(i.amount) || 0), 0);
+    const totalBilled = income.reduce((sum, i) => {
+      const tot = (i.totalAmount !== undefined && i.totalAmount !== null && i.totalAmount > 0)
+        ? Number(i.totalAmount)
+        : Number(i.amount) || 0;
+      return sum + tot;
+    }, 0);
+
+    const totalIncomeDue = income.reduce((sum, i) => {
+      const tot = (i.totalAmount !== undefined && i.totalAmount !== null && i.totalAmount > 0)
+        ? Number(i.totalAmount)
+        : Number(i.amount) || 0;
+      const rcv = Number(i.amount) || 0;
+      const due = (i.balanceDue !== undefined && i.balanceDue !== null)
+        ? Number(i.balanceDue)
+        : Math.max(0, tot - rcv);
+      return sum + due;
+    }, 0);
+
+    // Unbilled project dues
+    const pendingProjects = projects.filter(p => {
+      if (p.status === 'Completed') return false;
+      const pkg = Number(p.packageAmount) || 0;
+      const rcv = Number(p.receivedAmount) || 0;
+      return (pkg - rcv) > 0;
+    });
+    const unbilledProjectDue = pendingProjects.reduce((sum, p) => {
+      const pkg = Number(p.packageAmount) || 0;
+      const rcv = Number(p.receivedAmount) || 0;
+      return sum + Math.max(0, pkg - rcv);
+    }, 0);
+
+    const grandDue = totalIncomeDue + unbilledProjectDue;
 
     // Update KPI stat cards
     const revEl = document.getElementById('inv-stat-revenue');
     const totalEl = document.getElementById('inv-stat-total');
-    const paidEl = document.getElementById('inv-stat-paid');
     const dueEl = document.getElementById('inv-stat-due');
     const countEl = document.getElementById('inv-stat-count');
 
-    if (revEl) revEl.textContent = FinanceEngine.formatINR(totalRevenue);
-    if (totalEl) totalEl.textContent = FinanceEngine.formatINR(summary.totalInvoiced);
-    if (paidEl) paidEl.textContent = FinanceEngine.formatINR(summary.totalReceived);
-    if (dueEl) dueEl.textContent = FinanceEngine.formatINR(summary.totalOutstanding);
-    if (countEl) countEl.textContent = `${summary.totalCount} Invoices created`;
+    if (revEl) revEl.textContent = FinanceEngine.formatINR(totalCollected);
+    if (totalEl) totalEl.textContent = FinanceEngine.formatINR(totalBilled);
+    if (dueEl) dueEl.textContent = FinanceEngine.formatINR(grandDue);
+    if (countEl) countEl.textContent = `${income.length} Records`;
 
-    // Toggle status filter visibility: only show for 'invoices' or 'all'
-    const statusFilter = document.getElementById('invoice-status-filter');
-    if (statusFilter) {
-      statusFilter.style.display = (this.selectedBillingTab === 'invoices' || this.selectedBillingTab === 'all') ? 'flex' : 'none';
-    }
+    const filter = this.selectedInvoiceFilter || 'all';
 
-    if (this.selectedBillingTab === 'revenue') {
-      // Render Direct Revenue records
-      if (income.length === 0) {
-        listContainer.innerHTML = `
-          <div class="empty-state">
-            No direct revenue records logged yet.<br><br>
-            <button class="btn btn-gold btn-sm" onclick="App.openModal('modal-income')">+ Add Revenue</button>
-          </div>
-        `;
-        return;
-      }
-      listContainer.innerHTML = income.map(i => `
-        <div class="transaction-item" style="margin-bottom: 8px;">
-          <div class="transaction-left">
-            <div class="tx-icon income">+</div>
-            <div>
-              <div class="tx-title">${i.projectName || 'Studio Direct Revenue'}</div>
-              <div class="tx-meta">
-                <span>${i.date}</span>
-                <span class="method-tag">${i.paymentMethod}</span>
-                ${i.clientName ? `<span>• ${i.clientName}</span>` : ''}
-                ${i.notes ? `<span>• ${i.notes}</span>` : ''}
-              </div>
-            </div>
-          </div>
-          <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-            <div class="tx-amount income">+${FinanceEngine.formatINR(i.amount)}</div>
-            <button class="btn-share-icon" onclick="App.openShareReceiptModal('${i.id}', 'payment')" title="Share Payment Receipt">
-              <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
-              Receipt
-            </button>
-            <button class="edit-btn" onclick="App.openEditIncomeModal('${i.id}')" title="Edit Revenue">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-            </button>
-            <button class="delete-btn" onclick="event.stopPropagation(); App.confirmDelete('income', '${i.id}')" title="Delete">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-            </button>
-          </div>
-        </div>
-      `).join('');
-      return;
-    }
-
-    if (this.selectedBillingTab === 'pending') {
-      // Pending dues from both Invoices and Projects
-      const pendingInvoices = invoices.filter(inv => inv.status !== 'Paid' && (Number(inv.balanceDue) || 0) > 0);
-      const pendingProjects = projects.filter(p => {
-        const pkg = Number(p.packageAmount) || 0;
-        const rcv = Number(p.amountReceived) || 0;
-        return (pkg - rcv) > 0 && p.status !== 'Completed';
+    let filtered = income;
+    if (filter === 'pending') {
+      filtered = income.filter(i => {
+        const tot = (i.totalAmount !== undefined && i.totalAmount !== null && i.totalAmount > 0) ? Number(i.totalAmount) : Number(i.amount);
+        const due = (i.balanceDue !== undefined && i.balanceDue !== null) ? Number(i.balanceDue) : Math.max(0, tot - (Number(i.amount) || 0));
+        return due > 0;
       });
+    } else if (filter === 'paid') {
+      filtered = income.filter(i => {
+        const tot = (i.totalAmount !== undefined && i.totalAmount !== null && i.totalAmount > 0) ? Number(i.totalAmount) : Number(i.amount);
+        const due = (i.balanceDue !== undefined && i.balanceDue !== null) ? Number(i.balanceDue) : Math.max(0, tot - (Number(i.amount) || 0));
+        return due <= 0;
+      });
+    } else if (filter === 'UPI' || filter === 'Cash' || filter === 'Bank') {
+      filtered = income.filter(i => (i.paymentMethod || 'UPI') === filter);
+    }
 
-      if (pendingInvoices.length === 0 && pendingProjects.length === 0) {
-        listContainer.innerHTML = '<div class="empty-state">🎉 No pending dues! All invoices and projects are fully settled.</div>';
-        return;
-      }
-
-      let html = '';
-      if (pendingInvoices.length > 0) {
-        html += `<h3 style="font-size: 14px; font-weight: 700; color: #fbbf24; margin: 10px 0 12px 0; display: flex; align-items: center; gap: 6px;">
-          <span>⚠️ Outstanding Invoices (${pendingInvoices.length})</span>
-        </h3>`;
-        html += pendingInvoices.map(inv => `
-          <div class="invoice-card" style="border-left: 3px solid #fbbf24;">
-            <div class="invoice-header-row">
-              <div class="invoice-num-group">
-                <span class="invoice-number-tag">${inv.invoiceNumber}</span>
-                <span class="badge-pending">Due: ${inv.dueDate || 'Immediate'}</span>
-              </div>
-              <div class="val" style="color: #fbbf24; font-weight: 800; font-size: 15px;">
-                ${FinanceEngine.formatINR(inv.balanceDue)} Due
-              </div>
-            </div>
-            <div>
-              <h3 style="font-size: 15px; font-weight: 800; color: var(--text-white); margin-bottom: 2px;">
-                ${inv.clientName}
-              </h3>
-              <div style="font-size: 12px; color: var(--text-secondary);">
-                ${inv.projectName ? `<span>Project: ${inv.projectName}</span> • ` : ''}
-                <span>Total: ${FinanceEngine.formatINR(inv.totalAmount)}</span> •
-                <span>Paid: ${FinanceEngine.formatINR(inv.paidAmount)}</span>
-              </div>
-            </div>
-            <div class="invoice-actions-row" style="margin-top: 10px;">
-              <button class="btn-whatsapp" style="padding: 6px 12px; font-size: 12px;" onclick="App.shareInvoiceWhatsApp('${inv.id}')">
-                Send WhatsApp Reminder
-              </button>
-              <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                <button class="btn btn-outline btn-sm" onclick="App.openEditInvoiceModal('${inv.id}')" title="Edit Invoice Details">Edit</button>
-                <button class="btn btn-outline btn-sm" onclick="App.openRecordInvoicePaymentModal('${inv.id}')">Record Payment</button>
-                <button class="btn btn-gold btn-sm" onclick="App.openInvoicePreview('${inv.id}')">View</button>
-              </div>
-            </div>
-          </div>
-        `).join('');
-      }
-
-      if (pendingProjects.length > 0) {
-        html += `<h3 style="font-size: 14px; font-weight: 700; color: #fbbf24; margin: 18px 0 12px 0; display: flex; align-items: center; gap: 6px;">
-          <span>⚠️ Pending Project Balances (${pendingProjects.length})</span>
-        </h3>`;
-        html += pendingProjects.map(p => {
-          const pkg = Number(p.packageAmount) || 0;
-          const rcv = Number(p.amountReceived) || 0;
-          const pending = pkg - rcv;
-          return `
-            <div class="invoice-card" style="border-left: 3px solid #f87171;">
-              <div class="invoice-header-row">
-                <span class="invoice-number-tag" style="background: rgba(248, 113, 113, 0.15); color: #f87171;">PROJECT</span>
-                <div class="val" style="color: #f87171; font-weight: 800; font-size: 15px;">
-                  ${FinanceEngine.formatINR(pending)} Due
-                </div>
-              </div>
-              <div>
-                <h3 style="font-size: 15px; font-weight: 800; color: var(--text-white); margin-bottom: 2px;">
-                  ${p.name} (${p.clientName})
-                </h3>
-                <div style="font-size: 12px; color: var(--text-secondary);">
-                  <span>Package: ${FinanceEngine.formatINR(pkg)}</span> •
-                  <span>Collected: ${FinanceEngine.formatINR(rcv)}</span>
-                </div>
-              </div>
-              <div class="invoice-actions-row" style="margin-top: 10px;">
-                <button class="btn-whatsapp" style="padding: 6px 12px; font-size: 12px;" onclick="App.sendProjectWhatsAppReminder('${p.id}')">
-                  Send WhatsApp Reminder
-                </button>
-                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                  <button class="btn btn-outline btn-sm" onclick="App.openEditProjectModal('${p.id}')" title="Edit Project Details">Edit</button>
-                  <button class="btn btn-outline btn-sm" onclick="App.viewProjectDetails('${p.id}')">View Details</button>
-                  <button class="btn btn-gold btn-sm" onclick="App.quickMarkPaid('${p.id}')">Mark Paid</button>
-                </div>
-              </div>
-            </div>
-          `;
-        }).join('');
-      }
-
-      listContainer.innerHTML = html;
+    if (filtered.length === 0 && (filter !== 'pending' || pendingProjects.length === 0)) {
+      listContainer.innerHTML = `
+        <div class="empty-state" style="padding: 32px 16px;">
+          ${filter === 'pending'
+            ? '🎉 No pending client dues! All records are fully settled.'
+            : 'No revenue & bill records found for this filter.<br><br><button class="btn btn-gold btn-sm" onclick="App.openAddIncomeModal()">+ Add Revenue & Bill</button>'}
+        </div>
+      `;
       return;
     }
 
-    // Default 'all' or 'invoices'
-    let filteredInvoices = invoices;
-    if (this.selectedInvoiceFilter === 'paid') {
-      filteredInvoices = invoices.filter(inv => inv.status === 'Paid' || (Number(inv.balanceDue) || 0) <= 0);
-    } else if (this.selectedInvoiceFilter === 'pending') {
-      filteredInvoices = invoices.filter(inv => inv.status !== 'Paid' && (Number(inv.balanceDue) || 0) > 0);
-    }
-
-    if (this.selectedBillingTab === 'all') {
-      // In 'all', combine invoices and direct revenue records
-      let items = [
-        ...filteredInvoices.map(inv => ({ ...inv, itemKind: 'invoice', sortDate: inv.issueDate || '' })),
-        ...income.map(inc => ({ ...inc, itemKind: 'revenue', sortDate: inc.date || '' }))
-      ].sort((a, b) => new Date(b.sortDate) - new Date(a.sortDate));
-
-      if (items.length === 0) {
-        listContainer.innerHTML = '<div class="empty-state">No invoices or revenue records found. Tap "+ Create Invoice" or "+ Add Revenue" above.</div>';
-        return;
-      }
-
-      listContainer.innerHTML = items.map(item => {
-        if (item.itemKind === 'revenue') {
-          return `
-            <div class="transaction-item" style="margin-bottom: 8px;">
-              <div class="transaction-left">
-                <div class="tx-icon income">+</div>
-                <div>
-                  <div class="tx-title" style="display: flex; align-items: center; gap: 6px;">
-                    <span>${item.projectName || 'Studio Direct Revenue'}</span>
-                    <span style="font-size: 9px; padding: 2px 6px; border-radius: 4px; background: rgba(16, 185, 129, 0.2); color: #34d399; font-weight: 700;">REVENUE</span>
-                  </div>
-                  <div class="tx-meta">
-                    <span>${item.date}</span>
-                    <span class="method-tag">${item.paymentMethod}</span>
-                    ${item.clientName ? `<span>• ${item.clientName}</span>` : ''}
-                  </div>
-                </div>
-              </div>
-              <div style="display: flex; align-items: center; gap: 6px;">
-                <div class="tx-amount income">+${FinanceEngine.formatINR(item.amount)}</div>
-                <button class="btn-share-icon" onclick="App.openShareReceiptModal('${item.id}', 'payment')" title="Share Payment Receipt">
-                  <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
-                  Receipt
-                </button>
-                <button class="edit-btn" onclick="App.openEditIncomeModal('${item.id}')" title="Edit">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                </button>
-                <button class="delete-btn" onclick="event.stopPropagation(); App.confirmDelete('income', '${item.id}')" title="Delete">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                </button>
-              </div>
-            </div>
-          `;
-        }
-
-        // Render Invoice Card
-        const inv = item;
-        const isPaid = inv.status === 'Paid' || (Number(inv.balanceDue) || 0) <= 0;
-        const isPartial = inv.status === 'Partial';
-        const badgeClass = isPaid ? 'badge-paid' : (isPartial ? 'badge-partial' : 'badge-pending');
-        const badgeText = isPaid ? 'Fully Paid' : (isPartial ? 'Partially Paid' : 'Payment Due');
-
-        return `
-          <div class="invoice-card">
-            <div class="invoice-header-row">
-              <div class="invoice-num-group">
-                <span class="invoice-number-tag">${inv.invoiceNumber}</span>
-                <span class="${badgeClass}">${badgeText}</span>
-              </div>
-              <div style="font-size: 12px; color: var(--text-secondary);">
-                Due: <strong style="color: ${isPaid ? 'var(--accent-income)' : '#fbbf24'};">${inv.dueDate}</strong>
-              </div>
-            </div>
-
-            <div>
-              <h3 style="font-size: 16px; font-weight: 800; color: var(--text-white); margin-bottom: 2px;">
-                ${inv.clientName}
-              </h3>
-              <div style="font-size: 12px; color: var(--text-secondary);">
-                ${inv.projectName ? `<span>Project: <strong>${inv.projectName}</strong></span> • ` : ''}
-                ${inv.clientPhone ? `<span>${inv.clientPhone}</span> • ` : ''}
-                <span>Issued: ${inv.issueDate}</span>
-              </div>
-            </div>
-
-            <div class="invoice-meta-grid">
-              <div class="invoice-meta-item">
-                <div class="label">Total Amount</div>
-                <div class="val">${FinanceEngine.formatINR(inv.totalAmount)}</div>
-              </div>
-              <div class="invoice-meta-item">
-                <div class="label">Amount Paid</div>
-                <div class="val" style="color: var(--accent-income);">${FinanceEngine.formatINR(inv.paidAmount)}</div>
-              </div>
-              <div class="invoice-meta-item">
-                <div class="label">Balance Due</div>
-                <div class="val" style="color: ${isPaid ? 'var(--text-muted)' : '#fbbf24'};">${FinanceEngine.formatINR(inv.balanceDue)}</div>
-              </div>
-            </div>
-
-            <div class="invoice-actions-row">
-              <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                <button class="btn btn-gold btn-sm" onclick="App.openInvoicePreview('${inv.id}')">
-                  <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                  View / Print
-                </button>
-                <button class="btn btn-outline btn-sm" onclick="App.openShareReceiptModal('${inv.id}', 'invoice')" style="color: var(--gold-primary); border-color: var(--gold-border);">
-                  <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
-                  Share Bill
-                </button>
-                ${!isPaid ? `
-                  <button class="btn btn-outline btn-sm" onclick="App.openRecordInvoicePaymentModal('${inv.id}')" style="color: #34D399; border-color: rgba(52, 211, 153, 0.4);">
-                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                    Record Payment
-                  </button>
-                ` : ''}
-              </div>
-
-              <div style="display: flex; gap: 8px; align-items: center;">
-                <button class="btn btn-outline btn-sm" onclick="App.openEditInvoiceModal('${inv.id}')" title="Edit Invoice">
-                  Edit
-                </button>
-                <button class="delete-btn" onclick="event.stopPropagation(); App.confirmDelete('invoices', '${inv.id}')" title="Delete Invoice">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                </button>
-              </div>
-            </div>
-          </div>
-        `;
-      }).join('');
-      return;
-    }
-
-    // Invoices Tab
-    if (filteredInvoices.length === 0) {
-      listContainer.innerHTML = '<div class="empty-state">No invoices found. Tap "+ Create Invoice" above to generate a client bill.</div>';
-      return;
-    }
-
-    listContainer.innerHTML = filteredInvoices.map(inv => {
-      const isPaid = inv.status === 'Paid' || (Number(inv.balanceDue) || 0) <= 0;
-      const isPartial = inv.status === 'Partial';
-      const badgeClass = isPaid ? 'badge-paid' : (isPartial ? 'badge-partial' : 'badge-pending');
-      const badgeText = isPaid ? 'Fully Paid' : (isPartial ? 'Partially Paid' : 'Payment Due');
+    let html = filtered.map(i => {
+      const tot = (i.totalAmount !== undefined && i.totalAmount !== null && i.totalAmount > 0)
+        ? Number(i.totalAmount)
+        : Number(i.amount) || 0;
+      const rcv = Number(i.amount) || 0;
+      const due = (i.balanceDue !== undefined && i.balanceDue !== null)
+        ? Number(i.balanceDue)
+        : Math.max(0, tot - rcv);
+      const isSettled = due <= 0;
+      const ref = `REC-${(i.id || '').slice(-6).toUpperCase()}`;
+      const client = i.clientName || 'Studio Client';
+      const proj = i.projectName || 'Studio Direct Revenue';
+      const cat = i.category || 'Wedding Shoot';
+      const method = i.paymentMethod || 'UPI';
 
       return `
-        <div class="invoice-card">
+        <div class="invoice-card" style="border-left: 3px solid ${isSettled ? '#10b981' : '#fbbf24'}; margin-bottom: 12px;">
           <div class="invoice-header-row">
             <div class="invoice-num-group">
-              <span class="invoice-number-tag">${inv.invoiceNumber}</span>
-              <span class="${badgeClass}">${badgeText}</span>
+              <span class="invoice-number-tag">${ref}</span>
+              <span style="font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; background: rgba(212, 175, 55, 0.15); color: var(--gold-light);">${cat}</span>
+              <span class="${isSettled ? 'badge-paid' : 'badge-pending'}">${isSettled ? 'Fully Settled ✓' : `${FinanceEngine.formatINR(due)} Due`}</span>
             </div>
             <div style="font-size: 12px; color: var(--text-secondary);">
-              Due: <strong style="color: ${isPaid ? 'var(--accent-income)' : '#fbbf24'};">${inv.dueDate}</strong>
+              Date: <strong style="color: var(--text-white);">${i.date || ''}</strong>
             </div>
           </div>
 
           <div>
-            <h3 style="font-size: 16px; font-weight: 800; color: var(--text-white); margin-bottom: 2px;">
-              ${inv.clientName}
-            </h3>
-            <div style="font-size: 12px; color: var(--text-secondary);">
-              ${inv.projectName ? `<span>Project: <strong>${inv.projectName}</strong></span> • ` : ''}
-              ${inv.clientPhone ? `<span>${inv.clientPhone}</span> • ` : ''}
-              <span>Issued: ${inv.issueDate}</span>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
+              <h3 style="font-size: 16px; font-weight: 800; color: var(--text-white); margin-bottom: 2px;">
+                ${client}
+              </h3>
+              <span class="method-tag">${method}</span>
+            </div>
+            <div style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
+              ${proj ? `<span>Project: <strong style="color: var(--gold-light);">${proj}</strong></span>` : ''}
+              ${i.clientPhone ? `<span> • 📞 ${i.clientPhone}</span>` : ''}
+              ${i.notes ? `<span> • <em>${i.notes}</em></span>` : ''}
             </div>
           </div>
 
-          <div class="invoice-meta-grid">
+          <div class="invoice-meta-grid" style="margin-top: 10px;">
             <div class="invoice-meta-item">
-              <div class="label">Total Amount</div>
-              <div class="val">${FinanceEngine.formatINR(inv.totalAmount)}</div>
+              <div class="label">Total Bill / Package</div>
+              <div class="val">${FinanceEngine.formatINR(tot)}</div>
             </div>
             <div class="invoice-meta-item">
-              <div class="label">Amount Paid</div>
-              <div class="val" style="color: var(--accent-income);">${FinanceEngine.formatINR(inv.paidAmount)}</div>
+              <div class="label">Amount Received</div>
+              <div class="val" style="color: var(--accent-income);">+${FinanceEngine.formatINR(rcv)}</div>
             </div>
             <div class="invoice-meta-item">
               <div class="label">Balance Due</div>
-              <div class="val" style="color: ${isPaid ? 'var(--text-muted)' : '#fbbf24'};">${FinanceEngine.formatINR(inv.balanceDue)}</div>
+              <div class="val" style="color: ${isSettled ? '#34d399' : '#fbbf24'};">${isSettled ? '₹0 (Settled)' : FinanceEngine.formatINR(due)}</div>
             </div>
           </div>
 
-          <div class="invoice-actions-row">
+          <div class="invoice-actions-row" style="margin-top: 12px;">
             <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-              <button class="btn btn-gold btn-sm" onclick="App.openInvoicePreview('${inv.id}')">
-                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                View / Print
+              <button class="btn-whatsapp" style="padding: 6px 12px; font-size: 12px;" onclick="App.shareRevenueWhatsApp('${i.id}')" title="Share WhatsApp Bill">
+                <svg width="13" height="13" fill="currentColor" viewBox="0 0 24 24"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.007c.106.005.249-.04.39.299.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.861.174.086.275.072.376-.044.101-.116.433-.506.549-.68.116-.173.231-.144.39-.086s1.011.477 1.184.564.289.13.332.202c.045.073.045.42-.099.825z"/></svg>
+                WhatsApp Bill
               </button>
-              <button class="btn btn-outline btn-sm" onclick="App.openShareReceiptModal('${inv.id}', 'invoice')" style="color: var(--gold-primary); border-color: var(--gold-border);">
-                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
-                Share Bill
+              <button class="btn btn-outline btn-sm" onclick="App.openShareReceiptModal('${i.id}', 'payment')" title="View / Share Receipt">
+                <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+                Receipt
               </button>
-              ${!isPaid ? `
-                <button class="btn btn-outline btn-sm" onclick="App.openRecordInvoicePaymentModal('${inv.id}')" style="color: #34D399; border-color: rgba(52, 211, 153, 0.4);">
-                  <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                  Record Payment
-                </button>
-              ` : ''}
             </div>
-
             <div style="display: flex; gap: 8px; align-items: center;">
-              <button class="btn btn-outline btn-sm" onclick="App.openEditInvoiceModal('${inv.id}')" title="Edit Invoice">
-                Edit
+              <button class="btn btn-outline btn-sm" onclick="App.openEditIncomeModal('${i.id}')" title="Edit Revenue & Bill">
+                ✏️ Edit
               </button>
-              <button class="delete-btn" onclick="event.stopPropagation(); App.confirmDelete('invoices', '${inv.id}')" title="Delete Invoice">
+              <button class="delete-btn" onclick="event.stopPropagation(); App.confirmDelete('income', '${i.id}')" title="Delete Record">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
               </button>
             </div>
@@ -2052,19 +2060,64 @@ const App = {
         </div>
       `;
     }).join('');
-  },
 
-  filterInvoices(status) {
-    this.selectedInvoiceFilter = status;
-    document.querySelectorAll('#invoice-status-filter .pill-btn').forEach(btn => {
-      btn.classList.toggle('active', btn.getAttribute('data-status') === status);
-    });
-    this.renderInvoices();
+    // If pending filter is active, append unbilled project balances
+    if (filter === 'pending' && pendingProjects.length > 0) {
+      html += `
+        <h3 style="font-size: 14px; font-weight: 700; color: #fbbf24; margin: 24px 0 12px 0; display: flex; align-items: center; gap: 6px;">
+          <span>⚠️ Unbilled Project Balances (${pendingProjects.length})</span>
+        </h3>
+      `;
+      html += pendingProjects.map(p => {
+        const pkg = Number(p.packageAmount) || 0;
+        const rcv = Number(p.receivedAmount) || 0;
+        const pending = pkg - rcv;
+        return `
+          <div class="invoice-card" style="border-left: 3px solid #f87171; margin-bottom: 12px;">
+            <div class="invoice-header-row">
+              <span class="invoice-number-tag" style="background: rgba(248, 113, 113, 0.15); color: #f87171;">PROJECT BALANCE</span>
+              <div class="val" style="color: #f87171; font-weight: 800; font-size: 15px;">
+                ${FinanceEngine.formatINR(pending)} Due
+              </div>
+            </div>
+            <div>
+              <h3 style="font-size: 16px; font-weight: 800; color: var(--text-white); margin-bottom: 2px;">
+                ${p.name} (${p.clientName})
+              </h3>
+              <div style="font-size: 12px; color: var(--text-secondary);">
+                <span>Package: ${FinanceEngine.formatINR(pkg)}</span> •
+                <span>Collected: ${FinanceEngine.formatINR(rcv)}</span>
+                ${p.clientPhone ? ` • <span>📞 ${p.clientPhone}</span>` : ''}
+              </div>
+            </div>
+            <div class="invoice-actions-row" style="margin-top: 12px;">
+              <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button class="btn-whatsapp" style="padding: 6px 12px; font-size: 12px;" onclick="App.sendProjectWhatsAppReminder('${p.id}')">
+                  WhatsApp Reminder
+                </button>
+                <button class="btn btn-gold btn-sm" onclick="App.openAddIncomeModal('${p.id}')">
+                  + Record Bill / Payment
+                </button>
+              </div>
+              <div style="display: flex; gap: 8px;">
+                <button class="btn btn-outline btn-sm" onclick="App.viewProjectDetails('${p.id}')">View Details</button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    listContainer.innerHTML = html;
   },
 
   openCreateInvoiceFromHub() {
     this.closeModalDirect('modal-quick-hub');
-    this.openCreateInvoiceModal();
+    this.openAddIncomeModal();
+  },
+
+  openCreateInvoiceModal(projectId = null) {
+    this.openAddIncomeModal(projectId);
   },
 
   populateInvoiceProjectDropdown(selectedProjectId = null) {
@@ -2579,21 +2632,32 @@ const App = {
     } else if (type === 'payment') {
       const inc = (window.dataStore.data.income || []).find(i => i.id === id);
       if (!inc) return;
-      const proj = (window.dataStore.data.projects || []).find(p => p.id === inc.projectId);
+      const proj = inc.projectId ? (window.dataStore.data.projects || []).find(p => p.id === inc.projectId) : null;
+      const clientName = inc.clientName || (proj ? proj.clientName : (inc.notes || 'Studio Client'));
+      const clientPhone = inc.clientPhone || (proj ? (proj.clientPhone || '') : '');
+      const projectName = inc.projectName || (proj ? proj.name : '');
+      const totalAmount = (inc.totalAmount !== undefined && inc.totalAmount !== null && inc.totalAmount > 0)
+        ? Number(inc.totalAmount)
+        : (proj ? (Number(proj.packageAmount) || 0) : Number(inc.amount));
+      const receivedAmount = Number(inc.amount) || 0;
+      const balanceDue = (inc.balanceDue !== undefined && inc.balanceDue !== null)
+        ? Number(inc.balanceDue)
+        : Math.max(0, totalAmount - receivedAmount);
+
       receiptData = {
         type: 'payment',
         id: inc.id,
-        title: 'Payment Received Receipt',
+        title: 'Payment & Bill Receipt',
         number: `REC-${inc.id.slice(-6).toUpperCase()}`,
-        clientName: proj ? proj.clientName : (inc.notes || 'Studio Client'),
-        clientPhone: proj ? (proj.clientPhone || '') : '',
-        projectName: proj ? proj.name : '',
+        clientName,
+        clientPhone,
+        projectName,
         date: inc.date,
-        amountReceived: inc.amount,
+        amountReceived: receivedAmount,
         paymentMethod: inc.paymentMethod || 'UPI',
-        totalAmount: proj ? (Number(proj.packageAmount) || 0) : inc.amount,
-        paidAmount: proj ? (Number(proj.receivedAmount) || 0) : inc.amount,
-        balanceDue: proj ? Math.max(0, (Number(proj.packageAmount) || 0) - (Number(proj.receivedAmount) || 0)) : 0,
+        totalAmount,
+        paidAmount: receivedAmount,
+        balanceDue,
         notes: inc.notes
       };
     }
@@ -3696,6 +3760,32 @@ const App = {
     });
 
     // 2. Pending Dues Reminders
+    (income || []).forEach(inc => {
+      const tot = (inc.totalAmount !== undefined && inc.totalAmount !== null && inc.totalAmount > 0)
+        ? Number(inc.totalAmount)
+        : Number(inc.amount);
+      const rcv = Number(inc.amount) || 0;
+      const due = (inc.balanceDue !== undefined && inc.balanceDue !== null)
+        ? Number(inc.balanceDue)
+        : Math.max(0, tot - rcv);
+
+      if (due > 0) {
+        notifications.push({
+          category: 'due',
+          severity: 'urgent',
+          iconType: 'due',
+          title: `⚠️ Pending Bill: ${inc.clientName || 'Client'}`,
+          desc: `${inc.projectName || 'Studio Shoot'} has an outstanding balance of ${FinanceEngine.formatINR(due)}.`,
+          meta: `Date: ${inc.date} • Total: ${FinanceEngine.formatINR(tot)}`,
+          tag: `${FinanceEngine.formatINR(due)} Due`,
+          tagClass: 'due',
+          actionType: 'whatsapp-revenue',
+          actionId: inc.id,
+          phone: inc.clientPhone
+        });
+      }
+    });
+
     invoices.forEach(inv => {
       const due = Number(inv.balanceDue) || 0;
       if (due > 0 && inv.status !== 'Paid') {
@@ -3833,7 +3923,19 @@ const App = {
 
     container.innerHTML = notifs.map(n => {
       let actionBtnHtml = '';
-      if (n.actionType === 'whatsapp-invoice') {
+      if (n.actionType === 'whatsapp-revenue') {
+        actionBtnHtml = `
+          <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px;">
+            <button class="btn-whatsapp" style="padding: 6px 12px; font-size: 11px;" onclick="App.shareRevenueWhatsApp('${n.actionId}')">
+              <svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.007c.106.005.249-.04.39.299.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.861.174.086.275.072.376-.044.101-.116.433-.506.549-.68.116-.173.231-.144.39-.086s1.011.477 1.184.564.289.13.332.202c.045.073.045.42-.099.825z"/></svg>
+              Send WhatsApp Reminder
+            </button>
+            <button class="btn btn-outline btn-sm" style="padding: 4px 10px; font-size: 11px;" onclick="App.closeModalDirect('modal-notifications'); App.openEditIncomeModal('${n.actionId}')">
+              Edit Bill
+            </button>
+          </div>
+        `;
+      } else if (n.actionType === 'whatsapp-invoice') {
         actionBtnHtml = `
           <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px;">
             <button class="btn-whatsapp" style="padding: 6px 12px; font-size: 11px;" onclick="App.shareInvoiceWhatsApp('${n.actionId}')">

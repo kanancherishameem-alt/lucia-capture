@@ -342,7 +342,7 @@
         </div>
       </section>
 
-      <!-- ================= 3. REVENUE & CLIENT BILLING HUB ================= -->
+      <!-- ================= 3. REVENUE & CLIENT BILLS HUB ================= -->
       <section id="view-invoices" class="view-section">
         <div class="section-header">
           <div style="display: flex; align-items: center; gap: 8px;">
@@ -351,25 +351,22 @@
               <span>Back</span>
             </button>
             <div class="section-title-group">
-              <h1>Revenue & Client Billing</h1>
-              <p>Single hub for client invoices, direct revenue, receipts & pending dues</p>
+              <h1>Revenue & Client Bills</h1>
+              <p>Complete ledger of studio collections, client bills, payment receipts & dues</p>
             </div>
           </div>
-          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-            <button class="btn btn-outline btn-sm" onclick="App.openModal('modal-income')">
-              + Add Revenue
-            </button>
-            <button class="btn btn-gold btn-sm" onclick="App.openCreateInvoiceModal()">
-              + Create Invoice
+          <div>
+            <button class="btn btn-gold" onclick="App.openAddIncomeModal()">
+              + Add Revenue & Bill
             </button>
           </div>
         </div>
 
-        <!-- Top KPI Cards for Combined Revenue & Billing Hub -->
+        <!-- Top KPI Cards for Revenue & Billing Hub -->
         <div class="hero-stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin-bottom: 20px;">
           <div class="stat-card">
             <div class="stat-header">
-              <span class="stat-label">Total Revenue</span>
+              <span class="stat-label">Total Revenue Collected</span>
               <div class="stat-icon green">₹</div>
             </div>
             <div class="stat-value" id="inv-stat-revenue">₹0</div>
@@ -378,52 +375,47 @@
 
           <div class="stat-card">
             <div class="stat-header">
-              <span class="stat-label">Total Invoiced</span>
+              <span class="stat-label">Total Billed / Package</span>
               <div class="stat-icon" style="color: var(--gold-light);">₹</div>
             </div>
             <div class="stat-value" id="inv-stat-total">₹0</div>
-            <div class="stat-footer" id="inv-stat-count">0 Invoices created</div>
+            <div class="stat-footer">Total contract value across shoots</div>
           </div>
 
           <div class="stat-card">
             <div class="stat-header">
-              <span class="stat-label">Collected On Bills</span>
-              <div class="stat-icon green">
-                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg>
-              </div>
-            </div>
-            <div class="stat-value" id="inv-stat-paid">₹0</div>
-            <div class="stat-footer">Paid against bills</div>
-          </div>
-
-          <div class="stat-card">
-            <div class="stat-header">
-              <span class="stat-label">Outstanding Due</span>
+              <span class="stat-label">Pending Client Dues</span>
               <div class="stat-icon red">
                 <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
               </div>
             </div>
             <div class="stat-value" style="color: #fbbf24;" id="inv-stat-due">₹0</div>
-            <div class="stat-footer">Pending client settlements</div>
+            <div class="stat-footer">Uncollected client balances</div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-header">
+              <span class="stat-label">Bills & Records</span>
+              <div class="stat-icon gold">
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              </div>
+            </div>
+            <div class="stat-value gold" id="inv-stat-count">0 Records</div>
+            <div class="stat-footer">Live transactions ledger</div>
           </div>
         </div>
 
-        <!-- Segment Pills: All Combined | Invoices & Bills | Revenue Records | Pending Dues -->
-        <div class="billing-nav-pills" id="billing-segment-pills">
-          <button class="billing-tab-pill active" data-tab="all" onclick="App.setBillingTab('all')">All Combined</button>
-          <button class="billing-tab-pill" data-tab="invoices" onclick="App.setBillingTab('invoices')">📄 Invoices & Bills</button>
-          <button class="billing-tab-pill" data-tab="revenue" onclick="App.setBillingTab('revenue')">💰 Revenue Records</button>
-          <button class="billing-tab-pill" data-tab="pending" onclick="App.setBillingTab('pending')">⚠️ Pending Dues</button>
-        </div>
-
-        <!-- Status Filter Pills for Invoices/Revenue -->
+        <!-- Status Filter Pills for Revenue & Bills -->
         <div class="filter-pills" id="invoice-status-filter" style="margin-bottom: 16px;">
-          <button class="pill-btn active" data-status="all" onclick="App.filterInvoices('all')">All</button>
-          <button class="pill-btn" data-status="pending" onclick="App.filterInvoices('pending')">Pending & Partial</button>
-          <button class="pill-btn" data-status="paid" onclick="App.filterInvoices('paid')">Fully Paid</button>
+          <button class="pill-btn active" data-status="all" onclick="App.filterInvoices('all')">All Records</button>
+          <button class="pill-btn" data-status="pending" onclick="App.filterInvoices('pending')">⚠️ Pending Dues</button>
+          <button class="pill-btn" data-status="paid" onclick="App.filterInvoices('paid')">✅ Fully Settled</button>
+          <button class="pill-btn" data-status="UPI" onclick="App.filterInvoices('UPI')">UPI</button>
+          <button class="pill-btn" data-status="Cash" onclick="App.filterInvoices('Cash')">Cash</button>
+          <button class="pill-btn" data-status="Bank" onclick="App.filterInvoices('Bank')">Bank Transfer</button>
         </div>
 
-        <!-- Invoices & Billing List Container -->
+        <!-- Revenue & Billing List Container -->
         <div id="invoices-list-container">
           <!-- Dynamically populated -->
         </div>
@@ -970,12 +962,12 @@
           <button class="modal-close-btn" onclick="App.closeModalDirect('modal-quick-hub')">✕</button>
         </div>
 
-        <div class="quick-add-grid">
+        <div class="quick-add-grid" style="grid-template-columns: repeat(2, 1fr);">
           <div class="quick-add-btn" onclick="App.openAddIncomeFromHub()">
             <div class="quick-add-icon" style="background: var(--accent-income-bg); color: var(--accent-income);">
               <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
             </div>
-            <span>Add Revenue</span>
+            <span>Add Revenue & Bill</span>
           </div>
 
           <div class="quick-add-btn" onclick="App.openAddExpenseFromHub()">
@@ -992,73 +984,134 @@
             <span>Add Project</span>
           </div>
 
-          <div class="quick-add-btn" onclick="App.openCreateInvoiceFromHub()">
-            <div class="quick-add-icon" style="background: rgba(14, 82, 184, 0.16); color: var(--gold-light);">
-              <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
-            </div>
-            <span>Create Invoice</span>
-          </div>
-
           <div class="quick-add-btn" onclick="App.openAddPaymentFromHub()">
             <div class="quick-add-icon" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24;">
               <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
             </div>
-            <span>Add Payment</span>
+            <span>Record Payment</span>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- 2. Add Revenue Modal -->
+    <!-- 2. Comprehensive Add Revenue & Client Bill Modal -->
     <div id="modal-income" class="modal-overlay" onclick="App.closeModal(event, 'modal-income')">
-      <div class="modal-sheet" onclick="event.stopPropagation()">
+      <div class="modal-sheet" style="max-width: 580px;" onclick="event.stopPropagation()">
         <div class="modal-header">
-          <div class="modal-title" id="modal-income-title">Add Revenue</div>
+          <div class="modal-title" id="modal-income-title">
+            <svg width="20" height="20" fill="none" stroke="var(--gold-primary)" stroke-width="2.2" viewBox="0 0 24 24" style="vertical-align: middle; margin-right: 6px;"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            Record Revenue & Client Bill
+          </div>
           <button class="modal-close-btn" onclick="App.closeModalDirect('modal-income')">✕</button>
         </div>
         <form id="form-income" onsubmit="App.handleSaveIncome(event)">
+          <input type="hidden" id="inc-edit-id" value="">
+
+          <!-- Project Link or Direct Client Bill -->
           <div class="form-group">
-            <label class="form-label">Client / Project</label>
+            <label class="form-label">Link to Project (Optional)</label>
             <select class="form-select" id="inc-project" onchange="App.handleIncomeProjectChange()">
-              <!-- Dynamically populated with active projects -->
+              <!-- Populated dynamically with active projects + "Direct Client Bill / Custom Event" -->
             </select>
           </div>
 
-          <div class="form-group">
-            <label class="form-label">Amount (₹)</label>
-            <div class="amount-input-wrapper">
-              <span class="amount-prefix">₹</span>
-              <input type="number" inputmode="numeric" class="form-input" id="inc-amount" placeholder="0" required autofocus>
+          <!-- Client & Project Details -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div class="form-group">
+              <label class="form-label">Client Name <span style="color: #ef4444;">*</span></label>
+              <input type="text" class="form-input" id="inc-client-name" placeholder="e.g. Rahul & Sneha" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Client Phone / WhatsApp</label>
+              <input type="tel" class="form-input" id="inc-client-phone" placeholder="+91 98470 12345">
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 12px;">
+            <div class="form-group">
+              <label class="form-label">Project / Event Name</label>
+              <input type="text" class="form-input" id="inc-project-name" placeholder="e.g. Wedding & Reception Shoot">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Shoot / Service Category</label>
+              <select class="form-select" id="inc-category">
+                <option value="Wedding Shoot">Wedding Shoot</option>
+                <option value="Pre-Wedding / Outdoor">Pre-Wedding / Outdoor</option>
+                <option value="Commercial & Brand">Commercial & Brand</option>
+                <option value="Reception / Engagement">Reception / Engagement</option>
+                <option value="Portrait / Portfolio">Portrait / Portfolio</option>
+                <option value="Drone & Reels Package">Drone & Reels Package</option>
+                <option value="Album / Editing">Album / Editing</option>
+                <option value="Other Studio Service">Other Studio Service</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Total Bill & Received Amount -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div class="form-group">
+              <label class="form-label">Total Bill / Package Value (₹) <span style="color: #ef4444;">*</span></label>
+              <div class="amount-input-wrapper">
+                <span class="amount-prefix">₹</span>
+                <input type="number" inputmode="numeric" class="form-input" id="inc-total-amount" placeholder="0" oninput="App.updateIncomeLiveBalance()" required>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Amount Received Now (₹) <span style="color: #ef4444;">*</span></label>
+              <div class="amount-input-wrapper">
+                <span class="amount-prefix">₹</span>
+                <input type="number" inputmode="numeric" class="form-input" id="inc-amount" placeholder="0" oninput="App.updateIncomeLiveBalance()" required>
+              </div>
+            </div>
+          </div>
+
+          <!-- Dynamic Live Calculation Banner -->
+          <div id="inc-balance-banner" style="background: rgba(212, 175, 55, 0.08); border: 1px solid rgba(212, 175, 55, 0.25); border-radius: var(--radius-md); padding: 10px 14px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; font-size: 13px;">
+            <div>
+              <span style="color: var(--text-secondary);">Total: </span>
+              <strong id="inc-preview-total" style="color: var(--text-white);">₹0</strong>
+              <span style="color: var(--text-muted); margin: 0 4px;">•</span>
+              <span style="color: var(--text-secondary);">Received: </span>
+              <strong id="inc-preview-received" style="color: var(--accent-income);">₹0</strong>
+            </div>
+            <div id="inc-preview-balance-tag" class="badge-tag" style="background: rgba(16, 185, 129, 0.15); color: #34d399; border-color: rgba(16, 185, 129, 0.3); font-weight: 700;">
+              ₹0 Due
+            </div>
+          </div>
+
+          <!-- Date & Payment Method -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div class="form-group">
+              <label class="form-label">Payment Date</label>
+              <input type="date" class="form-input" id="inc-date" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Payment Method</label>
+              <div class="payment-method-selector" id="inc-method-selector">
+                <div class="method-choice selected" data-method="UPI" onclick="App.selectPaymentMethod('inc', 'UPI')">UPI</div>
+                <div class="method-choice" data-method="Cash" onclick="App.selectPaymentMethod('inc', 'Cash')">Cash</div>
+                <div class="method-choice" data-method="Bank" onclick="App.selectPaymentMethod('inc', 'Bank')">Bank</div>
+              </div>
+              <input type="hidden" id="inc-method" value="UPI">
             </div>
           </div>
 
           <div class="form-group">
-            <label class="form-label">Date</label>
-            <input type="date" class="form-input" id="inc-date" required>
+            <label class="form-label">Bill Description / Notes (Optional)</label>
+            <input type="text" class="form-input" id="inc-notes" placeholder="e.g. 50% advance token / Stage 1 booking settlement">
           </div>
 
-          <div class="form-group">
-            <label class="form-label">Payment Method</label>
-            <div class="payment-method-selector" id="inc-method-selector">
-              <div class="method-choice selected" data-method="UPI" onclick="App.selectPaymentMethod('inc', 'UPI')">UPI</div>
-              <div class="method-choice" data-method="Cash" onclick="App.selectPaymentMethod('inc', 'Cash')">Cash</div>
-              <div class="method-choice" data-method="Bank" onclick="App.selectPaymentMethod('inc', 'Bank')">Bank</div>
-            </div>
-            <input type="hidden" id="inc-method" value="UPI">
-          </div>
-
-          <div class="form-group">
-            <label class="form-label">Note (Optional)</label>
-            <input type="text" class="form-input" id="inc-notes" placeholder="e.g. Advance token / final settlement">
-          </div>
-
-          <div style="display: flex; gap: 10px; margin-top: 14px;">
+          <div style="display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap;">
             <button type="button" class="btn btn-outline" id="btn-delete-income" style="display: none; color: #ef4444; border-color: rgba(239, 68, 68, 0.4); padding: 12px 16px; align-items: center; gap: 6px;" onclick="App.deleteCurrentEditingIncome()">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
               <span>Delete</span>
             </button>
-            <button type="submit" class="btn btn-gold" id="btn-save-income" style="flex: 1; padding: 14px; font-size: 15px;">
-              Save Revenue
+            <button type="button" class="btn btn-outline" style="color: #25D366; border-color: rgba(37, 211, 102, 0.35); display: inline-flex; align-items: center; gap: 6px; padding: 12px 14px;" onclick="App.handleSaveAndShareWhatsAppIncome(event)" title="Save & immediately share WhatsApp Bill">
+              <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+              <span>Save & WhatsApp Bill</span>
+            </button>
+            <button type="submit" class="btn btn-gold" id="btn-save-income" style="flex: 1; min-width: 140px; padding: 14px; font-size: 15px;">
+              Save Revenue & Bill
             </button>
           </div>
         </form>

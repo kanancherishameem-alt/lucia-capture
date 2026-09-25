@@ -437,13 +437,21 @@ class DataStore {
 
   // --- ACTIONS ---
 
-  addIncome({ projectId, projectName, clientName, amount, date, paymentMethod, notes }) {
+  addIncome({ projectId, projectName, clientName, clientPhone, amount, totalAmount, balanceDue, category, date, paymentMethod, notes }) {
+    const rcv = Number(amount) || 0;
+    const total = totalAmount !== undefined ? (Number(totalAmount) || 0) : rcv;
+    const due = balanceDue !== undefined ? (Number(balanceDue) || 0) : Math.max(0, total - rcv);
+
     const newIncome = {
       id: 'inc-' + Date.now(),
       projectId: projectId || null,
       projectName: projectName || 'Direct Studio Income',
       clientName: clientName || '',
-      amount: Number(amount) || 0,
+      clientPhone: clientPhone || '',
+      amount: rcv,
+      totalAmount: total > 0 ? total : rcv,
+      balanceDue: due,
+      category: category || 'Wedding Shoot',
       date: date || new Date().toISOString().split('T')[0],
       paymentMethod: paymentMethod || 'UPI',
       notes: notes || ''
