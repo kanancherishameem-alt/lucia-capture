@@ -181,7 +181,7 @@ const FinanceEngine = {
       period: filter,
       income: totalIncome,
       expenses: totalExpenses,
-      salaries: totalSalaries,
+      salaries: 0,
       netProfit: netProfit,
       distribution: distribution,
       pendingPayments: pendingPayments,

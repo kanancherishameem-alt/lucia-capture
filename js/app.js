@@ -1384,6 +1384,9 @@ const App = {
     document.getElementById('home-pending-amount').textContent = FinanceEngine.formatINR(financials.pendingPayments);
     document.getElementById('home-company-fund-balance').textContent = FinanceEngine.formatINR(financials.companyFundBalance);
 
+    // Render Active Projects on Home
+    this.renderHomeProjects();
+
     // Render Recent Transactions
     this.renderRecentTransactions();
 
@@ -1391,55 +1394,149 @@ const App = {
     LuciaCharts.renderFinancialBars('home-chart-canvas', financials);
   },
 
+  renderHomeProjects() {
+    const container = document.getElementById('home-projects-list');
+    if (!container) return;
+
+    const projects = (window.dataStore.data.projects || []).slice(0, 5);
+
+    if (projects.length === 0) {
+      container.innerHTML = '<div class="empty-state">No projects recorded yet. Tap "+ New Project" to add your first shoot.</div>';
+      return;
+    }
+
+    container.innerHTML = projects.map(proj => {
+      const pkg = Number(proj.packageAmount) || 0;
+      const rcv = Number(proj.receivedAmount) || 0;
+      const pending = Math.max(0, pkg - rcv);
+
+      let statusBadgeClass = 'ongoing';
+      if (proj.status === 'Completed') statusBadgeClass = 'completed';
+      else if (proj.status === 'Payment Pending') statusBadgeClass = 'pending';
+      else if (proj.status === 'Upcoming') statusBadgeClass = 'upcoming';
+
+      return `
+        <div class="transaction-item" style="cursor: pointer;" onclick="App.editItem('projects', '${proj.id}')">
+          <div class="transaction-left">
+            <div class="tx-icon" style="background: rgba(212, 175, 55, 0.15); color: var(--gold-primary);">🎬</div>
+            <div>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span class="tx-title" style="font-weight: 700;">${proj.name || proj.projectName || proj.clientName}</span>
+                <span class="badge-tag status-badge ${statusBadgeClass}" style="font-size: 10px; padding: 2px 6px;">${proj.status}</span>
+              </div>
+              <div class="tx-meta" style="margin-top: 3px;">
+                <span>👤 ${proj.clientName || 'Client'}</span>
+                ${proj.eventDate ? `<span>📅 ${proj.eventDate}</span>` : ''}
+                ${proj.location ? `<span>📍 ${proj.location}</span>` : ''}
+                <span style="color: var(--accent-income); font-weight: 600;">Recv: ${FinanceEngine.formatINR(rcv)}</span>
+                ${pending > 0 ? `<span style="color: #fbbf24; font-weight: 600;">• Pending: ${FinanceEngine.formatINR(pending)}</span>` : ''}
+              </div>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <div style="text-align: right; margin-right: 6px;">
+              <div style="font-size: 13px; font-weight: 700; color: var(--gold-primary);">${FinanceEngine.formatINR(pkg)}</div>
+              <div style="font-size: 10px; color: var(--text-secondary);">Package</div>
+            </div>
+            ${proj.clientPhone ? `
+              <button class="btn-share-icon" onclick="event.stopPropagation(); App.sendProjectWhatsAppReminder('${proj.id}')" title="Send WhatsApp Details">
+                <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+                WA
+              </button>
+            ` : ''}
+            <button class="edit-btn" onclick="event.stopPropagation(); App.editItem('projects', '${proj.id}')" title="Edit project">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+            </button>
+            <button class="delete-btn" onclick="event.stopPropagation(); App.confirmDelete('projects', '${proj.id}')" title="Delete project">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  },
+
   renderRecentTransactions() {
     const container = document.getElementById('home-recent-transactions');
     if (!container) return;
 
-    const { income = [], expenses = [] } = window.dataStore.data;
+    const { income = [], expenses = [], withdrawals = [], companyFundLedger = [] } = window.dataStore.data;
     
+    // Partner names
+    const p1Name = window.dataStore.data.settings?.partner1Name || 'Shameem';
+    const p2Name = window.dataStore.data.settings?.partner2Name || 'Shiyan';
+
     // Combine into unified feed
     const combined = [
-      ...income.map(i => ({ ...i, txType: 'income' })),
-      ...expenses.map(e => ({ ...e, txType: 'expense' }))
-    ].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 6);
+      ...income.map(i => ({
+        ...i,
+        txType: 'income',
+        collection: 'income',
+        displayTitle: i.projectName || i.clientName || 'Studio Revenue',
+        displayMeta: i.paymentMethod || 'Direct Payment'
+      })),
+      ...expenses.map(e => ({
+        ...e,
+        txType: 'expense',
+        collection: 'expenses',
+        displayTitle: e.category + (e.projectName ? ` (${e.projectName})` : ''),
+        displayMeta: e.paymentMethod || 'Studio Expense'
+      })),
+      ...withdrawals.map(w => {
+        const partnerName = w.partnerId === 'partner2' ? p2Name : (w.partnerId === 'partner1' ? p1Name : (w.partner || p1Name));
+        return {
+          ...w,
+          txType: 'withdrawal',
+          collection: 'withdrawals',
+          displayTitle: `${partnerName} Withdrawal`,
+          displayMeta: `${w.paymentMethod || 'Bank'} • Payout`
+        };
+      }),
+      ...companyFundLedger.map(f => ({
+        ...f,
+        txType: f.type === 'addition' ? 'fund-deposit' : 'fund-expense',
+        collection: 'companyFundLedger',
+        displayTitle: f.type === 'addition' ? `Fund Deposit: ${f.description || f.category || 'Capital'}` : `Fund Purchase: ${f.description || f.category || 'Asset'}`,
+        displayMeta: `${f.paymentMethod || 'Fund Reserve'} • ${f.category || 'Reserve'}`
+      }))
+    ].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0)).slice(0, 8);
 
     if (combined.length === 0) {
-      container.innerHTML = '<div class="empty-state">No transactions recorded yet. Tap + to add.</div>';
+      container.innerHTML = '<div class="empty-state">No transactions recorded yet. Tap + Add New to add.</div>';
       return;
     }
 
     container.innerHTML = combined.map(tx => {
-      const isInc = tx.txType === 'income';
-      const title = isInc ? (tx.projectName || tx.clientName || 'Studio Revenue') : (tx.category + (tx.projectName ? ` (${tx.projectName})` : ''));
+      const isInc = tx.txType === 'income' || tx.txType === 'fund-deposit';
       const sign = isInc ? '+' : '−';
       const colorClass = isInc ? 'income' : 'expense';
-      const collection = isInc ? 'income' : 'expenses';
+      const collection = tx.collection || (isInc ? 'income' : 'expenses');
 
       return `
-        <div class="transaction-item">
+        <div class="transaction-item" style="cursor: pointer;" onclick="App.editItem('${collection}', '${tx.id}')">
           <div class="transaction-left">
             <div class="tx-icon ${colorClass}">${sign}</div>
             <div>
-              <div class="tx-title">${title}</div>
+              <div class="tx-title">${tx.displayTitle}</div>
               <div class="tx-meta">
-                <span>${tx.date}</span>
-                <span class="method-tag">${tx.paymentMethod}</span>
+                <span>${tx.date || 'Today'}</span>
+                <span class="method-tag">${tx.displayMeta}</span>
                 ${tx.notes ? `<span>• ${tx.notes}</span>` : ''}
               </div>
             </div>
           </div>
           <div style="display: flex; align-items: center; gap: 6px;">
             <div class="tx-amount ${colorClass}">${sign}${FinanceEngine.formatINR(tx.amount)}</div>
-            ${isInc ? `
-              <button class="btn-share-icon" onclick="App.openShareReceiptModal('${tx.id}', 'payment')" title="Share Payment Receipt">
+            ${tx.txType === 'income' ? `
+              <button class="btn-share-icon" onclick="event.stopPropagation(); App.openShareReceiptModal('${tx.id}', 'payment')" title="Share Payment Receipt">
                 <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
                 Receipt
               </button>
             ` : ''}
-            <button class="edit-btn" onclick="App.editItem('${collection}', '${tx.id}')" title="Edit this transaction">
+            <button class="edit-btn" onclick="event.stopPropagation(); App.editItem('${collection}', '${tx.id}')" title="Edit this record">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
             </button>
-            <button class="delete-btn" onclick="event.stopPropagation(); App.confirmDelete('${collection}', '${tx.id}')" title="Delete this activity">
+            <button class="delete-btn" onclick="event.stopPropagation(); App.confirmDelete('${collection}', '${tx.id}')" title="Delete this record">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
             </button>
           </div>
@@ -3532,7 +3629,7 @@ const App = {
 
     // 1. Work Dates / Shoot Reminders
     projects.forEach(p => {
-      const shootDateStr = p.shootDate || p.date;
+      const shootDateStr = p.shootDate || p.eventDate || p.date;
       if (shootDateStr) {
         const parts = shootDateStr.split('-');
         if (parts.length === 3) {
@@ -3544,7 +3641,7 @@ const App = {
               category: 'work',
               severity: 'urgent',
               iconType: 'work',
-              title: `🚨 Shoot Scheduled TODAY: ${p.projectName || p.clientName}`,
+              title: `🚨 Shoot Scheduled TODAY: ${p.projectName || p.name || p.clientName}`,
               desc: `Client: ${p.clientName || 'N/A'} • Package: ${FinanceEngine.formatINR(p.packageAmount || 0)}`,
               meta: `Date: Today (${shootDateStr})`,
               tag: 'TODAY',
@@ -3557,7 +3654,7 @@ const App = {
               category: 'work',
               severity: 'warning',
               iconType: 'work',
-              title: `📅 Shoot TOMORROW: ${p.projectName || p.clientName}`,
+              title: `📅 Shoot TOMORROW: ${p.projectName || p.name || p.clientName}`,
               desc: `Client: ${p.clientName || 'N/A'} • Package: ${FinanceEngine.formatINR(p.packageAmount || 0)}`,
               meta: `Date: Tomorrow (${shootDateStr})`,
               tag: 'TOMORROW',
@@ -3570,7 +3667,7 @@ const App = {
               category: 'work',
               severity: 'info',
               iconType: 'work',
-              title: `📅 Upcoming Shoot in ${diffDays} Days: ${p.projectName || p.clientName}`,
+              title: `📅 Upcoming Shoot in ${diffDays} Days: ${p.projectName || p.name || p.clientName}`,
               desc: `Scheduled on ${shootDateStr}. Client: ${p.clientName || 'N/A'}`,
               meta: `Shoot Date: ${shootDateStr}`,
               tag: `In ${diffDays}d`,
@@ -3587,7 +3684,7 @@ const App = {
           category: 'work',
           severity: 'info',
           iconType: 'work',
-          title: `🎬 Project In Progress: ${p.projectName || p.clientName}`,
+          title: `🎬 Project In Progress: ${p.projectName || p.name || p.clientName}`,
           desc: `Ongoing status • Package: ${FinanceEngine.formatINR(p.packageAmount || 0)}`,
           meta: `Status: Ongoing`,
           tag: 'ONGOING',
@@ -3620,14 +3717,14 @@ const App = {
 
     projects.forEach(p => {
       const pkg = Number(p.packageAmount) || 0;
-      const rcv = Number(p.amountReceived) || 0;
+      const rcv = Number(p.receivedAmount || p.amountReceived) || 0;
       const pending = pkg - rcv;
       if (pending > 0 && p.status !== 'Completed') {
         notifications.push({
           category: 'due',
           severity: 'warning',
           iconType: 'due',
-          title: `⚠️ Project Balance Due: ${p.projectName || p.clientName}`,
+          title: `⚠️ Project Balance Due: ${p.projectName || p.name || p.clientName}`,
           desc: `${p.clientName || 'Client'} has ${FinanceEngine.formatINR(pending)} unpaid on package of ${FinanceEngine.formatINR(pkg)}.`,
           meta: `Pending: ${FinanceEngine.formatINR(pending)} • Received: ${FinanceEngine.formatINR(rcv)}`,
           tag: `${FinanceEngine.formatINR(pending)} Due`,
@@ -3647,32 +3744,36 @@ const App = {
     });
     const monthlyTotal = currentMonthExpenses.reduce((s, e) => s + (Number(e.amount) || 0), 0);
 
-    notifications.push({
-      category: 'expense',
-      severity: 'info',
-      iconType: 'exp',
-      title: `💸 Monthly Studio Expenses`,
-      desc: `Total ${FinanceEngine.formatINR(monthlyTotal)} recorded across ${currentMonthExpenses.length} entries this month.`,
-      meta: `Period: Current Month`,
-      tag: FinanceEngine.formatINR(monthlyTotal),
-      tagClass: 'upcoming',
-      actionType: 'navigate-expenses'
-    });
-
-    // Add recent 3 expense records
-    expenses.slice(0, 3).forEach(e => {
+    if (currentMonthExpenses.length > 0) {
       notifications.push({
         category: 'expense',
         severity: 'info',
         iconType: 'exp',
-        title: `Expense: ${e.category} (${FinanceEngine.formatINR(e.amount)})`,
-        desc: `${e.date} • ${e.notes || 'Recorded studio expense'}`,
-        meta: `Category: ${e.category} • Method: ${e.paymentMethod || 'Cash'}`,
-        tag: `₹${FinanceEngine.formatINR(e.amount)}`,
-        tagClass: 'due',
+        title: `💸 Monthly Studio Expenses`,
+        desc: `Total ${FinanceEngine.formatINR(monthlyTotal)} recorded across ${currentMonthExpenses.length} entries this month.`,
+        meta: `Period: Current Month`,
+        tag: FinanceEngine.formatINR(monthlyTotal),
+        tagClass: 'upcoming',
         actionType: 'navigate-expenses'
       });
-    });
+    }
+
+    // Add recent 3 expense records
+    if (expenses.length > 0) {
+      expenses.slice(0, 3).forEach(e => {
+        notifications.push({
+          category: 'expense',
+          severity: 'info',
+          iconType: 'exp',
+          title: `Expense: ${e.category} (${FinanceEngine.formatINR(e.amount)})`,
+          desc: `${e.date} • ${e.notes || 'Recorded studio expense'}`,
+          meta: `Category: ${e.category} • Method: ${e.paymentMethod || 'Cash'}`,
+          tag: `₹${FinanceEngine.formatINR(e.amount)}`,
+          tagClass: 'due',
+          actionType: 'navigate-expenses'
+        });
+      });
+    }
 
     return notifications;
   },

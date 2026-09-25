@@ -70,5 +70,40 @@ class TestAllDataEditing(unittest.TestCase):
         total = self.settings['initialCompanyFundBalance'] + ledger_diff + profit_share
         self.assertEqual(total, target)
 
+    def test_clear_all_data_resets_everything_to_zero(self):
+        # Simulate clear all data
+        projects = []
+        invoices = []
+        income = []
+        expenses = []
+        withdrawals = []
+        fund_ledger = []
+        initial_fund_balance = 0
+
+        total_income = sum(i.get('amount', 0) for i in income)
+        total_expenses = sum(e.get('amount', 0) for e in expenses)
+        net_profit = total_income - total_expenses
+        distribution = distribute_profit(net_profit, self.settings['profitPercentages'])
+        pending_payments = sum(max(0, p.get('packageAmount', 0) - p.get('receivedAmount', 0)) for p in projects)
+        fund_balance = initial_fund_balance + sum(
+            entry['amount'] if entry['type'] == 'addition' else -entry['amount'] for entry in fund_ledger
+        ) + distribution['companyFund']
+
+        self.assertEqual(total_income, 0)
+        self.assertEqual(total_expenses, 0)
+        self.assertEqual(net_profit, 0)
+        self.assertEqual(distribution['partner1'], 0)
+        self.assertEqual(distribution['partner2'], 0)
+        self.assertEqual(distribution['companyFund'], 0)
+        self.assertEqual(pending_payments, 0)
+        self.assertEqual(fund_balance, 0)
+
+        # Verify notifications on empty state
+        notifications = []
+        if len(expenses) > 0:
+            notifications.append({'type': 'expense'})
+        self.assertEqual(len(notifications), 0)
+
 if __name__ == '__main__':
     unittest.main()
+

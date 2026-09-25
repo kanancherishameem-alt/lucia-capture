@@ -156,29 +156,39 @@
 
         <!-- 3 Top Stat Cards: THIS MONTH -->
         <div class="hero-stats-grid">
-          <div class="stat-card">
+          <div class="stat-card" style="cursor: pointer;" onclick="App.navigateTo('invoices')" title="View & Manage Studio Invoices / Revenue">
             <div class="stat-header">
               <span class="stat-label">Revenue</span>
-              <div class="stat-icon green">
-                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <button class="edit-btn" onclick="event.stopPropagation(); App.openModal('modal-income');" title="+ Record client income" style="font-size: 11px; padding: 2px 8px; border-radius: 4px; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); color: var(--accent-income); cursor: pointer; display: inline-flex; align-items: center; gap: 3px;">
+                  + Record
+                </button>
+                <div class="stat-icon green">
+                  <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
+                </div>
               </div>
             </div>
             <div class="stat-value" id="home-stat-income">₹1,50,000</div>
-            <div class="stat-footer">Direct client advances & settlements</div>
+            <div class="stat-footer">Direct client advances & settlements →</div>
           </div>
 
-          <div class="stat-card">
+          <div class="stat-card" style="cursor: pointer;" onclick="App.navigateTo('expenses')" title="View & Manage Studio Expenses">
             <div class="stat-header">
               <span class="stat-label">Expenses</span>
-              <div class="stat-icon red">
-                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg>
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <button class="edit-btn" onclick="event.stopPropagation(); App.openModal('modal-expense');" title="+ Add studio expense" style="font-size: 11px; padding: 2px 8px; border-radius: 4px; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); color: var(--accent-expense); cursor: pointer; display: inline-flex; align-items: center; gap: 3px;">
+                  + Add
+                </button>
+                <div class="stat-icon red">
+                  <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg>
+                </div>
               </div>
             </div>
             <div class="stat-value" id="home-stat-expenses">₹40,000</div>
-            <div class="stat-footer">Shoots, travel, gear, editing & overhead</div>
+            <div class="stat-footer">Shoots, travel, gear, editing & overhead →</div>
           </div>
 
-          <div class="stat-card highlight-gold">
+          <div class="stat-card highlight-gold" style="cursor: pointer;" onclick="App.navigateTo('reports')" title="View Detailed Financial Reports">
             <div class="stat-header">
               <span class="stat-label">Net Profit</span>
               <div class="stat-icon gold">
@@ -186,7 +196,7 @@
               </div>
             </div>
             <div class="stat-value gold" id="home-stat-netprofit">₹1,10,000</div>
-            <div class="stat-footer">Revenue − Business Expenses</div>
+            <div class="stat-footer">Revenue − Business Expenses →</div>
           </div>
         </div>
 
@@ -197,11 +207,17 @@
               <svg width="18" height="18" fill="none" stroke="var(--gold-primary)" stroke-width="2.2" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><polyline points="17 11 19 13 23 9"></polyline></svg>
               Profit Split (Automated)
             </h2>
-            <span class="badge-tag">Exact 100% Balanced</span>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span class="badge-tag">Exact 100% Balanced</span>
+              <button class="btn btn-outline btn-sm" onclick="App.openEditPartnersModal()" title="Edit Partner Split Percentages & Names" style="padding: 4px 10px; font-size: 11px; display: inline-flex; align-items: center; gap: 4px;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                Edit Splits
+              </button>
+            </div>
           </div>
 
           <div class="profit-split-grid">
-            <div class="split-partner-box">
+            <div class="split-partner-box" style="cursor: pointer;" onclick="App.openEditPartnersModal()" title="Click to edit Shameem & split %">
               <div class="split-partner-name">
                 <span id="home-split-p1-name">Shameem</span>
                 <span class="split-percent" id="home-split-p1-pct">33.33%</span>
@@ -209,7 +225,7 @@
               <div class="split-amount" id="home-split-p1-amount">₹30,000</div>
             </div>
 
-            <div class="split-partner-box">
+            <div class="split-partner-box" style="cursor: pointer;" onclick="App.openEditPartnersModal()" title="Click to edit Shiyan & split %">
               <div class="split-partner-name">
                 <span id="home-split-p2-name">Shiyan</span>
                 <span class="split-percent" id="home-split-p2-pct">33.33%</span>
@@ -217,7 +233,7 @@
               <div class="split-amount" id="home-split-p2-amount">₹30,000</div>
             </div>
 
-            <div class="split-partner-box">
+            <div class="split-partner-box" style="cursor: pointer;" onclick="App.openEditPartnersModal()" title="Click to edit Company Fund %">
               <div class="split-partner-name">
                 <span>Company Fund</span>
                 <span class="split-percent" id="home-split-cf-pct">33.34%</span>
@@ -243,6 +259,10 @@
               <span class="stat-label">Company Fund Balance</span>
               <div style="display: flex; align-items: center; gap: 8px;">
                 <span class="badge-tag">Reserve</span>
+                <button class="edit-btn" onclick="event.stopPropagation(); App.openEditFundBalanceModal();" title="Edit Company Fund Balance" style="padding: 4px 8px; border-radius: 6px; background: rgba(212, 175, 55, 0.15); border: 1px solid rgba(212, 175, 55, 0.3); color: var(--gold-primary); cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-size: 11px;">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                  Edit
+                </button>
                 <button class="delete-btn" onclick="event.stopPropagation(); App.confirmDeleteFundBalance();" title="Delete / Reset Company Fund Balance">
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                 </button>
@@ -261,6 +281,20 @@
           </div>
           <div class="canvas-wrapper">
             <canvas id="home-chart-canvas"></canvas>
+          </div>
+        </div>
+
+        <!-- Active Projects & Shoots on Home -->
+        <div class="content-box">
+          <div class="card-title-row">
+            <h2>Active Projects & Shoots</h2>
+            <div style="display: flex; gap: 8px;">
+              <button class="btn btn-outline btn-sm" onclick="App.navigateTo('projects')">View All</button>
+              <button class="btn btn-gold btn-sm" onclick="App.openModal('modal-project')">+ New Project</button>
+            </div>
+          </div>
+          <div class="transaction-list" id="home-projects-list">
+            <!-- Dynamically populated -->
           </div>
         </div>
 
