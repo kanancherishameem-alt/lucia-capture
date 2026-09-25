@@ -29,6 +29,47 @@ const FinanceEngine = {
     return includeSymbol ? `₹${formatted}` : formatted;
   },
 
+  // Convert number to Indian English words (e.g. 20000 -> "Twenty Thousand Rupees Only")
+  numberToWordsINR(amount) {
+    const num = Math.floor(Math.abs(Number(amount) || 0));
+    if (num === 0) return 'Zero Rupees Only';
+
+    const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine',
+      'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+    const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+
+    function twoDigits(n) {
+      if (n < 20) return ones[n];
+      const t = tens[Math.floor(n / 10)];
+      const o = ones[n % 10];
+      return t + (o ? ' ' + o : '');
+    }
+
+    function threeDigits(n) {
+      const h = Math.floor(n / 100);
+      const rest = n % 100;
+      let str = '';
+      if (h > 0) str += ones[h] + ' Hundred';
+      if (rest > 0) str += (str ? ' ' : '') + twoDigits(rest);
+      return str;
+    }
+
+    let words = '';
+    const crore = Math.floor(num / 10000000);
+    let remainder = num % 10000000;
+    const lakh = Math.floor(remainder / 100000);
+    remainder = remainder % 100000;
+    const thousand = Math.floor(remainder / 1000);
+    remainder = remainder % 1000;
+
+    if (crore > 0) words += twoDigits(crore) + ' Crore ';
+    if (lakh > 0) words += twoDigits(lakh) + ' Lakh ';
+    if (thousand > 0) words += twoDigits(thousand) + ' Thousand ';
+    if (remainder > 0) words += threeDigits(remainder);
+
+    return (words.trim() + ' Rupees Only');
+  },
+
   // Parse formatted currency string or input back to clean number
   parseINR(value) {
     if (typeof value === 'number') return Math.round(value);

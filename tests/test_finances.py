@@ -69,9 +69,61 @@ def test_project_aswathi():
     assert pending == 20000, f"Expected 20000, got {pending}"
     assert profit == 40000, f"Expected 40000, got {profit}"
 
+def number_to_words_inr(num):
+    num = int(abs(num))
+    if num == 0:
+        return 'Zero Rupees Only'
+    ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine',
+            'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen']
+    tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety']
+
+    def two_digits(n):
+        if n < 20:
+            return ones[n]
+        t = tens[n // 10]
+        o = ones[n % 10]
+        return t + ((' ' + o) if o else '')
+
+    def three_digits(n):
+        h = n // 100
+        rest = n % 100
+        s = ''
+        if h > 0:
+            s += ones[h] + ' Hundred'
+        if rest > 0:
+            s += (' ' if s else '') + two_digits(rest)
+        return s
+
+    words = ''
+    crore = num // 10000000
+    rem = num % 10000000
+    lakh = rem // 100000
+    rem = rem % 100000
+    thousand = rem // 1000
+    rem = rem % 1000
+
+    if crore > 0:
+        words += two_digits(crore) + ' Crore '
+    if lakh > 0:
+        words += two_digits(lakh) + ' Lakh '
+    if thousand > 0:
+        words += two_digits(thousand) + ' Thousand '
+    if rem > 0:
+        words += three_digits(rem)
+
+    return words.strip() + ' Rupees Only'
+
+def test_number_to_words():
+    assert number_to_words_inr(20000) == 'Twenty Thousand Rupees Only'
+    assert number_to_words_inr(150000) == 'One Lakh Fifty Thousand Rupees Only'
+    assert number_to_words_inr(0) == 'Zero Rupees Only'
+    assert number_to_words_inr(54321) == 'Fifty Four Thousand Three Hundred Twenty One Rupees Only'
+    print("Number to Words Test Passed: 20000 ->", number_to_words_inr(20000))
+
 if __name__ == '__main__':
     test_profit_split_example()
     test_default_this_month()
     test_partner_available_balances()
     test_project_aswathi()
+    test_number_to_words()
     print("ALL TESTS PASSED SUCCESSFULLY! ✓")

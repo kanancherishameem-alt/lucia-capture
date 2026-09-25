@@ -2595,38 +2595,50 @@ const App = {
     if (type === 'invoice') {
       const inv = (window.dataStore.data.invoices || []).find(i => i.id === id);
       if (!inv) return;
+      const yr = (inv.issueDate || new Date().toISOString().split('T')[0]).slice(0, 4);
+      const paid = Number(inv.paidAmount) || 0;
+      const total = Number(inv.totalAmount) || paid;
+      const due = Number(inv.balanceDue) || 0;
       receiptData = {
         type: 'invoice',
         id: inv.id,
-        title: 'Tax Invoice & Bill',
-        number: inv.invoiceNumber,
+        title: 'Payment Receipt',
+        number: inv.invoiceNumber || `PR-${yr}-${inv.id.slice(-4).toUpperCase()}`,
         clientName: inv.clientName,
         clientPhone: inv.clientPhone || '',
         projectName: inv.projectName || '',
+        category: 'Photography & Videography Package',
         date: inv.issueDate,
-        dueDate: inv.dueDate,
-        totalAmount: inv.totalAmount,
-        paidAmount: inv.paidAmount,
-        balanceDue: inv.balanceDue,
+        amountReceived: paid,
+        previousPaid: 0,
+        paidAmount: paid,
+        totalAmount: total,
+        balanceDue: due,
+        paymentMethod: 'UPI',
         notes: inv.notes
       };
     } else if (type === 'project') {
       const proj = (window.dataStore.data.projects || []).find(p => p.id === id);
       if (!proj) return;
+      const yr = (proj.eventDate || new Date().toISOString().split('T')[0]).slice(0, 4);
       const pkg = Number(proj.packageAmount) || 0;
       const rcv = Number(proj.receivedAmount) || 0;
       receiptData = {
         type: 'project',
         id: proj.id,
-        title: 'Project Bill Statement',
-        number: proj.name,
+        title: 'Payment Receipt',
+        number: `PR-${yr}-${proj.id.slice(-4).toUpperCase()}`,
         clientName: proj.clientName,
         clientPhone: proj.clientPhone || '',
         projectName: proj.name,
+        category: 'Wedding & Event Shoot',
         date: proj.eventDate,
-        totalAmount: pkg,
+        amountReceived: rcv,
+        previousPaid: 0,
         paidAmount: rcv,
+        totalAmount: pkg,
         balanceDue: Math.max(0, pkg - rcv),
+        paymentMethod: 'Direct Studio',
         notes: proj.location ? `Shoot Location: ${proj.location}` : ''
       };
     } else if (type === 'payment') {
@@ -2635,29 +2647,54 @@ const App = {
       const proj = inc.projectId ? (window.dataStore.data.projects || []).find(p => p.id === inc.projectId) : null;
       const clientName = inc.clientName || (proj ? proj.clientName : (inc.notes || 'Studio Client'));
       const clientPhone = inc.clientPhone || (proj ? (proj.clientPhone || '') : '');
-      const projectName = inc.projectName || (proj ? proj.name : '');
+      const projectName = inc.projectName || (proj ? proj.name : 'Studio Shoot');
+      const category = inc.category || 'Wedding Shoot';
       const totalAmount = (inc.totalAmount !== undefined && inc.totalAmount !== null && inc.totalAmount > 0)
         ? Number(inc.totalAmount)
         : (proj ? (Number(proj.packageAmount) || 0) : Number(inc.amount));
-      const receivedAmount = Number(inc.amount) || 0;
+      const amountReceived = Number(inc.amount) || 0;
+
+      let previousPaid = 0;
+      if (proj) {
+        const sortedIncomes = (window.dataStore.data.income || [])
+          .filter(x => x.projectId === proj.id)
+          .sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+        let sumBefore = 0;
+        let found = false;
+        for (const item of sortedIncomes) {
+          if (item.id === inc.id) {
+            found = true;
+            break;
+          }
+          sumBefore += Number(item.amount) || 0;
+        }
+        previousPaid = found ? sumBefore : Math.max(0, (Number(proj.receivedAmount) || 0) - amountReceived);
+      } else {
+        const dueVal = inc.balanceDue !== undefined ? Number(inc.balanceDue) : Math.max(0, totalAmount - amountReceived);
+        previousPaid = Math.max(0, totalAmount - dueVal - amountReceived);
+      }
+      const totalPaid = previousPaid + amountReceived;
       const balanceDue = (inc.balanceDue !== undefined && inc.balanceDue !== null)
         ? Number(inc.balanceDue)
-        : Math.max(0, totalAmount - receivedAmount);
+        : Math.max(0, totalAmount - totalPaid);
 
+      const yr = (inc.date || new Date().toISOString().split('T')[0]).slice(0, 4);
       receiptData = {
         type: 'payment',
         id: inc.id,
-        title: 'Payment & Bill Receipt',
-        number: `REC-${inc.id.slice(-6).toUpperCase()}`,
+        title: 'Payment Receipt',
+        number: `PR-${yr}-${inc.id.slice(-4).toUpperCase()}`,
         clientName,
         clientPhone,
         projectName,
+        category,
         date: inc.date,
-        amountReceived: receivedAmount,
-        paymentMethod: inc.paymentMethod || 'UPI',
+        amountReceived,
+        previousPaid,
+        paidAmount: totalPaid,
         totalAmount,
-        paidAmount: receivedAmount,
         balanceDue,
+        paymentMethod: inc.paymentMethod || 'Cash',
         notes: inc.notes
       };
     }
@@ -2667,66 +2704,139 @@ const App = {
 
     const billing = window.dataStore.data.settings?.billing || {
       studioName: 'LUCIA PHOTOGRAPHY & VIDEOGRAPHY',
+      tagline: 'Cinematic Visuals & Luxury Wedding Capture',
+      address: 'Studio Lucia, Mavoor Road, Calicut, Kerala',
+      phone: '+91 98470 12345',
+      email: 'lucia@studio.com',
       upiId: 'lucia@okaxis'
     };
 
-    const previewEl = document.getElementById('share-receipt-preview');
-    if (previewEl) {
-      previewEl.innerHTML = `
-        <div class="share-receipt-header">
-          <img src="lucia_logo.png" alt="Lucia Logo" style="height: 44px; width: auto; object-fit: contain; margin: 0 auto 8px; display: block; filter: drop-shadow(0 0 10px rgba(197, 160, 89, 0.4));" onerror="this.style.display='none'">
-          <div class="share-receipt-brand">${billing.studioName}</div>
-          <div class="share-receipt-type">${receiptData.title}</div>
-        </div>
+    const isSettled = (Number(receiptData.balanceDue) || 0) <= 0;
+    const statusBadgeText = isSettled ? 'FULLY SETTLED' : 'PARTIALLY PAID';
+    const statusBadgeClass = isSettled ? 'settled' : 'partial';
 
-        <div class="share-receipt-meta">
-          <span>Ref / Number:</span>
-          <strong>${receiptData.number}</strong>
-        </div>
-        <div class="share-receipt-meta">
-          <span>Client:</span>
-          <strong>${receiptData.clientName}</strong>
-        </div>
-        ${receiptData.projectName ? `
-        <div class="share-receipt-meta">
-          <span>Project:</span>
-          <strong>${receiptData.projectName}</strong>
-        </div>` : ''}
-        <div class="share-receipt-meta">
-          <span>Date:</span>
-          <strong>${receiptData.date}</strong>
-        </div>
-
-        <div class="share-receipt-divider"></div>
-
-        <div class="share-receipt-totals">
-          ${receiptData.amountReceived !== undefined ? `
-            <div class="share-receipt-row" style="color: var(--accent-income); font-weight: 800; font-size: 15px;">
-              <span>Amount Received:</span>
-              <span>+${FinanceEngine.formatINR(receiptData.amountReceived)}</span>
+    const sheetEl = document.getElementById('a4-receipt-sheet');
+    if (sheetEl) {
+      sheetEl.innerHTML = `
+        <div class="a4-receipt-header">
+          <div class="a4-brand-block">
+            <div class="a4-brand-logo-box">
+              <img src="lucia_logo.png" alt="Lucia Logo" onerror="this.style.display='none'">
             </div>
-            <div class="share-receipt-row" style="font-size: 11px; color: var(--text-secondary); margin-bottom: 4px;">
-              <span>Payment Mode:</span>
-              <span>${receiptData.paymentMethod || 'UPI'}</span>
+            <div>
+              <div class="a4-brand-title">${billing.studioName}</div>
+              <div class="a4-brand-tagline">${billing.tagline || 'Cinematic Visuals & Luxury Wedding Capture'}</div>
+              <div class="a4-brand-contact">
+                ${billing.email || 'lucia@studio.com'}<br>
+                ${billing.phone || '+91 98470 12345'} • ${billing.address || 'Calicut, Kerala'}
+              </div>
             </div>
-          ` : ''}
-          <div class="share-receipt-row">
-            <span>Package / Total:</span>
-            <span>${FinanceEngine.formatINR(receiptData.totalAmount)}</span>
           </div>
-          <div class="share-receipt-row" style="color: var(--accent-income);">
-            <span>Total Paid to Date:</span>
-            <span>${FinanceEngine.formatINR(receiptData.paidAmount)}</span>
-          </div>
-          <div class="share-receipt-row balance-due">
-            <span>Balance Due:</span>
-            <span>${FinanceEngine.formatINR(receiptData.balanceDue)}</span>
+          <div class="a4-title-block">
+            <div class="a4-title-receipt">PAYMENT RECEIPT</div>
+            <table class="a4-meta-table">
+              <tr>
+                <td class="a4-meta-lbl">Receipt No.</td>
+                <td class="a4-meta-val">${receiptData.number}</td>
+              </tr>
+              <tr>
+                <td class="a4-meta-lbl">Date</td>
+                <td class="a4-meta-val">${receiptData.date}</td>
+              </tr>
+            </table>
           </div>
         </div>
 
-        <div class="share-receipt-upi">
-          <div>Pay via UPI: <strong>${billing.upiId}</strong></div>
-          ${billing.bankName ? `<div style="margin-top: 3px; font-size: 10px; color: var(--text-muted);">${billing.bankName} • A/C: ${billing.accountNumber} • IFSC: ${billing.ifsc}</div>` : ''}
+        <div style="margin-bottom: 16px;">
+          <div class="a4-sec-heading">CLIENT DETAILS</div>
+          <table class="a4-table">
+            <tr>
+              <td style="width: 28%; color: #4b5563;">Client Name</td>
+              <td class="a4-td-val">${receiptData.clientName}</td>
+            </tr>
+            <tr>
+              <td style="color: #4b5563;">Phone Number</td>
+              <td class="a4-td-val">${receiptData.clientPhone || 'N/A'}</td>
+            </tr>
+            <tr>
+              <td style="color: #4b5563;">Shoot / Project</td>
+              <td class="a4-td-val">${receiptData.projectName || receiptData.category || 'Studio Shoot'}</td>
+            </tr>
+            <tr>
+              <td style="color: #4b5563;">Shoot / Service Category</td>
+              <td class="a4-td-val">${receiptData.category || receiptData.notes || 'Wedding Shoot'}</td>
+            </tr>
+          </table>
+        </div>
+
+        <div class="a4-two-col">
+          <!-- Left: Payment Summary -->
+          <div>
+            <div class="a4-sec-heading">PAYMENT SUMMARY</div>
+            <table class="a4-table">
+              <tr>
+                <td>Total Package Fee</td>
+                <td class="a4-td-val">Rs. ${Number(receiptData.totalAmount || 0).toLocaleString('en-IN')}</td>
+              </tr>
+              <tr>
+                <td>Previous Paid</td>
+                <td class="a4-td-val">Rs. ${Number(receiptData.previousPaid || 0).toLocaleString('en-IN')}</td>
+              </tr>
+              <tr>
+                <td>Current Payment</td>
+                <td class="a4-td-val" style="color: #16a34a;">Rs. ${Number(receiptData.amountReceived || 0).toLocaleString('en-IN')}</td>
+              </tr>
+              <tr>
+                <td>Total Paid to Date</td>
+                <td class="a4-td-val">Rs. ${Number(receiptData.paidAmount || 0).toLocaleString('en-IN')}</td>
+              </tr>
+              <tr>
+                <td>Balance Due</td>
+                <td class="a4-td-val" style="color: ${receiptData.balanceDue > 0 ? '#dc2626' : '#16a34a'};">Rs. ${Number(receiptData.balanceDue || 0).toLocaleString('en-IN')}</td>
+              </tr>
+            </table>
+          </div>
+
+          <!-- Right: Payment Details & Status Banner -->
+          <div>
+            <div class="a4-sec-heading">PAYMENT DETAILS</div>
+            <table class="a4-table">
+              <tr>
+                <td>Payment Method</td>
+                <td class="a4-td-val">${receiptData.paymentMethod || 'UPI'}</td>
+              </tr>
+              <tr>
+                <td>Mode / Type</td>
+                <td class="a4-td-val">${receiptData.paymentMethod === 'Cash' ? 'Offline Cash' : 'Online Digital'}</td>
+              </tr>
+            </table>
+
+            <div class="a4-status-badge ${statusBadgeClass}">
+              ${statusBadgeText}
+            </div>
+          </div>
+        </div>
+
+        <!-- Amount Received Banner Box -->
+        <div class="a4-amount-box">
+          <div class="a4-amount-lbl">AMOUNT RECEIVED (CURRENT PAYMENT)</div>
+          <div class="a4-amount-val">Rs. ${Number(receiptData.amountReceived || 0).toLocaleString('en-IN')}</div>
+          <div class="a4-amount-words">${FinanceEngine.numberToWordsINR(receiptData.amountReceived)}</div>
+        </div>
+
+        <!-- Footer with signature -->
+        <div class="a4-footer">
+          <div>
+            <div class="a4-footer-thanks">Thank You For Your Payment</div>
+            <div class="a4-footer-contact">
+              ${billing.email || 'lucia@studio.com'}<br>
+              Phone: ${billing.phone || '+91 98470 12345'} • UPI: ${billing.upiId || 'lucia@okaxis'}
+            </div>
+          </div>
+          <div class="a4-sig-block">
+            <div class="a4-sig-line"></div>
+            <div class="a4-sig-title">Authorized Signature</div>
+          </div>
         </div>
       `;
     }
@@ -2738,10 +2848,44 @@ const App = {
 
     const titleEl = document.getElementById('share-receipt-modal-title');
     if (titleEl) {
-      titleEl.textContent = `Share ${receiptData.title}`;
+      titleEl.textContent = `Payment Receipt — ${receiptData.clientName}`;
     }
 
     this.openModal('modal-share-receipt');
+  },
+
+  downloadReceiptA4PDF() {
+    const element = document.getElementById('a4-receipt-sheet');
+    if (!element) return;
+
+    const receiptNo = this.sharingReceiptData?.number || 'PR-RECEIPT';
+    const clientName = (this.sharingReceiptData?.clientName || 'Client').replace(/[^a-zA-Z0-9_-]/g, '_');
+    const filename = `Lucia_Payment_Receipt_${receiptNo}_${clientName}.pdf`;
+
+    this.showToast('📄 Generating A4 PDF receipt...');
+
+    if (window.html2pdf) {
+      const opt = {
+        margin: [6, 8, 6, 8],
+        filename: filename,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, logging: false },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+
+      window.html2pdf().set(opt).from(element).save().then(() => {
+        this.showToast('✅ A4 PDF Downloaded successfully!');
+      }).catch(err => {
+        console.warn('html2pdf fallback to native print:', err);
+        window.print();
+      });
+    } else {
+      window.print();
+    }
+  },
+
+  printReceiptA4() {
+    window.print();
   },
 
   generateReceiptText(r) {

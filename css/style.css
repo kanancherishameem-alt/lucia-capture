@@ -2049,97 +2049,282 @@ html, body {
    Bill & Receipt Sharing System
    ========================================================================== */
 
-.share-receipt-preview {
-  background: var(--bg-secondary);
-  border: 1px solid var(--gold-border);
-  border-radius: var(--radius-md);
-  padding: 18px 20px;
-  position: relative;
-  font-family: var(--font-family);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
-}
+/* ==========================================================================
+   A4 Luxury Payment Receipt (PDF & Print Model matching reference)
+   ========================================================================== */
 
-.share-receipt-header {
-  text-align: center;
-  padding-bottom: 12px;
-  border-bottom: 1.5px dashed rgba(197, 160, 89, 0.4);
+.a4-receipt-wrapper {
+  background: #cbd5e1;
+  padding: 14px;
+  border-radius: var(--radius-md);
+  display: flex;
+  justify-content: center;
+  overflow-x: auto;
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.25);
   margin-bottom: 14px;
 }
 
-.share-receipt-brand {
-  font-size: 14px;
-  font-weight: 900;
-  letter-spacing: 0.08em;
-  color: var(--gold-primary);
-  text-transform: uppercase;
+.a4-receipt-sheet {
+  background: #ffffff !important;
+  color: #111827 !important;
+  width: 100%;
+  max-width: 660px;
+  min-height: 780px;
+  padding: 24px 28px 28px 28px;
+  border-radius: 4px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  position: relative;
+  border-top: 5px solid #064e3b;
+  box-sizing: border-box;
 }
 
-.share-receipt-type {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--text-secondary);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  margin-top: 2px;
+.a4-receipt-sheet * {
+  box-sizing: border-box;
 }
 
-.share-receipt-meta {
+/* Header */
+.a4-receipt-header {
   display: flex;
   justify-content: space-between;
-  font-size: 12px;
-  color: var(--text-secondary);
-  margin-bottom: 6px;
+  align-items: flex-start;
+  margin-bottom: 18px;
+  gap: 14px;
 }
 
-.share-receipt-meta strong {
-  color: var(--text-white);
-}
-
-.share-receipt-divider {
-  border-bottom: 1.5px dashed rgba(197, 160, 89, 0.25);
-  margin: 12px 0;
-}
-
-.share-receipt-totals {
-  background: rgba(3, 20, 14, 0.6);
-  border-radius: var(--radius-sm);
-  padding: 10px 14px;
-  margin: 10px 0;
-}
-
-.share-receipt-row {
+.a4-brand-block {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  font-size: 13px;
-  padding: 3px 0;
+  gap: 12px;
 }
 
-.share-receipt-row.balance-due {
-  border-top: 1px solid rgba(197, 160, 89, 0.3);
-  margin-top: 6px;
-  padding-top: 6px;
+.a4-brand-logo-box {
+  width: 52px;
+  height: 52px;
+  border-radius: 6px;
+  background: #042f2e;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.a4-brand-logo-box img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.a4-brand-title {
+  font-size: 17px;
   font-weight: 800;
-  font-size: 15px;
-  color: var(--gold-light);
+  color: #111827;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
 }
 
-.share-receipt-upi {
+.a4-brand-tagline {
   font-size: 11px;
-  color: var(--text-secondary);
-  background: rgba(197, 160, 89, 0.08);
-  border: 1px dashed var(--gold-border);
-  border-radius: var(--radius-sm);
-  padding: 8px 12px;
+  color: #4b5563;
+  margin-top: 1px;
+}
+
+.a4-brand-contact {
+  font-size: 10.5px;
+  color: #6b7280;
+  margin-top: 2px;
+  line-height: 1.35;
+}
+
+.a4-title-block {
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.a4-title-receipt {
+  font-size: 16px;
+  font-weight: 900;
+  color: #111827;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.a4-meta-table {
+  margin-left: auto;
+  border-collapse: collapse;
+  font-size: 11.5px;
+}
+
+.a4-meta-table td {
+  padding: 1px 0;
+}
+
+.a4-meta-table .a4-meta-lbl {
+  color: #6b7280;
+  padding-right: 10px;
+  text-align: right;
+}
+
+.a4-meta-table .a4-meta-val {
+  font-weight: 800;
+  color: #111827;
+  text-align: right;
+}
+
+/* Section Headings */
+.a4-sec-heading {
+  font-size: 10px;
+  font-weight: 700;
+  color: #4b5563;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 5px;
+}
+
+/* Tables */
+.a4-table {
+  width: 100%;
+  border: 1px solid #e5e7eb;
+  border-collapse: collapse;
+  font-size: 11.5px;
+  background: #ffffff;
+}
+
+.a4-table tr {
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.a4-table tr:nth-child(even) {
+  background: #f9fafb;
+}
+
+.a4-table tr:last-child {
+  border-bottom: none;
+}
+
+.a4-table td {
+  padding: 6px 10px;
+  color: #374151;
+}
+
+.a4-table td.a4-td-val {
+  font-weight: 800;
+  color: #111827;
+  text-align: right;
+}
+
+/* Two Columns */
+.a4-two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 14px;
+  margin-bottom: 16px;
+}
+
+@media (max-width: 580px) {
+  .a4-two-col {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Status Badge */
+.a4-status-badge {
   text-align: center;
+  padding: 9px 12px;
+  font-weight: 800;
+  font-size: 12px;
+  border-radius: 6px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   margin-top: 10px;
+  color: #ffffff !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
 }
 
-.share-receipt-upi strong {
-  color: var(--gold-primary);
-  font-family: var(--font-mono);
+.a4-status-badge.partial {
+  background: #d97706; /* amber-gold matching reference */
 }
 
+.a4-status-badge.settled {
+  background: #16a34a; /* green */
+}
+
+/* Amount Received Box */
+.a4-amount-box {
+  border: 1.5px solid #86efac;
+  background: #f0fdf4;
+  border-radius: 8px;
+  padding: 14px 18px;
+  margin: 16px 0 20px 0;
+}
+
+.a4-amount-lbl {
+  font-size: 10px;
+  font-weight: 700;
+  color: #166534;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 3px;
+}
+
+.a4-amount-val {
+  font-size: 28px;
+  font-weight: 900;
+  color: #166534;
+  line-height: 1.15;
+}
+
+.a4-amount-words {
+  font-size: 12px;
+  font-style: italic;
+  color: #374151;
+  margin-top: 3px;
+}
+
+/* Footer & Signature */
+.a4-footer {
+  margin-top: 36px;
+  padding-top: 14px;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+
+.a4-footer-thanks {
+  font-weight: 800;
+  font-size: 12.5px;
+  color: #111827;
+  margin-bottom: 3px;
+}
+
+.a4-footer-contact {
+  font-size: 10.5px;
+  color: #6b7280;
+  line-height: 1.4;
+}
+
+.a4-sig-block {
+  text-align: center;
+}
+
+.a4-sig-line {
+  width: 180px;
+  border-bottom: 1.5px solid #374151;
+  margin-bottom: 5px;
+}
+
+.a4-sig-title {
+  font-weight: 700;
+  font-size: 11px;
+  color: #111827;
+}
+
+/* Share Actions Grid */
 .share-actions-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -2149,6 +2334,74 @@ html, body {
 @media (max-width: 480px) {
   .share-actions-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+/* Native Print Styles for A4 Page */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 8mm 10mm;
+  }
+
+  body {
+    background: #ffffff !important;
+    color: #111827 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Hide everything except receipt modal */
+  .app-container,
+  .bottom-nav,
+  .modal-overlay:not(#modal-share-receipt),
+  .modal-header,
+  .modal-close-btn,
+  .share-receipt-controls,
+  .toast-container,
+  #modal-share-receipt .modal-header,
+  #modal-share-receipt .share-receipt-controls {
+    display: none !important;
+  }
+
+  #modal-share-receipt {
+    position: static !important;
+    display: block !important;
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    overflow: visible !important;
+  }
+
+  #modal-share-receipt .modal-sheet {
+    max-width: 100% !important;
+    width: 100% !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .a4-receipt-wrapper {
+    background: transparent !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    display: block !important;
+    margin: 0 !important;
+  }
+
+  .a4-receipt-sheet {
+    max-width: 100% !important;
+    width: 100% !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    border-top: 5px solid #064e3b !important;
+    padding: 10mm 12mm !important;
+    min-height: auto !important;
+    page-break-inside: avoid !important;
   }
 }
 

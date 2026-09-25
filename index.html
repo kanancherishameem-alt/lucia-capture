@@ -1728,23 +1728,37 @@
 
     <!-- 12. Bill & Payment Receipt Sharing Modal -->
     <div id="modal-share-receipt" class="modal-overlay" onclick="App.closeModal(event, 'modal-share-receipt')">
-      <div class="modal-sheet" style="max-width: 520px;" onclick="event.stopPropagation()">
+      <div class="modal-sheet" style="max-width: 740px; width: 95%;" onclick="event.stopPropagation()">
         <div class="modal-header">
           <div style="display: flex; align-items: center; gap: 8px;">
             <svg width="20" height="20" fill="none" stroke="var(--gold-primary)" stroke-width="2.5" viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
-            <div class="modal-title" id="share-receipt-modal-title">Share Bill Receipt</div>
+            <div class="modal-title" id="share-receipt-modal-title">Payment Receipt (A4 Model)</div>
           </div>
           <button class="modal-close-btn" onclick="App.closeModalDirect('modal-share-receipt')">✕</button>
         </div>
 
-        <!-- Receipt Live Preview Card -->
-        <div class="share-receipt-preview" id="share-receipt-preview">
-          <!-- Populated dynamically with elegant receipt format -->
+        <!-- Quick Top Actions: Instant A4 PDF Download & Print -->
+        <div class="share-receipt-controls" style="display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap;">
+          <button class="btn btn-gold" style="flex: 1; min-width: 170px; padding: 11px 16px; font-size: 13.5px;" onclick="App.downloadReceiptA4PDF()">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            <span>Download A4 PDF</span>
+          </button>
+          <button class="btn btn-outline" style="padding: 11px 16px; font-size: 13.5px; border-color: var(--gold-border); color: var(--gold-primary);" onclick="App.printReceiptA4()">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+            <span>Print / Save PDF</span>
+          </button>
+        </div>
+
+        <!-- Receipt Live Preview Card (Exact A4 Sheet Model) -->
+        <div class="a4-receipt-wrapper">
+          <div class="a4-receipt-sheet" id="a4-receipt-sheet">
+            <!-- Populated dynamically with exact reference design -->
+          </div>
         </div>
 
         <!-- Recipient Phone & Actions -->
-        <div style="margin-top: 16px;">
-          <div class="form-group" style="margin-bottom: 14px;">
+        <div class="share-receipt-controls" style="margin-top: 16px;">
+          <div class="form-group" style="margin-bottom: 12px;">
             <label class="form-label" style="display: flex; justify-content: space-between; align-items: center;">
               <span>Client Mobile / WhatsApp</span>
               <span style="font-size: 11px; color: var(--gold-light);">Auto-detects country code</span>
@@ -1761,19 +1775,9 @@
               <span>WhatsApp Receipt</span>
             </button>
 
-            <button class="btn btn-gold" onclick="App.sendReceiptNative()">
-              <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
-              <span>Share via App</span>
-            </button>
-
             <button class="btn btn-outline" onclick="App.copyReceiptText()">
               <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
               <span>Copy Bill Text</span>
-            </button>
-
-            <button class="btn btn-outline" onclick="App.viewReceiptFullInvoice()">
-              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
-              <span>Full Print / PDF</span>
             </button>
           </div>
         </div>
@@ -1803,6 +1807,7 @@
   </div>
 
   <!-- Scripts -->
+  <script src="js/html2pdf.bundle.min.js"></script>
   <script src="js/finance.js"></script>
   <script src="js/data.js"></script>
   <script src="js/charts.js"></script>
