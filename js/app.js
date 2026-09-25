@@ -445,7 +445,15 @@ const App = {
 
   openWithdrawalModal(partnerId) {
     const select = document.getElementById('wd-partner');
-    if (select && partnerId) select.value = partnerId;
+    if (select) {
+      const p1Name = window.dataStore.data.settings?.partner1Name || 'Shameem';
+      const p2Name = window.dataStore.data.settings?.partner2Name || 'Shiyan';
+      if (select.options.length >= 2) {
+        select.options[0].textContent = p1Name;
+        select.options[1].textContent = p2Name;
+      }
+      if (partnerId) select.value = partnerId;
+    }
     this.openModal('modal-withdrawal');
   },
 
@@ -664,6 +672,121 @@ const App = {
     this.openEditExpenseModal(expenseId);
   },
 
+  openEditPartnersModal() {
+    const settings = window.dataStore.data.settings;
+    const p1Name = settings.partner1Name || 'Shameem';
+    const p2Name = settings.partner2Name || 'Shiyan';
+    const pcts = settings.profitPercentages || { partner1: 33.33, partner2: 33.33, companyFund: 33.34 };
+
+    const p1Inp = document.getElementById('edit-partner1-name');
+    const p2Inp = document.getElementById('edit-partner2-name');
+    const p1Pct = document.getElementById('edit-partner1-pct');
+    const p2Pct = document.getElementById('edit-partner2-pct');
+    const cfPct = document.getElementById('edit-company-fund-pct');
+
+    if (p1Inp) p1Inp.value = p1Name;
+    if (p2Inp) p2Inp.value = p2Name;
+    if (p1Pct) p1Pct.value = pcts.partner1;
+    if (p2Pct) p2Pct.value = pcts.partner2;
+    if (cfPct) cfPct.value = pcts.companyFund;
+
+    this.updateEditPartnersLabels();
+    this.validateEditPartnersSum();
+    this.openModal('modal-edit-partners');
+  },
+
+  updateEditPartnersLabels() {
+    const p1Name = document.getElementById('edit-partner1-name')?.value?.trim() || 'Partner 1';
+    const p2Name = document.getElementById('edit-partner2-name')?.value?.trim() || 'Partner 2';
+    const l1 = document.getElementById('edit-partner1-pct-label');
+    const l2 = document.getElementById('edit-partner2-pct-label');
+    if (l1) l1.textContent = `${p1Name} (%)`;
+    if (l2) l2.textContent = `${p2Name} (%)`;
+  },
+
+  validateEditPartnersSum() {
+    const p1 = parseFloat(document.getElementById('edit-partner1-pct')?.value) || 0;
+    const p2 = parseFloat(document.getElementById('edit-partner2-pct')?.value) || 0;
+    const cf = parseFloat(document.getElementById('edit-company-fund-pct')?.value) || 0;
+    const sum = Math.round((p1 + p2 + cf) * 100) / 100;
+
+    const badge = document.getElementById('edit-partners-sum-badge');
+    const btn = document.getElementById('btn-save-edit-partners');
+
+    if (badge) {
+      badge.textContent = `Sum: ${sum}%`;
+      const isValid = Math.abs(sum - 100) < 0.05;
+      badge.style.color = isValid ? 'var(--accent-income)' : 'var(--accent-expense)';
+      badge.style.borderColor = isValid ? 'var(--accent-income)' : 'var(--accent-expense)';
+      if (btn) btn.disabled = !isValid;
+    }
+  },
+
+  handleSavePartnersModal(e) {
+    if (e) e.preventDefault();
+    const p1Name = document.getElementById('edit-partner1-name')?.value?.trim();
+    const p2Name = document.getElementById('edit-partner2-name')?.value?.trim();
+    const p1Pct = parseFloat(document.getElementById('edit-partner1-pct')?.value) || 33.33;
+    const p2Pct = parseFloat(document.getElementById('edit-partner2-pct')?.value) || 33.33;
+    const cfPct = parseFloat(document.getElementById('edit-company-fund-pct')?.value) || 33.34;
+
+    if (!p1Name || !p2Name) {
+      this.showToast('⚠️ Please enter names for both partners');
+      return;
+    }
+
+    const sum = Math.round((p1Pct + p2Pct + cfPct) * 100) / 100;
+    if (Math.abs(sum - 100) >= 0.05) {
+      this.showToast('⚠️ Percentages must sum to exactly 100%');
+      return;
+    }
+
+    window.dataStore.updatePartnersAndSplits(p1Name, p2Name, p1Pct, p2Pct, cfPct);
+    this.closeModalDirect('modal-edit-partners');
+    this.showToast('Partner details & profit splits updated ✓');
+  },
+
+  openEditFundBalanceModal() {
+    const store = window.dataStore.data;
+    const financials = FinanceEngine.computeFinancials(store, { type: 'all' });
+    const currentBalance = financials.companyFund.balance || 0;
+
+    const input = document.getElementById('edit-fund-balance-input');
+    const hint = document.getElementById('edit-fund-current-hint');
+
+    if (input) input.value = currentBalance;
+    if (hint) hint.textContent = FinanceEngine.formatINR(currentBalance);
+
+    this.openModal('modal-edit-fund-balance');
+  },
+
+  handleSaveFundBalanceModal(e) {
+    if (e) e.preventDefault();
+    const amountVal = document.getElementById('edit-fund-balance-input')?.value;
+    const targetBalance = FinanceEngine.parseINR(amountVal);
+
+    if (isNaN(targetBalance) || targetBalance < 0) {
+      this.showToast('⚠️ Please enter a valid fund balance amount');
+      return;
+    }
+
+    window.dataStore.setCompanyFundBalance(targetBalance);
+    this.closeModalDirect('modal-edit-fund-balance');
+    this.showToast(`Company fund reserve updated to ${FinanceEngine.formatINR(targetBalance)} ✓`);
+  },
+
+  cycleProjectStatus(projectId) {
+    const proj = (window.dataStore.data.projects || []).find(p => p.id === projectId);
+    if (!proj) return;
+    const statuses = ['Upcoming', 'Ongoing', 'Payment Pending', 'Completed'];
+    const currentIndex = statuses.indexOf(proj.status);
+    const nextIndex = (currentIndex + 1) % statuses.length;
+    const nextStatus = statuses[nextIndex];
+
+    window.dataStore.updateProject(projectId, { status: nextStatus });
+    this.showToast(`Project status set to "${nextStatus}" ✓`);
+  },
+
   selectPaymentMethod(prefix, method) {
     const hidden = document.getElementById(`${prefix}-method`);
     if (hidden) hidden.value = method;
@@ -766,7 +889,7 @@ const App = {
     const notes = document.getElementById('inc-notes').value;
 
     if (!amount || amount <= 0) {
-      alert('Please enter a valid revenue amount');
+      this.showToast('⚠️ Please enter a valid revenue amount');
       return;
     }
 
@@ -819,7 +942,7 @@ const App = {
     const notes = document.getElementById('exp-notes').value;
 
     if (!amount || amount <= 0) {
-      alert('Please enter a valid expense amount');
+      this.showToast('⚠️ Please enter a valid expense amount');
       return;
     }
 
@@ -869,7 +992,7 @@ const App = {
     const location = document.getElementById('proj-location').value.trim();
 
     if (!name || packageAmount <= 0) {
-      alert('Please provide project name and package amount');
+      this.showToast('⚠️ Please provide project name and package amount');
       return;
     }
 
@@ -914,7 +1037,7 @@ const App = {
     e.preventDefault();
     const projectId = document.getElementById('pay-project').value;
     if (!projectId) {
-      alert('Please select a project');
+      this.showToast('⚠️ Please select a project');
       return;
     }
 
@@ -951,7 +1074,7 @@ const App = {
     const notes = document.getElementById('wd-notes').value;
 
     if (!amount || amount <= 0) {
-      alert('Please enter a valid amount');
+      this.showToast('⚠️ Please enter a valid amount');
       return;
     }
 
@@ -992,7 +1115,7 @@ const App = {
     const date = document.getElementById('fund-date').value;
 
     if (!amount || amount <= 0) {
-      alert('Please enter a valid amount');
+      this.showToast('⚠️ Please enter a valid amount');
       return;
     }
 
@@ -1326,7 +1449,7 @@ const App = {
                 <div class="project-title">${proj.name}</div>
                 <div class="project-client">${proj.clientName} • ${proj.eventDate}</div>
               </div>
-              <span class="status-badge ${statusClass}">${proj.status}</span>
+              <span class="status-badge ${statusClass} interactive-status" onclick="event.stopPropagation(); App.cycleProjectStatus('${proj.id}')" title="Click to instantly switch status (${proj.status})">${proj.status} ▾</span>
             </div>
 
             <div class="project-metrics-grid">
@@ -1527,7 +1650,8 @@ const App = {
               <button class="btn-whatsapp" style="padding: 6px 12px; font-size: 12px;" onclick="App.shareInvoiceWhatsApp('${inv.id}')">
                 Send WhatsApp Reminder
               </button>
-              <div style="display: flex; gap: 8px;">
+              <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button class="btn btn-outline btn-sm" onclick="App.openEditInvoiceModal('${inv.id}')" title="Edit Invoice Details">Edit</button>
                 <button class="btn btn-outline btn-sm" onclick="App.openRecordInvoicePaymentModal('${inv.id}')">Record Payment</button>
                 <button class="btn btn-gold btn-sm" onclick="App.openInvoicePreview('${inv.id}')">View</button>
               </div>
@@ -1565,8 +1689,9 @@ const App = {
                 <button class="btn-whatsapp" style="padding: 6px 12px; font-size: 12px;" onclick="App.sendProjectWhatsAppReminder('${p.id}')">
                   Send WhatsApp Reminder
                 </button>
-                <div style="display: flex; gap: 8px;">
-                  <button class="btn btn-outline btn-sm" onclick="App.viewProjectDetails('${p.id}')">View Project</button>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                  <button class="btn btn-outline btn-sm" onclick="App.openEditProjectModal('${p.id}')" title="Edit Project Details">Edit</button>
+                  <button class="btn btn-outline btn-sm" onclick="App.viewProjectDetails('${p.id}')">View Details</button>
                   <button class="btn btn-gold btn-sm" onclick="App.quickMarkPaid('${p.id}')">Mark Paid</button>
                 </div>
               </div>
@@ -2040,7 +2165,7 @@ const App = {
 
     const items = this.invoiceLineItems.filter(item => (item.description || '').trim().length > 0);
     if (items.length === 0) {
-      alert('Please add at least one service item to the invoice.');
+      this.showToast('⚠️ Please add at least one service item to the invoice.');
       return;
     }
 
@@ -2565,7 +2690,7 @@ const App = {
     const notes = document.getElementById('inv-pay-notes').value.trim();
 
     if (!amount || amount <= 0) {
-      alert('Please enter a valid payment amount.');
+      this.showToast('⚠️ Please enter a valid payment amount.');
       return;
     }
 
@@ -2582,7 +2707,7 @@ const App = {
       this.showToast(`Payment of ${FinanceEngine.formatINR(amount)} recorded & Revenue updated ✓`);
       this.renderAll();
     } else {
-      alert('Failed to record payment on invoice.');
+      this.showToast('⚠️ Failed to record payment on invoice.');
     }
   },
 
@@ -2698,14 +2823,29 @@ const App = {
     const store = window.dataStore.data;
     const financials = FinanceEngine.computeFinancials(store, { type: 'all' });
 
-    // Shameem
-    document.getElementById('partner1-title-name').textContent = store.settings.partner1Name.toUpperCase();
+    const p1Name = store.settings.partner1Name || 'Shameem';
+    const p2Name = store.settings.partner2Name || 'Shiyan';
+
+    // Partner 1
+    const p1Title = document.getElementById('partner1-title-name');
+    if (p1Title) p1Title.textContent = p1Name.toUpperCase();
+    const p1Avatar = document.getElementById('partner1-avatar');
+    if (p1Avatar) p1Avatar.textContent = p1Name.substring(0, 2).toUpperCase();
+    const p1Btn = document.getElementById('btn-p1-record-wd');
+    if (p1Btn) p1Btn.textContent = `Record ${p1Name} Withdrawal`;
+
     document.getElementById('p1-available').textContent = FinanceEngine.formatINR(financials.partner1.available);
     document.getElementById('p1-profit').textContent = FinanceEngine.formatINR(financials.partner1.profitShare);
     document.getElementById('p1-withdrawn').textContent = FinanceEngine.formatINR(financials.partner1.withdrawn);
 
-    // Shiyan
-    document.getElementById('partner2-title-name').textContent = store.settings.partner2Name.toUpperCase();
+    // Partner 2
+    const p2Title = document.getElementById('partner2-title-name');
+    if (p2Title) p2Title.textContent = p2Name.toUpperCase();
+    const p2Avatar = document.getElementById('partner2-avatar');
+    if (p2Avatar) p2Avatar.textContent = p2Name.substring(0, 2).toUpperCase();
+    const p2Btn = document.getElementById('btn-p2-record-wd');
+    if (p2Btn) p2Btn.textContent = `Record ${p2Name} Withdrawal`;
+
     document.getElementById('p2-available').textContent = FinanceEngine.formatINR(financials.partner2.available);
     document.getElementById('p2-profit').textContent = FinanceEngine.formatINR(financials.partner2.profitShare);
     document.getElementById('p2-withdrawn').textContent = FinanceEngine.formatINR(financials.partner2.withdrawn);
@@ -2822,10 +2962,24 @@ const App = {
   },
 
   renderSettings() {
-    const pcts = window.dataStore.data.settings.profitPercentages;
+    const settings = window.dataStore.data.settings;
+    const pcts = settings.profitPercentages || { partner1: 33.33, partner2: 33.33, companyFund: 33.34 };
     const p1 = document.getElementById('set-pct-p1');
     const p2 = document.getElementById('set-pct-p2');
     const cf = document.getElementById('set-pct-cf');
+
+    const p1NameInp = document.getElementById('set-partner1-name');
+    const p2NameInp = document.getElementById('set-partner2-name');
+    const p1Label = document.getElementById('set-pct-p1-label');
+    const p2Label = document.getElementById('set-pct-p2-label');
+
+    const p1Name = settings.partner1Name || 'Shameem';
+    const p2Name = settings.partner2Name || 'Shiyan';
+
+    if (p1NameInp) p1NameInp.value = p1Name;
+    if (p2NameInp) p2NameInp.value = p2Name;
+    if (p1Label) p1Label.textContent = `${p1Name} Share (%)`;
+    if (p2Label) p2Label.textContent = `${p2Name} Share (%)`;
 
     if (p1 && p2 && cf) {
       p1.value = pcts.partner1;
@@ -2907,19 +3061,20 @@ const App = {
 
   savePercentages(e) {
     e.preventDefault();
+    const p1Name = document.getElementById('set-partner1-name')?.value?.trim();
+    const p2Name = document.getElementById('set-partner2-name')?.value?.trim();
     const p1 = parseFloat(document.getElementById('set-pct-p1').value) || 33.33;
     const p2 = parseFloat(document.getElementById('set-pct-p2').value) || 33.33;
     const cf = parseFloat(document.getElementById('set-pct-cf').value) || 33.34;
 
-    window.dataStore.updateSettings({
-      profitPercentages: {
-        partner1: p1,
-        partner2: p2,
-        companyFund: cf
-      }
-    });
+    const sum = Math.round((p1 + p2 + cf) * 100) / 100;
+    if (Math.abs(sum - 100) >= 0.05) {
+      this.showToast('⚠️ Percentages must sum to exactly 100%');
+      return;
+    }
 
-    this.showToast('Profit distribution percentages updated ✓');
+    window.dataStore.updatePartnersAndSplits(p1Name, p2Name, p1, p2, cf);
+    this.showToast('Partner names and profit distribution percentages updated ✓');
   },
 
   saveSecuritySettings(e) {
@@ -2930,17 +3085,17 @@ const App = {
     const password = document.getElementById('set-sec-password')?.value || '';
 
     if (!/^[0-9]{4}$/.test(pin)) {
-      alert('PIN must be exactly 4 digits (e.g. 1234).');
+      this.showToast('⚠️ PIN must be exactly 4 digits (e.g. 1234).');
       return;
     }
 
     if (!email || !email.includes('@')) {
-      alert('Please enter a valid email address.');
+      this.showToast('⚠️ Please enter a valid email address.');
       return;
     }
 
     if (!password) {
-      alert('Password cannot be empty.');
+      this.showToast('⚠️ Password cannot be empty.');
       return;
     }
 
@@ -3095,7 +3250,7 @@ const App = {
       if (success) {
         this.showToast('Backup restored successfully ✓');
       } else {
-        alert('Invalid backup file');
+        this.showToast('⚠️ Invalid backup file format');
       }
     };
     reader.readAsText(file);
@@ -3342,23 +3497,38 @@ const App = {
       let actionBtnHtml = '';
       if (n.actionType === 'whatsapp-invoice') {
         actionBtnHtml = `
-          <button class="btn-whatsapp" style="padding: 6px 12px; font-size: 11px; margin-top: 8px;" onclick="App.shareInvoiceWhatsApp('${n.actionId}')">
-            <svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.007c.106.005.249-.04.39.299.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.861.174.086.275.072.376-.044.101-.116.433-.506.549-.68.116-.173.231-.144.39-.086s1.011.477 1.184.564.289.13.332.202c.045.073.045.42-.099.825z"/></svg>
-            Send WhatsApp Reminder
-          </button>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px;">
+            <button class="btn-whatsapp" style="padding: 6px 12px; font-size: 11px;" onclick="App.shareInvoiceWhatsApp('${n.actionId}')">
+              <svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.007c.106.005.249-.04.39.299.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.861.174.086.275.072.376-.044.101-.116.433-.506.549-.68.116-.173.231-.144.39-.086s1.011.477 1.184.564.289.13.332.202c.045.073.045.42-.099.825z"/></svg>
+              Send WhatsApp Reminder
+            </button>
+            <button class="btn btn-outline btn-sm" style="padding: 4px 10px; font-size: 11px;" onclick="App.closeModalDirect('modal-notifications'); App.openEditInvoiceModal('${n.actionId}')">
+              Edit Invoice
+            </button>
+          </div>
         `;
       } else if (n.actionType === 'whatsapp-project') {
         actionBtnHtml = `
-          <button class="btn-whatsapp" style="padding: 6px 12px; font-size: 11px; margin-top: 8px;" onclick="App.sendProjectWhatsAppReminder('${n.actionId}')">
-            <svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.007c.106.005.249-.04.39.299.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.861.174.086.275.072.376-.044.101-.116.433-.506.549-.68.116-.173.231-.144.39-.086s1.011.477 1.184.564.289.13.332.202c.045.073.045.42-.099.825z"/></svg>
-            Send WhatsApp Reminder
-          </button>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px;">
+            <button class="btn-whatsapp" style="padding: 6px 12px; font-size: 11px;" onclick="App.sendProjectWhatsAppReminder('${n.actionId}')">
+              <svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.007c.106.005.249-.04.39.299.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.861.174.086.275.072.376-.044.101-.116.433-.506.549-.68.116-.173.231-.144.39-.086s1.011.477 1.184.564.289.13.332.202c.045.073.045.42-.099.825z"/></svg>
+              Send WhatsApp Reminder
+            </button>
+            <button class="btn btn-outline btn-sm" style="padding: 4px 10px; font-size: 11px;" onclick="App.closeModalDirect('modal-notifications'); App.openEditProjectModal('${n.actionId}')">
+              Edit Project
+            </button>
+          </div>
         `;
       } else if (n.actionType === 'project') {
         actionBtnHtml = `
-          <button class="btn btn-outline btn-sm" style="padding: 4px 10px; font-size: 11px; margin-top: 6px;" onclick="App.closeModalDirect('modal-notifications'); App.viewProjectDetails('${n.actionId}')">
-            View Project
-          </button>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px;">
+            <button class="btn btn-outline btn-sm" style="padding: 4px 10px; font-size: 11px;" onclick="App.closeModalDirect('modal-notifications'); App.viewProjectDetails('${n.actionId}')">
+              View Project
+            </button>
+            <button class="btn btn-outline btn-sm" style="padding: 4px 10px; font-size: 11px;" onclick="App.closeModalDirect('modal-notifications'); App.openEditProjectModal('${n.actionId}')">
+              Edit Shoot
+            </button>
+          </div>
         `;
       } else if (n.actionType === 'navigate-expenses') {
         actionBtnHtml = `

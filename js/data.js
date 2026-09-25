@@ -592,7 +592,52 @@ class DataStore {
 
   updateSettings(newSettings) {
     this.data.settings = { ...this.data.settings, ...newSettings };
+    if (newSettings.partner1Name || newSettings.partner2Name) {
+      (this.data.withdrawals || []).forEach(w => {
+        if (w.partnerId === 'partner1') w.partnerName = this.data.settings.partner1Name;
+        if (w.partnerId === 'partner2') w.partnerName = this.data.settings.partner2Name;
+      });
+    }
     this.save();
+  }
+
+  setCompanyFundBalance(targetBalance) {
+    const target = Number(targetBalance) || 0;
+    
+    // Calculate ledger net difference (additions - usages)
+    const ledgerDiff = (this.data.companyFundLedger || []).reduce((sum, entry) => {
+      const amt = Number(entry.amount) || 0;
+      return entry.type === 'addition' ? sum + amt : sum - amt;
+    }, 0);
+
+    const allTimeIncome = (this.data.income || []).reduce((sum, i) => sum + (Number(i.amount) || 0), 0);
+    const allTimeExpenses = (this.data.expenses || []).reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
+    const allTimeNetProfit = FinanceEngine.calculateNetProfit(allTimeIncome, allTimeExpenses);
+    const allTimeDist = FinanceEngine.distributeProfit(allTimeNetProfit, this.data.settings.profitPercentages);
+
+    // Set initial balance so total matches target exactly
+    this.data.settings.initialCompanyFundBalance = target - (ledgerDiff + allTimeDist.companyFund);
+    this.save();
+    return true;
+  }
+
+  updatePartnersAndSplits(partner1Name, partner2Name, p1Pct, p2Pct, cfPct) {
+    if (partner1Name) this.data.settings.partner1Name = partner1Name.trim();
+    if (partner2Name) this.data.settings.partner2Name = partner2Name.trim();
+    if (p1Pct !== undefined && p2Pct !== undefined && cfPct !== undefined) {
+      this.data.settings.profitPercentages = {
+        partner1: Number(p1Pct),
+        partner2: Number(p2Pct),
+        companyFund: Number(cfPct)
+      };
+    }
+    // Synchronize withdrawal partnerName labels
+    (this.data.withdrawals || []).forEach(w => {
+      if (w.partnerId === 'partner1') w.partnerName = this.data.settings.partner1Name;
+      if (w.partnerId === 'partner2') w.partnerName = this.data.settings.partner2Name;
+    });
+    this.save();
+    return true;
   }
 
   updateSecuritySettings(newSec) {

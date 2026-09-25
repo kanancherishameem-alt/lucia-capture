@@ -462,20 +462,31 @@
               <p>Earned profit share, distributions, and partner withdrawal ledger</p>
             </div>
           </div>
-          <button class="btn btn-gold" onclick="App.openModal('modal-withdrawal')">
-            Record Partner Withdrawal
-          </button>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <button class="btn btn-outline" onclick="App.openEditPartnersModal()" style="border-color: var(--gold-border); color: var(--gold-primary); display: flex; align-items: center; gap: 6px;">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+              <span>Edit Partners & Splits</span>
+            </button>
+            <button class="btn btn-gold" onclick="App.openModal('modal-withdrawal')">
+              Record Partner Withdrawal
+            </button>
+          </div>
         </div>
 
         <div class="partner-deck" style="margin-bottom: 24px;">
           <!-- Shameem Card -->
           <div class="partner-card">
-            <div class="partner-header">
-              <div class="partner-avatar">S1</div>
-              <div>
-                <div class="partner-name" id="partner1-title-name">SHAMEEM</div>
-                <div class="partner-role">Co-Founder & Partner</div>
+            <div class="partner-header" style="display: flex; align-items: center; justify-content: space-between;">
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <div class="partner-avatar" id="partner1-avatar">S1</div>
+                <div>
+                  <div class="partner-name" id="partner1-title-name">SHAMEEM</div>
+                  <div class="partner-role">Co-Founder & Partner</div>
+                </div>
               </div>
+              <button class="edit-btn" onclick="App.openEditPartnersModal()" title="Edit Partner Details & Profit Split">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+              </button>
             </div>
 
             <div class="partner-available-banner">
@@ -495,19 +506,24 @@
               </div>
             </div>
 
-            <button class="btn btn-outline" style="width: 100%;" onclick="App.openWithdrawalModal('partner1')">
+            <button class="btn btn-outline" id="btn-p1-record-wd" style="width: 100%;" onclick="App.openWithdrawalModal('partner1')">
               Record Shameem Withdrawal
             </button>
           </div>
 
           <!-- Shiyan Card -->
           <div class="partner-card">
-            <div class="partner-header">
-              <div class="partner-avatar">S2</div>
-              <div>
-                <div class="partner-name" id="partner2-title-name">SHIYAN</div>
-                <div class="partner-role">Co-Founder & Partner</div>
+            <div class="partner-header" style="display: flex; align-items: center; justify-content: space-between;">
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <div class="partner-avatar" id="partner2-avatar">S2</div>
+                <div>
+                  <div class="partner-name" id="partner2-title-name">SHIYAN</div>
+                  <div class="partner-role">Co-Founder & Partner</div>
+                </div>
               </div>
+              <button class="edit-btn" onclick="App.openEditPartnersModal()" title="Edit Partner Details & Profit Split">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+              </button>
             </div>
 
             <div class="partner-available-banner">
@@ -527,7 +543,7 @@
               </div>
             </div>
 
-            <button class="btn btn-outline" style="width: 100%;" onclick="App.openWithdrawalModal('partner2')">
+            <button class="btn btn-outline" id="btn-p2-record-wd" style="width: 100%;" onclick="App.openWithdrawalModal('partner2')">
               Record Shiyan Withdrawal
             </button>
           </div>
@@ -562,9 +578,14 @@
         <div class="fund-banner">
           <div style="display: flex; align-items: center; justify-content: space-between;">
             <div class="fund-balance-label">Company Fund Balance</div>
-            <button class="delete-btn" onclick="App.confirmDeleteFundBalance()" title="Delete / Reset Company Fund Balance">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-            </button>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <button class="edit-btn" onclick="App.openEditFundBalanceModal()" title="Edit Company Fund Balance">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+              </button>
+              <button class="delete-btn" onclick="App.confirmDeleteFundBalance()" title="Delete / Reset Company Fund Balance">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+              </button>
+            </div>
           </div>
           <div class="fund-balance-amount" id="fund-balance-large">₹1,20,000</div>
           <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 20px;">
@@ -577,9 +598,12 @@
             <button class="btn btn-outline" onclick="App.openFundModal('usage')">
               − Use Fund (Camera, Lens, etc.)
             </button>
+            <button class="btn btn-outline" onclick="App.openEditFundBalanceModal()" style="border-color: var(--gold-border); color: var(--gold-primary);">
+              ✏️ Edit Balance
+            </button>
             <button class="btn btn-outline" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.4);" onclick="App.confirmDeleteFundBalance()">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-              Delete / Reset Balance
+              Reset Fund to ₹0
             </button>
           </div>
         </div>
@@ -687,20 +711,31 @@
           </p>
 
           <form id="form-settings-percentages" onsubmit="App.savePercentages(event)">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+              <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label">Partner 1 Name</label>
+                <input type="text" class="form-input" id="set-partner1-name" value="Shameem" required>
+              </div>
+              <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label">Partner 2 Name</label>
+                <input type="text" class="form-input" id="set-partner2-name" value="Shiyan" required>
+              </div>
+            </div>
             <div class="form-group">
-              <label class="form-label">Shameem Share (%)</label>
+              <label class="form-label" id="set-pct-p1-label">Partner 1 Share (%)</label>
               <input type="number" step="0.01" min="0" max="100" class="form-input" id="set-pct-p1" value="33.33" oninput="App.validatePercentages()" required>
             </div>
             <div class="form-group">
-              <label class="form-label">Shiyan Share (%)</label>
+              <label class="form-label" id="set-pct-p2-label">Partner 2 Share (%)</label>
               <input type="number" step="0.01" min="0" max="100" class="form-input" id="set-pct-p2" value="33.33" oninput="App.validatePercentages()" required>
             </div>
             <div class="form-group">
               <label class="form-label">Company Fund Share (%)</label>
               <input type="number" step="0.01" min="0" max="100" class="form-input" id="set-pct-cf" value="33.34" oninput="App.validatePercentages()" required>
             </div>
-            <button type="submit" class="btn btn-gold" id="btn-save-pct">Save Percentages</button>
+            <button type="submit" class="btn btn-gold" id="btn-save-pct">Save Partner & Profit Percentages</button>
           </form>
+        </div>
         <!-- Security & Passkey Settings -->
         <div class="content-box" style="max-width: 650px; margin-bottom: 24px;">
           <div class="card-title-row">
@@ -1252,6 +1287,90 @@
 
           <button type="submit" class="btn btn-gold" id="btn-save-fund" style="width: 100%; padding: 14px; font-size: 15px; margin-top: 10px;">
             Save Fund Record
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Edit Partners & Profit Split Modal -->
+    <div id="modal-edit-partners" class="modal-overlay" onclick="App.closeModal(event, 'modal-edit-partners')">
+      <div class="modal-sheet" style="max-width: 540px;" onclick="event.stopPropagation()">
+        <div class="modal-header">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <svg width="20" height="20" fill="none" stroke="var(--gold-primary)" stroke-width="2.2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+            <div class="modal-title">Edit Partners & Profit Split</div>
+          </div>
+          <button class="modal-close-btn" onclick="App.closeModalDirect('modal-edit-partners')">✕</button>
+        </div>
+        <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;">
+          Update partner names and net profit distribution percentages across all studio cards and reports.
+        </p>
+        <form id="form-edit-partners" onsubmit="App.handleSavePartnersModal(event)">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label">Partner 1 Name</label>
+              <input type="text" class="form-input" id="edit-partner1-name" placeholder="Shameem" required oninput="App.updateEditPartnersLabels()">
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label">Partner 2 Name</label>
+              <input type="text" class="form-input" id="edit-partner2-name" placeholder="Shiyan" required oninput="App.updateEditPartnersLabels()">
+            </div>
+          </div>
+
+          <div style="margin-top: 14px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+            <label class="form-label" style="margin: 0; font-size: 13px; font-weight: 700;">Net Profit Split (%)</label>
+            <span class="badge-tag" id="edit-partners-sum-badge" style="font-weight: 700;">Sum: 100%</span>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
+            <div class="form-group">
+              <label class="form-label" id="edit-partner1-pct-label" style="font-size: 11px;">Partner 1 (%)</label>
+              <input type="number" step="0.01" min="0" max="100" class="form-input" id="edit-partner1-pct" value="33.33" oninput="App.validateEditPartnersSum()" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" id="edit-partner2-pct-label" style="font-size: 11px;">Partner 2 (%)</label>
+              <input type="number" step="0.01" min="0" max="100" class="form-input" id="edit-partner2-pct" value="33.33" oninput="App.validateEditPartnersSum()" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" style="font-size: 11px;">Company Fund (%)</label>
+              <input type="number" step="0.01" min="0" max="100" class="form-input" id="edit-company-fund-pct" value="33.34" oninput="App.validateEditPartnersSum()" required>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-gold" id="btn-save-edit-partners" style="width: 100%; padding: 14px; font-size: 15px; margin-top: 10px;">
+            Save Partner & Split Details
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Edit Company Fund Balance Modal -->
+    <div id="modal-edit-fund-balance" class="modal-overlay" onclick="App.closeModal(event, 'modal-edit-fund-balance')">
+      <div class="modal-sheet" style="max-width: 480px;" onclick="event.stopPropagation()">
+        <div class="modal-header">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <svg width="20" height="20" fill="none" stroke="var(--gold-primary)" stroke-width="2.2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+            <div class="modal-title">Edit Company Fund Balance</div>
+          </div>
+          <button class="modal-close-btn" onclick="App.closeModalDirect('modal-edit-fund-balance')">✕</button>
+        </div>
+        <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;">
+          Set your studio reserve balance directly. Past equipment usages and profit allocations remain fully intact.
+        </p>
+        <form id="form-edit-fund-balance" onsubmit="App.handleSaveFundBalanceModal(event)">
+          <div class="form-group">
+            <label class="form-label">Target Fund Reserve Balance (₹)</label>
+            <div class="amount-input-wrapper">
+              <span class="amount-prefix">₹</span>
+              <input type="number" inputmode="numeric" class="form-input" id="edit-fund-balance-input" placeholder="0" required autofocus>
+            </div>
+            <div style="font-size: 12px; color: var(--text-muted); margin-top: 6px;">
+              Current Balance: <span id="edit-fund-current-hint" style="color: var(--gold-light); font-weight: 700;">₹0</span>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-gold" style="width: 100%; padding: 14px; font-size: 15px; margin-top: 10px;">
+            Update Reserve Balance
           </button>
         </form>
       </div>
