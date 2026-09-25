@@ -365,6 +365,8 @@ const App = {
         if (titleEl) titleEl.textContent = 'Add Revenue';
         const btnEl = document.getElementById('btn-save-income');
         if (btnEl) btnEl.textContent = 'Save Revenue';
+        const delBtn = document.getElementById('btn-delete-income');
+        if (delBtn) delBtn.style.display = 'none';
         this.selectPaymentMethod('inc', 'UPI');
       } else if (modalId === 'modal-expense' && !this.editingExpenseId) {
         document.getElementById('form-expense')?.reset();
@@ -374,6 +376,8 @@ const App = {
         if (titleEl) titleEl.textContent = 'Add Expense';
         const btnEl = document.getElementById('btn-save-expense');
         if (btnEl) btnEl.textContent = 'Save Expense';
+        const delBtn = document.getElementById('btn-delete-expense');
+        if (delBtn) delBtn.style.display = 'none';
         this.selectPaymentMethod('exp', 'UPI');
       } else if (modalId === 'modal-project' && !this.editingProjectId) {
         document.getElementById('form-project')?.reset();
@@ -383,6 +387,8 @@ const App = {
         if (titleEl) titleEl.textContent = 'Add Project';
         const btnEl = document.getElementById('btn-save-project');
         if (btnEl) btnEl.textContent = 'Save Project';
+        const delBtn = document.getElementById('btn-delete-project');
+        if (delBtn) delBtn.style.display = 'none';
       } else if (modalId === 'modal-withdrawal' && !this.editingWithdrawalId) {
         document.getElementById('form-withdrawal')?.reset();
         const dateEl = document.getElementById('wd-date');
@@ -391,6 +397,14 @@ const App = {
         if (titleEl) titleEl.textContent = 'Record Partner Withdrawal';
         const btnEl = document.getElementById('btn-save-withdrawal');
         if (btnEl) btnEl.textContent = 'Save Withdrawal';
+        const delBtn = document.getElementById('btn-delete-withdrawal');
+        if (delBtn) delBtn.style.display = 'none';
+      } else if (modalId === 'modal-fund' && !this.editingFundId) {
+        const delBtn = document.getElementById('btn-delete-fund');
+        if (delBtn) delBtn.style.display = 'none';
+      } else if (modalId === 'modal-invoice' && !this.editingInvoiceId) {
+        const delBtn = document.getElementById('btn-delete-invoice');
+        if (delBtn) delBtn.style.display = 'none';
       }
 
       // Prepopulate select inputs
@@ -416,6 +430,7 @@ const App = {
       if (modalId === 'modal-project') this.editingProjectId = null;
       if (modalId === 'modal-withdrawal') this.editingWithdrawalId = null;
       if (modalId === 'modal-fund') this.editingFundId = null;
+      if (modalId === 'modal-invoice') this.editingInvoiceId = null;
     }
   },
 
@@ -467,6 +482,8 @@ const App = {
       title.textContent = type === 'addition' ? '+ Add Company Fund' : '− Use Company Fund (Gear / Asset)';
     }
     if (btn) btn.textContent = 'Save Fund Record';
+    const delBtn = document.getElementById('btn-delete-fund');
+    if (delBtn) delBtn.style.display = 'none';
     document.getElementById('form-fund')?.reset();
     const dateEl = document.getElementById('fund-date');
     if (dateEl) dateEl.value = new Date().toISOString().split('T')[0];
@@ -499,6 +516,9 @@ const App = {
 
     const btnEl = document.getElementById('btn-save-income');
     if (btnEl) btnEl.textContent = 'Update Revenue';
+
+    const delBtn = document.getElementById('btn-delete-income');
+    if (delBtn) delBtn.style.display = 'inline-flex';
 
     const modal = document.getElementById('modal-income');
     if (modal) {
@@ -536,6 +556,9 @@ const App = {
 
     const btnEl = document.getElementById('btn-save-expense');
     if (btnEl) btnEl.textContent = 'Update Expense';
+
+    const delBtn = document.getElementById('btn-delete-expense');
+    if (delBtn) delBtn.style.display = 'inline-flex';
 
     const modal = document.getElementById('modal-expense');
     if (modal) {
@@ -580,6 +603,9 @@ const App = {
     const btnEl = document.getElementById('btn-save-project');
     if (btnEl) btnEl.textContent = 'Update Project';
 
+    const delBtn = document.getElementById('btn-delete-project');
+    if (delBtn) delBtn.style.display = 'inline-flex';
+
     const modal = document.getElementById('modal-project');
     if (modal) {
       modal.classList.add('open');
@@ -614,6 +640,9 @@ const App = {
     const btnEl = document.getElementById('btn-save-withdrawal');
     if (btnEl) btnEl.textContent = 'Update Withdrawal';
 
+    const delBtn = document.getElementById('btn-delete-withdrawal');
+    if (delBtn) delBtn.style.display = 'inline-flex';
+
     const modal = document.getElementById('modal-withdrawal');
     if (modal) {
       modal.classList.add('open');
@@ -647,6 +676,9 @@ const App = {
 
     const btnEl = document.getElementById('btn-save-fund');
     if (btnEl) btnEl.textContent = 'Update Fund Record';
+
+    const delBtn = document.getElementById('btn-delete-fund');
+    if (delBtn) delBtn.style.display = 'inline-flex';
 
     const modal = document.getElementById('modal-fund');
     if (modal) {
@@ -1157,10 +1189,16 @@ const App = {
       return;
     }
 
-    if (confirm(`Mark "${proj.name}" as fully paid? This will record ₹${pending.toLocaleString('en-IN')} as received revenue.`)) {
-      window.dataStore.markProjectPaid(projectId, 'UPI');
-      this.showToast(`Revenue added successfully ✓ (₹${pending.toLocaleString('en-IN')})`);
-    }
+    this.confirmDelete('markProjectPaid', projectId);
+  },
+
+  executeMarkProjectPaid(projectId) {
+    const proj = window.dataStore.data.projects.find(p => p.id === projectId);
+    if (!proj) return;
+    const pending = Math.max(0, proj.packageAmount - proj.receivedAmount);
+    window.dataStore.markProjectPaid(projectId, 'UPI');
+    this.showToast(`Revenue added successfully ✓ (₹${pending.toLocaleString('en-IN')})`);
+    this.renderAll();
   },
 
   // Open Project Details Drawer
@@ -1246,7 +1284,7 @@ const App = {
                   <button class="edit-btn" onclick="App.editProjectIncome('${proj.id}', '${i.id}')" title="Edit payment">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                   </button>
-                  <button class="delete-btn" onclick="App.deleteProjectIncome('${proj.id}', '${i.id}')" title="Delete payment">
+                  <button class="delete-btn" onclick="event.stopPropagation(); App.confirmDelete('projectIncome', '${proj.id}', '${i.id}')" title="Delete payment">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                   </button>
                 </div>
@@ -1273,7 +1311,7 @@ const App = {
                   <button class="edit-btn" onclick="App.editProjectExpense('${proj.id}', '${e.id}')" title="Edit expense">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                   </button>
-                  <button class="delete-btn" onclick="App.deleteProjectExpense('${proj.id}', '${e.id}')" title="Delete expense">
+                  <button class="delete-btn" onclick="event.stopPropagation(); App.confirmDelete('projectExpense', '${proj.id}', '${e.id}')" title="Delete expense">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                   </button>
                 </div>
@@ -1287,7 +1325,7 @@ const App = {
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
           Edit Project
         </button>
-        <button class="btn btn-outline" style="flex: 1; color: #ef4444; border-color: rgba(239, 68, 68, 0.35); font-size: 13px;" onclick="App.deleteProject('${proj.id}', '${proj.name}')">
+        <button class="btn btn-outline" style="flex: 1; color: #ef4444; border-color: rgba(239, 68, 68, 0.35); font-size: 13px;" onclick="event.stopPropagation(); App.confirmDelete('projects', '${proj.id}')">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
           Delete Project
         </button>
@@ -1401,7 +1439,7 @@ const App = {
             <button class="edit-btn" onclick="App.editItem('${collection}', '${tx.id}')" title="Edit this transaction">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
             </button>
-            <button class="delete-btn" onclick="App.deleteItem('${collection}', '${tx.id}')" title="Delete this activity">
+            <button class="delete-btn" onclick="event.stopPropagation(); App.confirmDelete('${collection}', '${tx.id}')" title="Delete this activity">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
             </button>
           </div>
@@ -1496,7 +1534,7 @@ const App = {
               <button class="edit-btn" onclick="App.openEditProjectModal('${proj.id}')" title="Edit Project">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
               </button>
-              <button class="delete-btn" onclick="App.deleteProject('${proj.id}', '${proj.name}')" title="Delete Project">
+              <button class="delete-btn" onclick="event.stopPropagation(); App.confirmDelete('projects', '${proj.id}')" title="Delete Project">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
               </button>
             </div>
@@ -1597,7 +1635,7 @@ const App = {
             <button class="edit-btn" onclick="App.openEditIncomeModal('${i.id}')" title="Edit Revenue">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
             </button>
-            <button class="delete-btn" onclick="App.deleteItem('income', '${i.id}')" title="Delete">
+            <button class="delete-btn" onclick="event.stopPropagation(); App.confirmDelete('income', '${i.id}')" title="Delete">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
             </button>
           </div>
@@ -1751,7 +1789,7 @@ const App = {
                 <button class="edit-btn" onclick="App.openEditIncomeModal('${item.id}')" title="Edit">
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                 </button>
-                <button class="delete-btn" onclick="App.deleteItem('income', '${item.id}')" title="Delete">
+                <button class="delete-btn" onclick="event.stopPropagation(); App.confirmDelete('income', '${item.id}')" title="Delete">
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                 </button>
               </div>
@@ -1826,7 +1864,7 @@ const App = {
                 <button class="btn btn-outline btn-sm" onclick="App.openEditInvoiceModal('${inv.id}')" title="Edit Invoice">
                   Edit
                 </button>
-                <button class="delete-btn" onclick="App.deleteInvoice('${inv.id}', '${inv.invoiceNumber}')" title="Delete Invoice">
+                <button class="delete-btn" onclick="event.stopPropagation(); App.confirmDelete('invoices', '${inv.id}')" title="Delete Invoice">
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                 </button>
               </div>
@@ -1909,7 +1947,7 @@ const App = {
               <button class="btn btn-outline btn-sm" onclick="App.openEditInvoiceModal('${inv.id}')" title="Edit Invoice">
                 Edit
               </button>
-              <button class="delete-btn" onclick="App.deleteInvoice('${inv.id}', '${inv.invoiceNumber}')" title="Delete Invoice">
+              <button class="delete-btn" onclick="event.stopPropagation(); App.confirmDelete('invoices', '${inv.id}')" title="Delete Invoice">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
               </button>
             </div>
@@ -1951,6 +1989,9 @@ const App = {
 
     const titleEl = document.getElementById('invoice-modal-title');
     if (titleEl) titleEl.textContent = 'Create Client Invoice';
+
+    const delBtn = document.getElementById('btn-delete-invoice');
+    if (delBtn) delBtn.style.display = 'none';
 
     document.getElementById('inv-edit-id').value = '';
     document.getElementById('inv-num').value = window.dataStore.getNextInvoiceNumber();
@@ -1997,6 +2038,9 @@ const App = {
     this.editingInvoiceId = invoiceId;
     const titleEl = document.getElementById('invoice-modal-title');
     if (titleEl) titleEl.textContent = `Edit Invoice ${inv.invoiceNumber}`;
+
+    const delBtn = document.getElementById('btn-delete-invoice');
+    if (delBtn) delBtn.style.display = 'inline-flex';
 
     document.getElementById('inv-edit-id').value = inv.id;
     document.getElementById('inv-num').value = inv.invoiceNumber;
@@ -2712,11 +2756,7 @@ const App = {
   },
 
   deleteInvoice(invoiceId, invoiceNumber) {
-    if (confirm(`Are you sure you want to delete invoice "${invoiceNumber}"?`)) {
-      window.dataStore.deleteInvoice(invoiceId);
-      this.showToast(`Invoice "${invoiceNumber}" deleted ✓`);
-      this.renderInvoices();
-    }
+    this.confirmDelete('invoices', invoiceId);
   },
 
   renderIncome() {
@@ -2756,7 +2796,7 @@ const App = {
           <button class="edit-btn" onclick="App.openEditIncomeModal('${i.id}')" title="Edit Revenue">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
           </button>
-          <button class="delete-btn" onclick="App.deleteItem('income', '${i.id}')" title="Delete">
+          <button class="delete-btn" onclick="event.stopPropagation(); App.confirmDelete('income', '${i.id}')" title="Delete">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
           </button>
         </div>
@@ -2800,7 +2840,7 @@ const App = {
           <button class="edit-btn" onclick="App.openEditExpenseModal('${e.id}')" title="Edit Expense">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
           </button>
-          <button class="delete-btn" onclick="App.deleteItem('expenses', '${e.id}')" title="Delete">
+          <button class="delete-btn" onclick="event.stopPropagation(); App.confirmDelete('expenses', '${e.id}')" title="Delete">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
           </button>
         </div>
@@ -2878,7 +2918,7 @@ const App = {
           <button class="edit-btn" onclick="App.openEditWithdrawalModal('${w.id}')" title="Edit withdrawal">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
           </button>
-          <button class="delete-btn" onclick="App.deleteItem('withdrawals', '${w.id}')" title="Delete withdrawal">
+          <button class="delete-btn" onclick="event.stopPropagation(); App.confirmDelete('withdrawals', '${w.id}')" title="Delete withdrawal">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
           </button>
         </div>
@@ -2924,7 +2964,7 @@ const App = {
             <button class="edit-btn" onclick="App.openEditFundTransactionModal('${entry.id}')" title="Edit fund record">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
             </button>
-            <button class="delete-btn" onclick="App.deleteItem('companyFundLedger', '${entry.id}')" title="Delete fund entry">
+            <button class="delete-btn" onclick="event.stopPropagation(); App.confirmDelete('companyFundLedger', '${entry.id}')" title="Delete fund entry">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
             </button>
           </div>
@@ -3138,58 +3178,258 @@ const App = {
     this.showToast('Studio Billing Profile updated ✓');
   },
 
-  deleteItem(collection, id) {
-    let itemLabel = 'activity';
-    if (collection === 'income') itemLabel = 'revenue record';
-    else if (collection === 'expenses') itemLabel = 'expense record';
-    else if (collection === 'withdrawals') itemLabel = 'partner withdrawal';
-    else if (collection === 'companyFundLedger') itemLabel = 'company fund record';
-    else if (collection === 'projects') itemLabel = 'project';
-    else if (collection === 'invoices') itemLabel = 'invoice';
+  pendingDeleteAction: null,
 
-    if (confirm(`Are you sure you want to delete this ${itemLabel}? All balances will recalculate automatically.`)) {
-      window.dataStore.deleteItem(collection, id);
-      this.showToast('Deleted successfully ✓');
+  openConfirmModal(title, message, onConfirm) {
+    const modal = document.getElementById('modal-confirm-delete');
+    const titleEl = document.getElementById('confirm-delete-title');
+    const msgEl = document.getElementById('confirm-delete-msg');
+    if (titleEl) titleEl.textContent = title || 'Confirm Deletion';
+    if (msgEl) msgEl.textContent = message || 'Are you sure you want to permanently delete this item? This action cannot be undone.';
+    this.pendingDeleteAction = onConfirm;
+    if (modal) {
+      modal.classList.add('open');
+      document.body.style.overflow = 'hidden';
     }
+  },
+
+  closeConfirmModal(event) {
+    if (event && event.target && event.target.id !== 'modal-confirm-delete') {
+      return;
+    }
+    const modal = document.getElementById('modal-confirm-delete');
+    if (modal) {
+      modal.classList.remove('open');
+      document.body.style.overflow = '';
+    }
+    this.pendingDeleteAction = null;
+  },
+
+  executeConfirmedDelete() {
+    const action = this.pendingDeleteAction;
+    this.closeConfirmModal();
+    if (typeof action === 'function') {
+      try {
+        action();
+      } catch (err) {
+        console.error('Error executing delete action:', err);
+      }
+    }
+  },
+
+  confirmDelete(type, id, secondaryId) {
+    if (type === 'projects' || type === 'project') {
+      const proj = (window.dataStore.data.projects || []).find(p => p.id === id);
+      const name = proj ? proj.name : 'this project';
+      this.openConfirmModal(
+        'Delete Project',
+        `Are you sure you want to delete project "${name}"? This will also remove any income, expenses, and linked client bills logged for this project.`,
+        () => {
+          window.dataStore.deleteProject(id);
+          this.closeModalDirect('modal-project-details');
+          this.closeModalDirect('modal-project');
+          this.showToast(`Project "${name}" deleted successfully ✓`);
+          this.renderAll();
+        }
+      );
+    } else if (type === 'invoices' || type === 'invoice') {
+      const inv = (window.dataStore.data.invoices || []).find(i => i.id === id);
+      const invNum = inv ? inv.invoiceNumber : 'Invoice';
+      this.openConfirmModal(
+        'Delete Invoice',
+        `Are you sure you want to delete invoice "${invNum}"? All balances and client records will update automatically.`,
+        () => {
+          window.dataStore.deleteInvoice(id);
+          this.closeModalDirect('modal-invoice');
+          this.closeModalDirect('modal-invoice-preview');
+          this.showToast(`Invoice "${invNum}" deleted successfully ✓`);
+          this.renderAll();
+        }
+      );
+    } else if (type === 'income') {
+      const inc = (window.dataStore.data.income || []).find(i => i.id === id);
+      const desc = inc ? ` of ₹${Number(inc.amount || 0).toLocaleString('en-IN')}` : '';
+      this.openConfirmModal(
+        'Delete Revenue Record',
+        `Are you sure you want to delete this revenue record${desc}? All balances will recalculate automatically.`,
+        () => {
+          window.dataStore.deleteItem('income', id);
+          this.closeModalDirect('modal-income');
+          this.showToast('Revenue record deleted successfully ✓');
+          this.renderAll();
+        }
+      );
+    } else if (type === 'expenses') {
+      const exp = (window.dataStore.data.expenses || []).find(e => e.id === id);
+      const desc = exp ? ` of ₹${Number(exp.amount || 0).toLocaleString('en-IN')} (${exp.category})` : '';
+      this.openConfirmModal(
+        'Delete Expense Record',
+        `Are you sure you want to delete this expense record${desc}? All balances will recalculate automatically.`,
+        () => {
+          window.dataStore.deleteItem('expenses', id);
+          this.closeModalDirect('modal-expense');
+          this.showToast('Expense record deleted successfully ✓');
+          this.renderAll();
+        }
+      );
+    } else if (type === 'withdrawals') {
+      const wd = (window.dataStore.data.withdrawals || []).find(w => w.id === id);
+      const desc = wd ? ` of ₹${Number(wd.amount || 0).toLocaleString('en-IN')}` : '';
+      this.openConfirmModal(
+        'Delete Partner Withdrawal',
+        `Are you sure you want to delete this partner withdrawal${desc}? Balances will recalculate automatically.`,
+        () => {
+          window.dataStore.deleteItem('withdrawals', id);
+          this.closeModalDirect('modal-withdrawal');
+          this.showToast('Partner withdrawal deleted ✓');
+          this.renderAll();
+        }
+      );
+    } else if (type === 'companyFundLedger') {
+      this.openConfirmModal(
+        'Delete Fund Record',
+        'Are you sure you want to delete this company fund transaction? Reserve balance will recalculate automatically.',
+        () => {
+          window.dataStore.deleteItem('companyFundLedger', id);
+          this.closeModalDirect('modal-fund');
+          this.showToast('Fund record deleted ✓');
+          this.renderAll();
+        }
+      );
+    } else if (type === 'projectIncome') {
+      this.openConfirmModal(
+        'Delete Payment',
+        'Delete this revenue payment? Project received amount and pending dues will recalculate automatically.',
+        () => {
+          window.dataStore.deleteItem('income', secondaryId);
+          this.showToast('Payment deleted ✓');
+          if (id) this.viewProjectDetails(id);
+          this.renderAll();
+        }
+      );
+    } else if (type === 'projectExpense') {
+      this.openConfirmModal(
+        'Delete Expense',
+        'Delete this project expense? Project profit and expenses will recalculate automatically.',
+        () => {
+          window.dataStore.deleteItem('expenses', secondaryId);
+          this.showToast('Expense deleted ✓');
+          if (id) this.viewProjectDetails(id);
+          this.renderAll();
+        }
+      );
+    } else if (type === 'markProjectPaid') {
+      const proj = (window.dataStore.data.projects || []).find(p => p.id === id);
+      if (!proj) return;
+      const pending = Math.max(0, (proj.packageAmount || 0) - (proj.receivedAmount || 0));
+      this.openConfirmModal(
+        'Mark Project as Fully Paid',
+        `Mark "${proj.name}" as fully paid? This will record ₹${pending.toLocaleString('en-IN')} as received revenue.`,
+        () => {
+          this.executeMarkProjectPaid(id);
+        }
+      );
+    } else if (type === 'clearAll') {
+      this.openConfirmModal(
+        'Clear All Records',
+        'CAUTION: This will delete ALL transactions, projects, withdrawals, and records to start fresh from zero. Are you sure?',
+        () => {
+          window.dataStore.clearAllData();
+          this.showToast('All records cleared successfully ✓');
+          this.renderAll();
+        }
+      );
+    } else if (type === 'resetFund') {
+      this.openConfirmModal(
+        'Reset Company Fund',
+        'Are you sure you want to delete/reset the Company Fund Balance to ₹0? This will reset the reserve balance and clear fund purchase history.',
+        () => {
+          window.dataStore.resetCompanyFund(0);
+          this.showToast('Company Fund balance reset to ₹0 ✓');
+          this.renderAll();
+        }
+      );
+    } else if (type === 'resetSample') {
+      this.openConfirmModal(
+        'Reset Sample Data',
+        'Reset all transactions and projects to default studio sample data?',
+        () => {
+          window.dataStore.resetToDefaults();
+          this.showToast('Sample data reset successfully ✓');
+          this.renderAll();
+        }
+      );
+    } else {
+      this.openConfirmModal(
+        'Confirm Deletion',
+        'Are you sure you want to delete this record? All balances will recalculate automatically.',
+        () => {
+          window.dataStore.deleteItem(type, id);
+          this.showToast('Deleted successfully ✓');
+          this.renderAll();
+        }
+      );
+    }
+  },
+
+  deleteItem(collection, id) {
+    this.confirmDelete(collection, id);
   },
 
   deleteProject(projectId, projectName) {
-    const proj = window.dataStore.data.projects.find(p => p.id === projectId);
-    const name = projectName || (proj ? proj.name : 'this project');
-    if (confirm(`Are you sure you want to delete project "${name}"? This will also remove any income and expenses specifically logged for this project.`)) {
-      window.dataStore.deleteProject(projectId);
-      this.closeModalDirect('modal-project-details');
-      this.showToast(`Project "${name}" deleted successfully ✓`);
-    }
+    this.confirmDelete('projects', projectId);
   },
 
   deleteProjectIncome(projectId, incomeId) {
-    if (confirm('Delete this revenue payment? Project received amount and pending dues will recalculate.')) {
-      window.dataStore.deleteItem('income', incomeId);
-      this.showToast('Payment deleted ✓');
-      this.viewProjectDetails(projectId);
-    }
+    this.confirmDelete('projectIncome', projectId, incomeId);
   },
 
   deleteProjectExpense(projectId, expenseId) {
-    if (confirm('Delete this project expense?')) {
-      window.dataStore.deleteItem('expenses', expenseId);
-      this.showToast('Expense deleted ✓');
-      this.viewProjectDetails(projectId);
-    }
+    this.confirmDelete('projectExpense', projectId, expenseId);
   },
 
   confirmClearAllData() {
-    if (confirm('CAUTION: This will delete ALL transactions, projects, withdrawals and records to start from zero. Are you sure?')) {
-      window.dataStore.clearAllData();
-      this.showToast('All records cleared successfully ✓');
-    }
+    this.confirmDelete('clearAll');
   },
 
   confirmDeleteFundBalance() {
-    if (confirm('Are you sure you want to delete/reset the Company Fund Balance to ₹0? This will reset the reserve balance and clear fund purchase history.')) {
-      window.dataStore.resetCompanyFund(0);
-      this.showToast('Company Fund balance reset to ₹0 ✓');
+    this.confirmDelete('resetFund');
+  },
+
+  // Modal Direct Delete Handlers
+  deleteCurrentEditingIncome() {
+    if (this.editingIncomeId) {
+      this.confirmDelete('income', this.editingIncomeId);
+    }
+  },
+
+  deleteCurrentEditingExpense() {
+    if (this.editingExpenseId) {
+      this.confirmDelete('expenses', this.editingExpenseId);
+    }
+  },
+
+  deleteCurrentEditingProject() {
+    if (this.editingProjectId) {
+      this.confirmDelete('projects', this.editingProjectId);
+    }
+  },
+
+  deleteCurrentEditingWithdrawal() {
+    if (this.editingWithdrawalId) {
+      this.confirmDelete('withdrawals', this.editingWithdrawalId);
+    }
+  },
+
+  deleteCurrentEditingFund() {
+    if (this.editingFundId) {
+      this.confirmDelete('companyFundLedger', this.editingFundId);
+    }
+  },
+
+  deleteCurrentEditingInvoice() {
+    if (this.editingInvoiceId) {
+      this.confirmDelete('invoices', this.editingInvoiceId);
     }
   },
 
@@ -3257,10 +3497,7 @@ const App = {
   },
 
   confirmResetSampleData() {
-    if (confirm('Reset all transactions and projects to default sample data?')) {
-      window.dataStore.resetToDefaults();
-      this.showToast('Sample data reset successfully ✓');
-    }
+    this.confirmDelete('resetSample');
   },
 
   exportCSV() {

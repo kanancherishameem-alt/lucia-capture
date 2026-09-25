@@ -883,11 +883,17 @@ class DataStore {
   }
 
   deleteItem(collectionName, id) {
+    if (collectionName === 'projects') {
+      return this.deleteProject(id);
+    }
+    if (collectionName === 'invoices') {
+      return this.deleteInvoice(id);
+    }
     if (this.data[collectionName]) {
       const target = this.data[collectionName].find(item => item.id === id);
       // If deleting an income linked to a project, subtract from project's received amount
       if (collectionName === 'income' && target && target.projectId) {
-        const project = this.data.projects.find(p => p.id === target.projectId);
+        const project = (this.data.projects || []).find(p => p.id === target.projectId);
         if (project) {
           project.receivedAmount = Math.max(0, (Number(project.receivedAmount) || 0) - (Number(target.amount) || 0));
           if (project.receivedAmount < project.packageAmount && project.status === 'Completed') {
@@ -903,15 +909,16 @@ class DataStore {
   }
 
   deleteProject(projectId) {
-    const proj = this.data.projects.find(p => p.id === projectId);
+    const proj = (this.data.projects || []).find(p => p.id === projectId);
     if (!proj) return false;
 
     // Remove project
     this.data.projects = this.data.projects.filter(p => p.id !== projectId);
 
-    // Also clean up linked project income and expenses
-    this.data.income = this.data.income.filter(i => i.projectId !== projectId);
-    this.data.expenses = this.data.expenses.filter(e => e.projectId !== projectId);
+    // Also clean up linked project income, expenses, and invoices
+    this.data.income = (this.data.income || []).filter(i => i.projectId !== projectId);
+    this.data.expenses = (this.data.expenses || []).filter(e => e.projectId !== projectId);
+    this.data.invoices = (this.data.invoices || []).filter(inv => inv.projectId !== projectId);
 
     this.save();
     return true;

@@ -1124,6 +1124,11 @@ html, body {
   transform: scale(0.95);
 }
 
+.delete-btn svg,
+.edit-btn svg {
+  pointer-events: none;
+}
+
 .edit-btn {
   background: var(--bg-secondary);
   border: 1px solid var(--border-subtle);
