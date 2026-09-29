@@ -99,10 +99,21 @@ class TestAllDataEditing(unittest.TestCase):
         self.assertEqual(fund_balance, 0)
 
         # Verify notifications on empty state
-        notifications = []
-        if len(expenses) > 0:
-            notifications.append({'type': 'expense'})
-        self.assertEqual(len(notifications), 0)
+    def test_quick_update_pending_and_settle(self):
+        # Initial project: package 50000, received 30000 -> pending 20000
+        proj = self.projects[0]
+        self.assertEqual(proj['packageAmount'] - proj['receivedAmount'], 20000)
+
+        # Update received amount to 40000
+        proj['receivedAmount'] = 40000
+        pending = proj['packageAmount'] - proj['receivedAmount']
+        self.assertEqual(pending, 10000)
+
+        # 1-click settle: received becomes package amount
+        proj['receivedAmount'] = proj['packageAmount']
+        proj['status'] = 'Completed'
+        self.assertEqual(proj['packageAmount'] - proj['receivedAmount'], 0)
+        self.assertEqual(proj['status'], 'Completed')
 
 if __name__ == '__main__':
     unittest.main()

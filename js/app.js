@@ -872,6 +872,299 @@ const App = {
     this.showToast(`Company fund reserve updated to ${FinanceEngine.formatINR(targetBalance)} ✓`);
   },
 
+  openQuickEditDashboardModal() {
+    const store = window.dataStore.data;
+    const financials = FinanceEngine.computeFinancials(store, { type: 'all' });
+    const currentBalance = financials.companyFund.balance || 0;
+    const settings = store.settings || {};
+    const p1Name = settings.partner1Name || 'Shameem';
+    const p2Name = settings.partner2Name || 'Shiyan';
+    const pcts = settings.profitPercentages || { partner1: 33.33, partner2: 33.33, companyFund: 33.34 };
+
+    const fundInp = document.getElementById('quick-edit-fund-balance');
+    const p1Inp = document.getElementById('quick-edit-p1-name');
+    const p2Inp = document.getElementById('quick-edit-p2-name');
+    const p1Pct = document.getElementById('quick-edit-p1-pct');
+    const p2Pct = document.getElementById('quick-edit-p2-pct');
+    const cfPct = document.getElementById('quick-edit-cf-pct');
+
+    if (fundInp) fundInp.value = currentBalance;
+    if (p1Inp) p1Inp.value = p1Name;
+    if (p2Inp) p2Inp.value = p2Name;
+    if (p1Pct) p1Pct.value = pcts.partner1;
+    if (p2Pct) p2Pct.value = pcts.partner2;
+    if (cfPct) cfPct.value = pcts.companyFund;
+
+    this.updateQuickDashboardLabels();
+    this.validateQuickDashboardSum();
+    this.openModal('modal-quick-edit-dashboard');
+  },
+
+  updateQuickDashboardLabels() {
+    const p1Name = document.getElementById('quick-edit-p1-name')?.value?.trim() || 'Partner 1';
+    const p2Name = document.getElementById('quick-edit-p2-name')?.value?.trim() || 'Partner 2';
+    const l1 = document.getElementById('quick-edit-p1-pct-label');
+    const l2 = document.getElementById('quick-edit-p2-pct-label');
+    if (l1) l1.textContent = `${p1Name} (%)`;
+    if (l2) l2.textContent = `${p2Name} (%)`;
+  },
+
+  validateQuickDashboardSum() {
+    const p1 = parseFloat(document.getElementById('quick-edit-p1-pct')?.value) || 0;
+    const p2 = parseFloat(document.getElementById('quick-edit-p2-pct')?.value) || 0;
+    const cf = parseFloat(document.getElementById('quick-edit-cf-pct')?.value) || 0;
+    const sum = Math.round((p1 + p2 + cf) * 100) / 100;
+
+    const badge = document.getElementById('quick-dashboard-sum-badge');
+    const btn = document.getElementById('btn-save-quick-dashboard');
+
+    if (badge) {
+      badge.textContent = `Sum: ${sum}%`;
+      const isValid = Math.abs(sum - 100) < 0.05;
+      badge.style.color = isValid ? 'var(--accent-income)' : 'var(--accent-expense)';
+      badge.style.borderColor = isValid ? 'var(--accent-income)' : 'var(--accent-expense)';
+      if (btn) btn.disabled = !isValid;
+    }
+  },
+
+  handleSaveQuickDashboardModal(e) {
+    if (e) e.preventDefault();
+    const p1Name = document.getElementById('quick-edit-p1-name')?.value?.trim();
+    const p2Name = document.getElementById('quick-edit-p2-name')?.value?.trim();
+    const p1Pct = parseFloat(document.getElementById('quick-edit-p1-pct')?.value) || 33.33;
+    const p2Pct = parseFloat(document.getElementById('quick-edit-p2-pct')?.value) || 33.33;
+    const cfPct = parseFloat(document.getElementById('quick-edit-cf-pct')?.value) || 33.34;
+    const fundVal = document.getElementById('quick-edit-fund-balance')?.value;
+    const targetBalance = FinanceEngine.parseINR(fundVal);
+
+    if (!p1Name || !p2Name) {
+      this.showToast('⚠️ Please enter names for both partners');
+      return;
+    }
+
+    const sum = Math.round((p1Pct + p2Pct + cfPct) * 100) / 100;
+    if (Math.abs(sum - 100) >= 0.05) {
+      this.showToast('⚠️ Percentages must sum to exactly 100%');
+      return;
+    }
+
+    window.dataStore.updatePartnersAndSplits(p1Name, p2Name, p1Pct, p2Pct, cfPct);
+    if (!isNaN(targetBalance) && targetBalance >= 0) {
+      window.dataStore.setCompanyFundBalance(targetBalance);
+    }
+
+    this.closeModalDirect('modal-quick-edit-dashboard');
+    this.renderHome();
+    this.showToast('Dashboard values and partner splits saved ✓');
+  },
+
+  openManageRevenueModal() {
+    const income = window.dataStore.data.income || [];
+    const total = income.reduce((s, i) => s + (Number(i.amount) || 0), 0);
+    const totalEl = document.getElementById('quick-revenue-total-display');
+    if (totalEl) totalEl.textContent = FinanceEngine.formatINR(total);
+
+    const listEl = document.getElementById('quick-revenue-records-list');
+    if (listEl) {
+      if (income.length === 0) {
+        listEl.innerHTML = '<div class="empty-state">No revenue records logged yet. Tap "+ Record Revenue" to add your first bill.</div>';
+      } else {
+        listEl.innerHTML = income.map(item => `
+          <div class="transaction-item" style="cursor: pointer;" onclick="App.closeModalDirect('modal-manage-revenue-quick'); App.openEditIncomeModal('${item.id}');">
+            <div class="transaction-left">
+              <div class="tx-icon income">+</div>
+              <div>
+                <div class="tx-title" style="font-weight: 700;">${item.clientName || item.projectName || 'Studio Revenue'}</div>
+                <div class="tx-meta">
+                  <span>📅 ${item.date || 'Today'}</span>
+                  <span class="method-tag">${item.paymentMethod || 'UPI'}</span>
+                  ${item.projectName ? `<span>• ${item.projectName}</span>` : ''}
+                </div>
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <div class="tx-amount income" style="font-size: 14px; font-weight: 800;">+${FinanceEngine.formatINR(item.amount)}</div>
+              <button class="btn-share-icon" onclick="event.stopPropagation(); App.openShareReceiptModal('${item.id}', 'payment');" title="Receipt">
+                <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+                PDF
+              </button>
+              <button class="edit-btn" onclick="event.stopPropagation(); App.closeModalDirect('modal-manage-revenue-quick'); App.openEditIncomeModal('${item.id}');" title="Edit this record">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+              </button>
+              <button class="delete-btn" onclick="event.stopPropagation(); App.confirmDelete('income', '${item.id}');" title="Delete record">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+              </button>
+            </div>
+          </div>
+        `).join('');
+      }
+    }
+
+    this.openModal('modal-manage-revenue-quick');
+  },
+
+  openManageExpensesModal() {
+    const expenses = window.dataStore.data.expenses || [];
+    const total = expenses.reduce((s, e) => s + (Number(e.amount) || 0), 0);
+    const totalEl = document.getElementById('quick-expenses-total-display');
+    if (totalEl) totalEl.textContent = FinanceEngine.formatINR(total);
+
+    const listEl = document.getElementById('quick-expenses-records-list');
+    if (listEl) {
+      if (expenses.length === 0) {
+        listEl.innerHTML = '<div class="empty-state">No expense entries logged yet. Tap "+ Add Expense" to record costs.</div>';
+      } else {
+        listEl.innerHTML = expenses.map(item => `
+          <div class="transaction-item" style="cursor: pointer;" onclick="App.closeModalDirect('modal-manage-expenses-quick'); App.openEditExpenseModal('${item.id}');">
+            <div class="transaction-left">
+              <div class="tx-icon expense">−</div>
+              <div>
+                <div class="tx-title" style="font-weight: 700;">${item.category || 'Expense'}</div>
+                <div class="tx-meta">
+                  <span>📅 ${item.date || 'Today'}</span>
+                  <span class="method-tag">${item.paymentMethod || 'UPI'}</span>
+                  ${item.projectName ? `<span>• ${item.projectName}</span>` : ''}
+                </div>
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <div class="tx-amount expense" style="font-size: 14px; font-weight: 800;">−${FinanceEngine.formatINR(item.amount)}</div>
+              <button class="edit-btn" onclick="event.stopPropagation(); App.closeModalDirect('modal-manage-expenses-quick'); App.openEditExpenseModal('${item.id}');" title="Edit this expense">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+              </button>
+              <button class="delete-btn" onclick="event.stopPropagation(); App.confirmDelete('expenses', '${item.id}');" title="Delete expense">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+              </button>
+            </div>
+          </div>
+        `).join('');
+      }
+    }
+
+    this.openModal('modal-manage-expenses-quick');
+  },
+
+  openAdjustProfitModal() {
+    const store = window.dataStore.data;
+    const period = this.homePeriod || 'month';
+    const financials = FinanceEngine.computeFinancials(store, { type: period });
+
+    const revEl = document.getElementById('adjust-profit-rev-val');
+    const expEl = document.getElementById('adjust-profit-exp-val');
+    const netEl = document.getElementById('adjust-profit-net-val');
+    const p1Lbl = document.getElementById('adjust-profit-p1-label');
+    const p1Val = document.getElementById('adjust-profit-p1-val');
+    const p2Lbl = document.getElementById('adjust-profit-p2-label');
+    const p2Val = document.getElementById('adjust-profit-p2-val');
+    const cfVal = document.getElementById('adjust-profit-cf-val');
+
+    if (revEl) revEl.textContent = FinanceEngine.formatINR(financials.totalIncome);
+    if (expEl) expEl.textContent = FinanceEngine.formatINR(financials.totalExpenses);
+    if (netEl) netEl.textContent = FinanceEngine.formatINR(financials.netProfit);
+
+    const p1Name = store.settings?.partner1Name || 'Shameem';
+    const p2Name = store.settings?.partner2Name || 'Shiyan';
+    if (p1Lbl) p1Lbl.textContent = `${p1Name} (${store.settings?.profitPercentages?.partner1 || 33.33}%)`;
+    if (p2Lbl) p2Lbl.textContent = `${p2Name} (${store.settings?.profitPercentages?.partner2 || 33.33}%)`;
+    if (p1Val) p1Val.textContent = FinanceEngine.formatINR(financials.distribution.partner1);
+    if (p2Val) p2Val.textContent = FinanceEngine.formatINR(financials.distribution.partner2);
+    if (cfVal) cfVal.textContent = FinanceEngine.formatINR(financials.distribution.companyFund);
+
+    this.openModal('modal-adjust-profit');
+  },
+
+  openEditPendingPaymentsModal() {
+    const projects = window.dataStore.data.projects || [];
+    const pendingShoots = projects.filter(p => (Number(p.packageAmount) || 0) > (Number(p.receivedAmount) || 0));
+    const totalPending = pendingShoots.reduce((sum, p) => sum + Math.max(0, (Number(p.packageAmount) || 0) - (Number(p.receivedAmount) || 0)), 0);
+
+    const totalEl = document.getElementById('quick-pending-total-display');
+    if (totalEl) totalEl.textContent = FinanceEngine.formatINR(totalPending);
+
+    const listEl = document.getElementById('quick-pending-shoots-list');
+    if (listEl) {
+      if (pendingShoots.length === 0) {
+        listEl.innerHTML = `
+          <div class="empty-state" style="padding: 28px; text-align: center;">
+            <div style="font-size: 32px; margin-bottom: 8px;">🎉</div>
+            <div style="font-weight: 700; color: var(--accent-income); font-size: 15px;">All Client Dues Settled!</div>
+            <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">There are no pending payments across any active or completed shoots.</div>
+          </div>
+        `;
+      } else {
+        listEl.innerHTML = pendingShoots.map(proj => {
+          const pkg = Number(proj.packageAmount) || 0;
+          const rcv = Number(proj.receivedAmount) || 0;
+          const pending = Math.max(0, pkg - rcv);
+
+          return `
+            <div style="background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 10px;">
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
+                <div>
+                  <div style="font-weight: 700; font-size: 14px; color: var(--text-primary);">${proj.name || proj.projectName || proj.clientName}</div>
+                  <div style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
+                    👤 ${proj.clientName || 'Client'} ${proj.clientPhone ? `• 📞 ${proj.clientPhone}` : ''}
+                    ${proj.eventDate ? `• 📅 ${proj.eventDate}` : ''}
+                  </div>
+                </div>
+                <div style="text-align: right;">
+                  <div style="font-size: 14px; font-weight: 800; color: #fbbf24;">₹${pending.toLocaleString('en-IN')} Due</div>
+                  <div style="font-size: 11px; color: var(--text-muted);">Pkg: ₹${pkg.toLocaleString('en-IN')}</div>
+                </div>
+              </div>
+
+              <!-- Quick Inline Actions -->
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; border-top: 1px dashed var(--border-subtle); padding-top: 10px;">
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <span style="font-size: 11px; color: var(--text-secondary);">Received (₹):</span>
+                  <input type="number" id="quick-pending-inp-${proj.id}" class="form-input" value="${rcv}" style="width: 105px; padding: 4px 8px; font-size: 13px; font-weight: 700; height: 32px;">
+                  <button class="btn btn-outline btn-sm" onclick="App.quickUpdatePendingAmount('${proj.id}')" style="padding: 4px 10px; font-size: 11px; font-weight: 700; height: 32px;">
+                    Update
+                  </button>
+                </div>
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <button class="btn btn-gold btn-sm" onclick="App.quickSettleProject('${proj.id}')" style="padding: 4px 12px; font-size: 11px; font-weight: 700; height: 32px; background: rgba(16, 185, 129, 0.2); border: 1px solid rgba(16, 185, 129, 0.4); color: var(--accent-income);">
+                    Mark Settled ✓
+                  </button>
+                  <button class="edit-btn" onclick="App.closeModalDirect('modal-edit-pending-payments'); App.openEditProjectModal('${proj.id}');" title="Edit Full Shoot Details">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                  </button>
+                  ${proj.clientPhone ? `
+                    <button class="btn-share-icon" onclick="App.sendProjectWhatsAppReminder('${proj.id}')" title="Send WhatsApp Payment Balance Reminder">
+                      WA
+                    </button>
+                  ` : ''}
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+    }
+
+    this.openModal('modal-edit-pending-payments');
+  },
+
+  quickUpdatePendingAmount(projectId) {
+    const inp = document.getElementById(`quick-pending-inp-${projectId}`);
+    if (!inp) return;
+    const newAmount = parseFloat(inp.value);
+    if (isNaN(newAmount) || newAmount < 0) {
+      this.showToast('⚠️ Please enter a valid payment amount');
+      return;
+    }
+
+    window.dataStore.updateProjectReceivedAmount(projectId, newAmount);
+    this.showToast('Project received payment updated ✓');
+    this.openEditPendingPaymentsModal();
+  },
+
+  quickSettleProject(projectId) {
+    window.dataStore.markProjectPaid(projectId);
+    this.showToast('Shoot marked fully settled! Payment recorded ✓');
+    this.openEditPendingPaymentsModal();
+  },
+
   cycleProjectStatus(projectId) {
     const proj = (window.dataStore.data.projects || []).find(p => p.id === projectId);
     if (!proj) return;

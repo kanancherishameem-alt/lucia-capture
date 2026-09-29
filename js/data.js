@@ -565,6 +565,39 @@ class DataStore {
     return { project, incomeRecord };
   }
 
+  updateProjectReceivedAmount(projectId, newReceivedAmount) {
+    const project = this.data.projects.find(p => p.id === projectId);
+    if (!project) return null;
+
+    const oldRcv = Number(project.receivedAmount) || 0;
+    const newRcv = Math.max(0, Number(newReceivedAmount) || 0);
+    const pkg = Number(project.packageAmount) || 0;
+
+    project.receivedAmount = newRcv;
+    if (newRcv >= pkg && project.status === 'Payment Pending') {
+      project.status = 'Completed';
+    } else if (newRcv < pkg && project.status === 'Completed') {
+      project.status = 'Payment Pending';
+    }
+
+    const diff = newRcv - oldRcv;
+    if (diff > 0) {
+      this.data.income.unshift({
+        id: 'inc-' + Date.now(),
+        projectId: project.id,
+        projectName: project.name,
+        clientName: project.clientName,
+        amount: diff,
+        date: new Date().toISOString().split('T')[0],
+        paymentMethod: 'UPI',
+        notes: `Payment collection for ${project.name}`
+      });
+    }
+
+    this.save();
+    return project;
+  }
+
   addPartnerWithdrawal({ partnerId, amount, date, paymentMethod, notes }) {
     const partnerName = partnerId === 'partner1' ? this.data.settings.partner1Name : this.data.settings.partner2Name;
     const newWithdrawal = {
