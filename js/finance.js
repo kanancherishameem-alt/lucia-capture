@@ -87,16 +87,38 @@ const FinanceEngine = {
   },
 
   /**
-   * Distribute net profit with exact rounding guarantee.
-   * Total distributed will always exactly equal netProfit.
+   * Distribute net profit with exact rounding guarantee or custom editable amounts.
+   * Total distributed will always exactly equal netProfit (or custom amounts).
    * 
    * @param {number} netProfit 
    * @param {object} percentages - { partner1: 33.33, partner2: 33.33, companyFund: 33.34 }
+   * @param {object} customAmounts - Optional direct rupee amounts: { partner1: X, partner2: Y, companyFund: Z }
    */
-  distributeProfit(netProfit, percentages = { partner1: 33.33, partner2: 33.33, companyFund: 33.34 }) {
+  distributeProfit(netProfit, percentages = { partner1: 33.33, partner2: 33.33, companyFund: 33.34 }, customAmounts = null) {
     const profit = Math.round(Number(netProfit) || 0);
+
+    // If direct custom amounts are provided
+    if (customAmounts && (customAmounts.partner1 !== undefined || customAmounts.partner2 !== undefined || customAmounts.companyFund !== undefined)) {
+      const p1 = Math.round(Number(customAmounts.partner1) || 0);
+      const p2 = Math.round(Number(customAmounts.partner2) || 0);
+      let cf = Math.round(Number(customAmounts.companyFund) || 0);
+
+      // If companyFund wasn't explicitly set or if the user wants exact balance with netProfit:
+      if (customAmounts.companyFund === undefined && profit > 0) {
+        cf = Math.max(0, profit - (p1 + p2));
+      }
+
+      return {
+        partner1: p1,
+        partner2: p2,
+        companyFund: cf,
+        total: p1 + p2 + cf,
+        isCustomAmount: true
+      };
+    }
+
     if (profit === 0) {
-      return { partner1: 0, partner2: 0, companyFund: 0, total: 0 };
+      return { partner1: 0, partner2: 0, companyFund: 0, total: 0, isCustomAmount: false };
     }
 
     const p1Percent = Number(percentages.partner1) || 33.33;
@@ -119,7 +141,8 @@ const FinanceEngine = {
       partner1: p1Share,
       partner2: p2Share,
       companyFund: companyFundShare,
-      total: p1Share + p2Share + companyFundShare
+      total: p1Share + p2Share + companyFundShare,
+      isCustomAmount: false
     };
   },
 
@@ -165,7 +188,7 @@ const FinanceEngine = {
     const netProfit = this.calculateNetProfit(totalIncome, totalExpenses);
 
     // Profit Distribution
-    const distribution = this.distributeProfit(netProfit, settings.profitPercentages);
+    const distribution = this.distributeProfit(netProfit, settings.profitPercentages, settings.customProfitAmounts);
 
     // Pending Payments calculation (across all active projects)
     const pendingPayments = projects.reduce((sum, proj) => {
@@ -194,7 +217,7 @@ const FinanceEngine = {
     const allTimeIncome = income.reduce((sum, i) => sum + (Number(i.amount) || 0), 0);
     const allTimeExpenses = expenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
     const allTimeNetProfit = this.calculateNetProfit(allTimeIncome, allTimeExpenses);
-    const allTimeDistribution = this.distributeProfit(allTimeNetProfit, settings.profitPercentages);
+    const allTimeDistribution = this.distributeProfit(allTimeNetProfit, settings.profitPercentages, settings.customProfitAmounts);
 
     const totalCompanyFundBalance = companyFundBalance + allTimeDistribution.companyFund;
 

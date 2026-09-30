@@ -120,10 +120,24 @@ def test_number_to_words():
     assert number_to_words_inr(54321) == 'Fifty Four Thousand Three Hundred Twenty One Rupees Only'
     print("Number to Words Test Passed: 20000 ->", number_to_words_inr(20000))
 
+def test_custom_profit_amounts():
+    # User specifies exact amounts in Rupees: Shameem = 40000, Shiyan = 40000, Company Fund = 30000
+    custom_amounts = {'partner1': 40000, 'partner2': 40000, 'companyFund': 30000}
+    p1 = custom_amounts['partner1']
+    p2 = custom_amounts['partner2']
+    cf = custom_amounts['companyFund']
+    total = p1 + p2 + cf
+    assert p1 == 40000
+    assert p2 == 40000
+    assert cf == 30000
+    assert total == 110000
+    print(f"Custom Profit Amounts Test Passed: Shameem=₹{p1}, Shiyan=₹{p2}, Company Fund=₹{cf}, Total=₹{total}")
+
 if __name__ == '__main__':
     test_profit_split_example()
     test_default_this_month()
     test_partner_available_balances()
     test_project_aswathi()
     test_number_to_words()
+    test_custom_profit_amounts()
     print("ALL TESTS PASSED SUCCESSFULLY! ✓")

@@ -769,78 +769,120 @@ const App = {
     this.openEditExpenseModal(expenseId);
   },
 
-  openEditPartnersModal() {
-    const settings = window.dataStore.data.settings;
+  openEditPartnersModal(targetPartner) {
+    const store = window.dataStore.data;
+    const settings = store.settings || {};
     const p1Name = settings.partner1Name || 'Shameem';
     const p2Name = settings.partner2Name || 'Shiyan';
-    const pcts = settings.profitPercentages || { partner1: 33.33, partner2: 33.33, companyFund: 33.34 };
+
+    const financials = FinanceEngine.computeFinancials(store, { type: 'all' });
+    const dist = financials.distribution || { partner1: 0, partner2: 0, companyFund: 0 };
+    const netProfit = financials.netProfit || 0;
 
     const p1Inp = document.getElementById('edit-partner1-name');
     const p2Inp = document.getElementById('edit-partner2-name');
-    const p1Pct = document.getElementById('edit-partner1-pct');
-    const p2Pct = document.getElementById('edit-partner2-pct');
-    const cfPct = document.getElementById('edit-company-fund-pct');
+    const p1Amt = document.getElementById('edit-partner1-amount');
+    const p2Amt = document.getElementById('edit-partner2-amount');
+    const cfAmt = document.getElementById('edit-company-fund-amount');
+    const npDisplay = document.getElementById('edit-partners-netprofit-display');
 
     if (p1Inp) p1Inp.value = p1Name;
     if (p2Inp) p2Inp.value = p2Name;
-    if (p1Pct) p1Pct.value = pcts.partner1;
-    if (p2Pct) p2Pct.value = pcts.partner2;
-    if (cfPct) cfPct.value = pcts.companyFund;
+    if (p1Amt) p1Amt.value = dist.partner1;
+    if (p2Amt) p2Amt.value = dist.partner2;
+    if (cfAmt) cfAmt.value = dist.companyFund;
+    if (npDisplay) npDisplay.textContent = FinanceEngine.formatINR(netProfit);
 
     this.updateEditPartnersLabels();
-    this.validateEditPartnersSum();
+    this.updateEditPartnersTotal();
     this.openModal('modal-edit-partners');
+
+    // Auto-focus selected partner input if specified
+    setTimeout(() => {
+      let targetInput = p1Amt;
+      if (targetPartner === 'partner2') targetInput = p2Amt;
+      else if (targetPartner === 'companyFund') targetInput = cfAmt;
+      if (targetInput) {
+        targetInput.focus();
+        targetInput.select();
+      }
+    }, 100);
   },
 
   updateEditPartnersLabels() {
     const p1Name = document.getElementById('edit-partner1-name')?.value?.trim() || 'Partner 1';
     const p2Name = document.getElementById('edit-partner2-name')?.value?.trim() || 'Partner 2';
-    const l1 = document.getElementById('edit-partner1-pct-label');
-    const l2 = document.getElementById('edit-partner2-pct-label');
-    if (l1) l1.textContent = `${p1Name} (%)`;
-    if (l2) l2.textContent = `${p2Name} (%)`;
+    const l1 = document.getElementById('edit-partner1-amount-label');
+    const l2 = document.getElementById('edit-partner2-amount-label');
+    if (l1) l1.textContent = `${p1Name} (₹)`;
+    if (l2) l2.textContent = `${p2Name} (₹)`;
   },
 
-  validateEditPartnersSum() {
-    const p1 = parseFloat(document.getElementById('edit-partner1-pct')?.value) || 0;
-    const p2 = parseFloat(document.getElementById('edit-partner2-pct')?.value) || 0;
-    const cf = parseFloat(document.getElementById('edit-company-fund-pct')?.value) || 0;
-    const sum = Math.round((p1 + p2 + cf) * 100) / 100;
+  updateEditPartnersTotal() {
+    const p1 = Math.round(Number(document.getElementById('edit-partner1-amount')?.value) || 0);
+    const p2 = Math.round(Number(document.getElementById('edit-partner2-amount')?.value) || 0);
+    const cf = Math.round(Number(document.getElementById('edit-company-fund-amount')?.value) || 0);
+    const total = p1 + p2 + cf;
 
-    const badge = document.getElementById('edit-partners-sum-badge');
-    const btn = document.getElementById('btn-save-edit-partners');
-
+    const badge = document.getElementById('edit-partners-total-badge');
     if (badge) {
-      badge.textContent = `Sum: ${sum}%`;
-      const isValid = Math.abs(sum - 100) < 0.05;
-      badge.style.color = isValid ? 'var(--accent-income)' : 'var(--accent-expense)';
-      badge.style.borderColor = isValid ? 'var(--accent-income)' : 'var(--accent-expense)';
-      if (btn) btn.disabled = !isValid;
+      badge.textContent = `Total: ${FinanceEngine.formatINR(total)}`;
     }
+  },
+
+  splitNetProfitEqually() {
+    const store = window.dataStore.data;
+    const financials = FinanceEngine.computeFinancials(store, { type: 'all' });
+    const profit = Math.max(0, financials.netProfit || 0);
+
+    const share = Math.floor(profit / 3);
+    const remainder = profit - (share * 2);
+
+    const p1Amt = document.getElementById('edit-partner1-amount');
+    const p2Amt = document.getElementById('edit-partner2-amount');
+    const cfAmt = document.getElementById('edit-company-fund-amount');
+
+    if (p1Amt) p1Amt.value = share;
+    if (p2Amt) p2Amt.value = share;
+    if (cfAmt) cfAmt.value = remainder;
+
+    this.updateEditPartnersTotal();
+    this.showToast('Net profit split equally (1/3 each) ✓');
+  },
+
+  balanceRemainingToFund() {
+    const store = window.dataStore.data;
+    const financials = FinanceEngine.computeFinancials(store, { type: 'all' });
+    const profit = Math.max(0, financials.netProfit || 0);
+
+    const p1 = Math.round(Number(document.getElementById('edit-partner1-amount')?.value) || 0);
+    const p2 = Math.round(Number(document.getElementById('edit-partner2-amount')?.value) || 0);
+    const cf = Math.max(0, profit - (p1 + p2));
+
+    const cfAmt = document.getElementById('edit-company-fund-amount');
+    if (cfAmt) cfAmt.value = cf;
+
+    this.updateEditPartnersTotal();
+    this.showToast(`Balanced remaining ${FinanceEngine.formatINR(cf)} to Company Fund ✓`);
   },
 
   handleSavePartnersModal(e) {
     if (e) e.preventDefault();
     const p1Name = document.getElementById('edit-partner1-name')?.value?.trim();
     const p2Name = document.getElementById('edit-partner2-name')?.value?.trim();
-    const p1Pct = parseFloat(document.getElementById('edit-partner1-pct')?.value) || 33.33;
-    const p2Pct = parseFloat(document.getElementById('edit-partner2-pct')?.value) || 33.33;
-    const cfPct = parseFloat(document.getElementById('edit-company-fund-pct')?.value) || 33.34;
+    const p1Amount = document.getElementById('edit-partner1-amount')?.value;
+    const p2Amount = document.getElementById('edit-partner2-amount')?.value;
+    const cfAmount = document.getElementById('edit-company-fund-amount')?.value;
 
     if (!p1Name || !p2Name) {
       this.showToast('⚠️ Please enter names for both partners');
       return;
     }
 
-    const sum = Math.round((p1Pct + p2Pct + cfPct) * 100) / 100;
-    if (Math.abs(sum - 100) >= 0.05) {
-      this.showToast('⚠️ Percentages must sum to exactly 100%');
-      return;
-    }
-
-    window.dataStore.updatePartnersAndSplits(p1Name, p2Name, p1Pct, p2Pct, cfPct);
+    window.dataStore.updatePartnerProfitAmounts(p1Amount, p2Amount, cfAmount, p1Name, p2Name);
     this.closeModalDirect('modal-edit-partners');
-    this.showToast('Partner details & profit splits updated ✓');
+    this.renderHome();
+    this.showToast('Partner profit amounts saved successfully ✓');
   },
 
   openEditFundBalanceModal() {
@@ -879,61 +921,42 @@ const App = {
     const settings = store.settings || {};
     const p1Name = settings.partner1Name || 'Shameem';
     const p2Name = settings.partner2Name || 'Shiyan';
-    const pcts = settings.profitPercentages || { partner1: 33.33, partner2: 33.33, companyFund: 33.34 };
+    const dist = financials.distribution || { partner1: 0, partner2: 0, companyFund: 0 };
 
     const fundInp = document.getElementById('quick-edit-fund-balance');
     const p1Inp = document.getElementById('quick-edit-p1-name');
     const p2Inp = document.getElementById('quick-edit-p2-name');
-    const p1Pct = document.getElementById('quick-edit-p1-pct');
-    const p2Pct = document.getElementById('quick-edit-p2-pct');
-    const cfPct = document.getElementById('quick-edit-cf-pct');
+    const p1Amt = document.getElementById('quick-edit-p1-amount');
+    const p2Amt = document.getElementById('quick-edit-p2-amount');
+    const cfAmt = document.getElementById('quick-edit-cf-amount');
 
     if (fundInp) fundInp.value = currentBalance;
     if (p1Inp) p1Inp.value = p1Name;
     if (p2Inp) p2Inp.value = p2Name;
-    if (p1Pct) p1Pct.value = pcts.partner1;
-    if (p2Pct) p2Pct.value = pcts.partner2;
-    if (cfPct) cfPct.value = pcts.companyFund;
+    if (p1Amt) p1Amt.value = dist.partner1;
+    if (p2Amt) p2Amt.value = dist.partner2;
+    if (cfAmt) cfAmt.value = dist.companyFund;
 
     this.updateQuickDashboardLabels();
-    this.validateQuickDashboardSum();
     this.openModal('modal-quick-edit-dashboard');
   },
 
   updateQuickDashboardLabels() {
     const p1Name = document.getElementById('quick-edit-p1-name')?.value?.trim() || 'Partner 1';
     const p2Name = document.getElementById('quick-edit-p2-name')?.value?.trim() || 'Partner 2';
-    const l1 = document.getElementById('quick-edit-p1-pct-label');
-    const l2 = document.getElementById('quick-edit-p2-pct-label');
-    if (l1) l1.textContent = `${p1Name} (%)`;
-    if (l2) l2.textContent = `${p2Name} (%)`;
-  },
-
-  validateQuickDashboardSum() {
-    const p1 = parseFloat(document.getElementById('quick-edit-p1-pct')?.value) || 0;
-    const p2 = parseFloat(document.getElementById('quick-edit-p2-pct')?.value) || 0;
-    const cf = parseFloat(document.getElementById('quick-edit-cf-pct')?.value) || 0;
-    const sum = Math.round((p1 + p2 + cf) * 100) / 100;
-
-    const badge = document.getElementById('quick-dashboard-sum-badge');
-    const btn = document.getElementById('btn-save-quick-dashboard');
-
-    if (badge) {
-      badge.textContent = `Sum: ${sum}%`;
-      const isValid = Math.abs(sum - 100) < 0.05;
-      badge.style.color = isValid ? 'var(--accent-income)' : 'var(--accent-expense)';
-      badge.style.borderColor = isValid ? 'var(--accent-income)' : 'var(--accent-expense)';
-      if (btn) btn.disabled = !isValid;
-    }
+    const l1 = document.getElementById('quick-edit-p1-amount-label');
+    const l2 = document.getElementById('quick-edit-p2-amount-label');
+    if (l1) l1.textContent = `${p1Name} (₹)`;
+    if (l2) l2.textContent = `${p2Name} (₹)`;
   },
 
   handleSaveQuickDashboardModal(e) {
     if (e) e.preventDefault();
     const p1Name = document.getElementById('quick-edit-p1-name')?.value?.trim();
     const p2Name = document.getElementById('quick-edit-p2-name')?.value?.trim();
-    const p1Pct = parseFloat(document.getElementById('quick-edit-p1-pct')?.value) || 33.33;
-    const p2Pct = parseFloat(document.getElementById('quick-edit-p2-pct')?.value) || 33.33;
-    const cfPct = parseFloat(document.getElementById('quick-edit-cf-pct')?.value) || 33.34;
+    const p1Amt = document.getElementById('quick-edit-p1-amount')?.value;
+    const p2Amt = document.getElementById('quick-edit-p2-amount')?.value;
+    const cfAmt = document.getElementById('quick-edit-cf-amount')?.value;
     const fundVal = document.getElementById('quick-edit-fund-balance')?.value;
     const targetBalance = FinanceEngine.parseINR(fundVal);
 
@@ -942,20 +965,14 @@ const App = {
       return;
     }
 
-    const sum = Math.round((p1Pct + p2Pct + cfPct) * 100) / 100;
-    if (Math.abs(sum - 100) >= 0.05) {
-      this.showToast('⚠️ Percentages must sum to exactly 100%');
-      return;
-    }
-
-    window.dataStore.updatePartnersAndSplits(p1Name, p2Name, p1Pct, p2Pct, cfPct);
+    window.dataStore.updatePartnerProfitAmounts(p1Amt, p2Amt, cfAmt, p1Name, p2Name);
     if (!isNaN(targetBalance) && targetBalance >= 0) {
       window.dataStore.setCompanyFundBalance(targetBalance);
     }
 
     this.closeModalDirect('modal-quick-edit-dashboard');
     this.renderHome();
-    this.showToast('Dashboard values and partner splits saved ✓');
+    this.showToast('Dashboard values and partner profit amounts saved ✓');
   },
 
   openManageRevenueModal() {
@@ -1064,8 +1081,8 @@ const App = {
 
     const p1Name = store.settings?.partner1Name || 'Shameem';
     const p2Name = store.settings?.partner2Name || 'Shiyan';
-    if (p1Lbl) p1Lbl.textContent = `${p1Name} (${store.settings?.profitPercentages?.partner1 || 33.33}%)`;
-    if (p2Lbl) p2Lbl.textContent = `${p2Name} (${store.settings?.profitPercentages?.partner2 || 33.33}%)`;
+    if (p1Lbl) p1Lbl.textContent = store.settings?.customProfitAmounts ? `${p1Name} (Custom ₹)` : `${p1Name} (${store.settings?.profitPercentages?.partner1 || 33.33}%)`;
+    if (p2Lbl) p2Lbl.textContent = store.settings?.customProfitAmounts ? `${p2Name} (Custom ₹)` : `${p2Name} (${store.settings?.profitPercentages?.partner2 || 33.33}%)`;
     if (p1Val) p1Val.textContent = FinanceEngine.formatINR(financials.distribution.partner1);
     if (p2Val) p2Val.textContent = FinanceEngine.formatINR(financials.distribution.partner2);
     if (cfVal) cfVal.textContent = FinanceEngine.formatINR(financials.distribution.companyFund);
@@ -1885,17 +1902,17 @@ const App = {
     // Update Profit Split
     const p1Name = window.dataStore.data.settings.partner1Name || 'Shameem';
     const p2Name = window.dataStore.data.settings.partner2Name || 'Shiyan';
-    const pcts = window.dataStore.data.settings.profitPercentages;
+    const pcts = window.dataStore.data.settings.profitPercentages || { partner1: 33.33, partner2: 33.33, companyFund: 33.34 };
 
-    document.getElementById('home-split-p1-name').textContent = p1Name;
-    document.getElementById('home-split-p2-name').textContent = p2Name;
-    document.getElementById('home-split-p1-pct').textContent = `${pcts.partner1}%`;
-    document.getElementById('home-split-p2-pct').textContent = `${pcts.partner2}%`;
-    document.getElementById('home-split-cf-pct').textContent = `${pcts.companyFund}%`;
+    if (document.getElementById('home-split-p1-name')) document.getElementById('home-split-p1-name').textContent = p1Name;
+    if (document.getElementById('home-split-p2-name')) document.getElementById('home-split-p2-name').textContent = p2Name;
+    if (document.getElementById('home-split-p1-pct')) document.getElementById('home-split-p1-pct').textContent = `${pcts.partner1}%`;
+    if (document.getElementById('home-split-p2-pct')) document.getElementById('home-split-p2-pct').textContent = `${pcts.partner2}%`;
+    if (document.getElementById('home-split-cf-pct')) document.getElementById('home-split-cf-pct').textContent = `${pcts.companyFund}%`;
 
-    document.getElementById('home-split-p1-amount').textContent = FinanceEngine.formatINR(financials.distribution.partner1);
-    document.getElementById('home-split-p2-amount').textContent = FinanceEngine.formatINR(financials.distribution.partner2);
-    document.getElementById('home-split-cf-amount').textContent = FinanceEngine.formatINR(financials.distribution.companyFund);
+    if (document.getElementById('home-split-p1-amount')) document.getElementById('home-split-p1-amount').textContent = FinanceEngine.formatINR(financials.distribution.partner1);
+    if (document.getElementById('home-split-p2-amount')) document.getElementById('home-split-p2-amount').textContent = FinanceEngine.formatINR(financials.distribution.partner2);
+    if (document.getElementById('home-split-cf-amount')) document.getElementById('home-split-cf-amount').textContent = FinanceEngine.formatINR(financials.distribution.companyFund);
 
     // Update OTHER Cards
     document.getElementById('home-pending-amount').textContent = FinanceEngine.formatINR(financials.pendingPayments);

@@ -654,10 +654,47 @@ class DataStore {
     const allTimeIncome = (this.data.income || []).reduce((sum, i) => sum + (Number(i.amount) || 0), 0);
     const allTimeExpenses = (this.data.expenses || []).reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
     const allTimeNetProfit = FinanceEngine.calculateNetProfit(allTimeIncome, allTimeExpenses);
-    const allTimeDist = FinanceEngine.distributeProfit(allTimeNetProfit, this.data.settings.profitPercentages);
+    const allTimeDist = FinanceEngine.distributeProfit(allTimeNetProfit, this.data.settings.profitPercentages, this.data.settings.customProfitAmounts);
 
     // Set initial balance so total matches target exactly
     this.data.settings.initialCompanyFundBalance = target - (ledgerDiff + allTimeDist.companyFund);
+    this.save();
+    return true;
+  }
+
+  updatePartnerProfitAmounts(p1Amount, p2Amount, cfAmount, partner1Name, partner2Name) {
+    if (partner1Name) this.data.settings.partner1Name = partner1Name.trim();
+    if (partner2Name) this.data.settings.partner2Name = partner2Name.trim();
+
+    const p1 = Math.max(0, Math.round(Number(p1Amount) || 0));
+    const p2 = Math.max(0, Math.round(Number(p2Amount) || 0));
+    const cf = Math.max(0, Math.round(Number(cfAmount) || 0));
+
+    this.data.settings.customProfitAmounts = {
+      partner1: p1,
+      partner2: p2,
+      companyFund: cf
+    };
+
+    // Calculate background percentages if total > 0 so standard percentage reports remain consistent
+    const total = p1 + p2 + cf;
+    if (total > 0) {
+      const p1Pct = Math.round((p1 / total) * 10000) / 100;
+      const p2Pct = Math.round((p2 / total) * 10000) / 100;
+      const cfPct = Math.round((100 - (p1Pct + p2Pct)) * 100) / 100;
+      this.data.settings.profitPercentages = {
+        partner1: p1Pct,
+        partner2: p2Pct,
+        companyFund: cfPct
+      };
+    }
+
+    // Synchronize withdrawal partnerName labels
+    (this.data.withdrawals || []).forEach(w => {
+      if (w.partnerId === 'partner1') w.partnerName = this.data.settings.partner1Name;
+      if (w.partnerId === 'partner2') w.partnerName = this.data.settings.partner2Name;
+    });
+
     this.save();
     return true;
   }
@@ -671,6 +708,8 @@ class DataStore {
         partner2: Number(p2Pct),
         companyFund: Number(cfPct)
       };
+      // Clear custom amounts so percentage takes effect
+      this.data.settings.customProfitAmounts = null;
     }
     // Synchronize withdrawal partnerName labels
     (this.data.withdrawals || []).forEach(w => {
@@ -984,7 +1023,7 @@ class DataStore {
     const allTimeIncome = (this.data.income || []).reduce((sum, i) => sum + (Number(i.amount) || 0), 0);
     const allTimeExpenses = (this.data.expenses || []).reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
     const allTimeNetProfit = FinanceEngine.calculateNetProfit(allTimeIncome, allTimeExpenses);
-    const allTimeDist = FinanceEngine.distributeProfit(allTimeNetProfit, this.data.settings.profitPercentages);
+    const allTimeDist = FinanceEngine.distributeProfit(allTimeNetProfit, this.data.settings.profitPercentages, this.data.settings.customProfitAmounts);
     
     // Set initial balance so that initialBalance + companyFundProfitShare = targetBalance
     this.data.settings.initialCompanyFundBalance = targetBalance - allTimeDist.companyFund;
