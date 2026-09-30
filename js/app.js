@@ -3072,10 +3072,6 @@ const App = {
                 <td class="a4-td-val">Rs. ${Number(receiptData.totalAmount || 0).toLocaleString('en-IN')}</td>
               </tr>
               <tr>
-                <td>Previous Paid</td>
-                <td class="a4-td-val">Rs. ${Number(receiptData.previousPaid || 0).toLocaleString('en-IN')}</td>
-              </tr>
-              <tr>
                 <td>Current Payment</td>
                 <td class="a4-td-val" style="color: #16a34a;">Rs. ${Number(receiptData.amountReceived || 0).toLocaleString('en-IN')}</td>
               </tr>
