@@ -113,9 +113,16 @@ function getDefaultData() {
         projectName: 'Aswathi Wedding',
         clientName: 'Aswathi & Kiran',
         amount: 30000,
+        totalAmount: 50000,
+        balanceDue: 20000,
         date: `${monthPrefix}-08`,
         paymentMethod: 'UPI', // Cash, UPI, Bank
-        notes: 'Advance booking payment'
+        notes: 'Advance booking payment',
+        items: [
+          { description: 'Wedding Photography Package 01', quantity: 1, rate: 12000, amount: 12000 },
+          { description: 'Camera Videography', quantity: 1, rate: 15000, amount: 15000 },
+          { description: 'Additional Service', quantity: 1, rate: 3000, amount: 3000 }
+        ]
       },
       {
         id: 'inc-2',
@@ -437,7 +444,7 @@ class DataStore {
 
   // --- ACTIONS ---
 
-  addIncome({ projectId, projectName, clientName, clientPhone, amount, totalAmount, balanceDue, category, date, paymentMethod, notes }) {
+  addIncome({ projectId, projectName, clientName, clientPhone, amount, totalAmount, balanceDue, category, date, paymentMethod, notes, items }) {
     const rcv = Number(amount) || 0;
     const total = totalAmount !== undefined ? (Number(totalAmount) || 0) : rcv;
     const due = balanceDue !== undefined ? (Number(balanceDue) || 0) : Math.max(0, total - rcv);
@@ -454,7 +461,8 @@ class DataStore {
       category: category || 'Wedding Shoot',
       date: date || new Date().toISOString().split('T')[0],
       paymentMethod: paymentMethod || 'UPI',
-      notes: notes || ''
+      notes: notes || '',
+      items: Array.isArray(items) ? items : []
     };
 
     this.data.income.unshift(newIncome);

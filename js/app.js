@@ -371,6 +371,10 @@ const App = {
         if (delBtn) delBtn.style.display = 'none';
         this.selectPaymentMethod('inc', 'UPI');
         this.populateIncomeProjectDropdown();
+        this.incomeLineItems = [
+          { description: 'Wedding Photography Package 01', quantity: 1, rate: 0, amount: 0 }
+        ];
+        this.renderIncomeLineItemRows();
         this.updateIncomeLiveBalance();
       } else if (modalId === 'modal-expense' && !this.editingExpenseId) {
         document.getElementById('form-expense')?.reset();
@@ -583,6 +587,18 @@ const App = {
     const delBtn = document.getElementById('btn-delete-income');
     if (delBtn) delBtn.style.display = 'inline-flex';
 
+    if (inc.items && Array.isArray(inc.items) && inc.items.length > 0) {
+      this.incomeLineItems = JSON.parse(JSON.stringify(inc.items));
+    } else {
+      const initRate = inc.totalAmount !== undefined ? inc.totalAmount : inc.amount;
+      this.incomeLineItems = [{
+        description: inc.projectName || inc.category || 'Wedding Photography Package 01',
+        quantity: 1,
+        rate: initRate,
+        amount: initRate
+      }];
+    }
+    this.renderIncomeLineItemRows();
     this.updateIncomeLiveBalance();
 
     const modal = document.getElementById('modal-income');
@@ -1288,6 +1304,16 @@ const App = {
     const amtInp = document.getElementById('inc-amount');
     if (amtInp && (!amtInp.value || amtInp.value === '0')) amtInp.value = pending > 0 ? pending : pkg;
 
+    if (!this.incomeLineItems || this.incomeLineItems.length === 0 || (this.incomeLineItems.length === 1 && (!this.incomeLineItems[0].rate || this.incomeLineItems[0].rate === 0))) {
+      this.incomeLineItems = [{
+        description: projName || 'Wedding Photography & Videography Package',
+        quantity: 1,
+        rate: pkg,
+        amount: pkg
+      }];
+      this.renderIncomeLineItemRows();
+    }
+
     this.updateIncomeLiveBalance();
   },
 
@@ -1322,6 +1348,101 @@ const App = {
         tagPrev.textContent = '₹0 Due';
       }
     }
+  },
+
+  renderIncomeLineItemRows() {
+    const container = document.getElementById('inc-line-items-container');
+    if (!container) return;
+
+    if (!this.incomeLineItems || this.incomeLineItems.length === 0) {
+      container.innerHTML = `
+        <div style="text-align: center; color: var(--text-muted); font-size: 11.5px; padding: 12px; border: 1px dashed var(--border-subtle); border-radius: 8px;">
+          No itemized services added. Tap <strong>"+ Add Service"</strong> or click a Quick Add chip above to itemize your bill.
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = this.incomeLineItems.map((item, idx) => {
+      const q = Number(item.quantity) || 1;
+      const r = Number(item.rate) || 0;
+      const rowAmt = q * r;
+
+      return `
+        <div class="inc-line-item-row">
+          <div class="inc-desc-col">
+            <input type="text" class="form-input" placeholder="Service description" 
+              value="${item.description ? item.description.replace(/"/g, '&quot;') : ''}" 
+              oninput="App.handleIncomeLineItemChange(${idx}, 'description', this.value)" style="font-size: 12.5px; padding: 7px 10px;" required>
+          </div>
+          <div>
+            <input type="number" min="1" class="form-input" placeholder="Qty" value="${q}" 
+              oninput="App.handleIncomeLineItemChange(${idx}, 'quantity', this.value)" style="text-align: center; font-size: 12.5px; padding: 7px 4px;" required>
+          </div>
+          <div>
+            <input type="number" min="0" class="form-input" placeholder="Rate" value="${r || ''}" 
+              oninput="App.handleIncomeLineItemChange(${idx}, 'rate', this.value)" style="text-align: right; font-size: 12.5px; padding: 7px 8px;" required>
+          </div>
+          <div class="inc-total-col" style="font-weight: 700; font-size: 12.5px; text-align: right; padding-right: 4px; color: var(--gold-light);" id="inc-item-total-${idx}">
+            ${FinanceEngine.formatINR(rowAmt)}
+          </div>
+          <div style="text-align: center;">
+            <button type="button" class="line-item-delete-btn" onclick="App.removeIncomeLineItem(${idx})" title="Remove item" style="height: 32px; width: 32px;">✕</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  },
+
+  addIncomeLineItem(desc = '', qty = 1, rate = 0) {
+    if (!this.incomeLineItems) this.incomeLineItems = [];
+    this.incomeLineItems.push({
+      description: desc,
+      quantity: Number(qty) || 1,
+      rate: Number(rate) || 0,
+      amount: (Number(qty) || 1) * (Number(rate) || 0)
+    });
+    this.renderIncomeLineItemRows();
+    this.syncIncomeTotalFromItems();
+  },
+
+  addIncomePresetItem(desc, qty, rate) {
+    if (this.incomeLineItems && this.incomeLineItems.length === 1 && !this.incomeLineItems[0].rate && (!this.incomeLineItems[0].description || this.incomeLineItems[0].description === 'Wedding Photography Package 01')) {
+      this.incomeLineItems = [];
+    }
+    this.addIncomeLineItem(desc, qty, rate);
+  },
+
+  removeIncomeLineItem(idx) {
+    if (!this.incomeLineItems) return;
+    this.incomeLineItems.splice(idx, 1);
+    this.renderIncomeLineItemRows();
+    this.syncIncomeTotalFromItems();
+  },
+
+  handleIncomeLineItemChange(idx, field, value) {
+    if (!this.incomeLineItems || !this.incomeLineItems[idx]) return;
+    this.incomeLineItems[idx][field] = value;
+
+    const q = Number(this.incomeLineItems[idx].quantity) || 1;
+    const r = Number(this.incomeLineItems[idx].rate) || 0;
+    const rowAmt = q * r;
+    this.incomeLineItems[idx].amount = rowAmt;
+
+    const totalEl = document.getElementById(`inc-item-total-${idx}`);
+    if (totalEl) totalEl.textContent = FinanceEngine.formatINR(rowAmt);
+
+    this.syncIncomeTotalFromItems();
+  },
+
+  syncIncomeTotalFromItems() {
+    if (!this.incomeLineItems || this.incomeLineItems.length === 0) return;
+    const sum = this.incomeLineItems.reduce((s, it) => s + ((Number(it.quantity) || 1) * (Number(it.rate) || 0)), 0);
+    const totalInp = document.getElementById('inc-total-amount');
+    if (totalInp && sum > 0) {
+      totalInp.value = sum;
+    }
+    this.updateIncomeLiveBalance();
   },
 
   handlePayProjectSelected() {
@@ -1382,6 +1503,26 @@ const App = {
     const finalTotal = totalAmount > 0 ? totalAmount : amount;
     const balanceDue = Math.max(0, finalTotal - amount);
 
+    const validItems = (this.incomeLineItems || [])
+      .filter(it => it.description && it.description.trim())
+      .map(it => {
+        const q = Number(it.quantity) || 1;
+        const r = Number(it.rate) || 0;
+        return {
+          description: it.description.trim(),
+          quantity: q,
+          rate: r,
+          amount: q * r
+        };
+      });
+
+    const items = validItems.length > 0 ? validItems : [{
+      description: projectName || category || 'Studio Photography & Videography Service',
+      quantity: 1,
+      rate: finalTotal,
+      amount: finalTotal
+    }];
+
     let savedId = null;
 
     if (this.editingIncomeId) {
@@ -1397,7 +1538,8 @@ const App = {
         balanceDue,
         date,
         paymentMethod,
-        notes
+        notes,
+        items
       });
       this.editingIncomeId = null;
       document.getElementById('form-income')?.reset();
@@ -1418,7 +1560,8 @@ const App = {
         balanceDue,
         date,
         paymentMethod,
-        notes
+        notes,
+        items
       });
       savedId = newInc?.id;
       document.getElementById('form-income')?.reset();
@@ -1462,6 +1605,13 @@ const App = {
       ? `*Balance Due: ${FinanceEngine.formatINR(balance)}*`
       : `*Status: Fully Settled ✅*`;
 
+    let servicesBlock = '';
+    if (inc.items && inc.items.length > 0) {
+      servicesBlock = `📋 *Services Included:*\n` +
+        inc.items.map(it => `  • ${it.description} (${it.quantity || 1} × ₹${(it.rate || 0).toLocaleString('en-IN')}) = ₹${((it.amount !== undefined ? it.amount : (it.quantity || 1) * (it.rate || 0))).toLocaleString('en-IN')}`).join('\n') +
+        `\n---------------------------\n`;
+    }
+
     const text = `*${billing.studioName}* 📸✨\n` +
       `*PAYMENT & BILL RECEIPT: ${refNo}*\n` +
       `---------------------------\n` +
@@ -1471,6 +1621,7 @@ const App = {
       `Date: ${inc.date}\n` +
       `Payment Mode: ${inc.paymentMethod || 'UPI'}\n` +
       `---------------------------\n` +
+      servicesBlock +
       `Total Package: ${FinanceEngine.formatINR(total)}\n` +
       `Amount Received: ${FinanceEngine.formatINR(received)}\n` +
       `${statusLine}\n` +
@@ -2925,7 +3076,8 @@ const App = {
         totalAmount: total,
         balanceDue: due,
         paymentMethod: 'UPI',
-        notes: inv.notes
+        notes: inv.notes,
+        items: (inv.items && inv.items.length > 0) ? inv.items : []
       };
     } else if (type === 'project') {
       const proj = (window.dataStore.data.projects || []).find(p => p.id === id);
@@ -2949,7 +3101,8 @@ const App = {
         totalAmount: pkg,
         balanceDue: Math.max(0, pkg - rcv),
         paymentMethod: 'Direct Studio',
-        notes: proj.location ? `Shoot Location: ${proj.location}` : ''
+        notes: proj.location ? `Shoot Location: ${proj.location}` : '',
+        items: (proj.items && proj.items.length > 0) ? proj.items : []
       };
     } else if (type === 'payment') {
       const inc = (window.dataStore.data.income || []).find(i => i.id === id);
@@ -3005,7 +3158,8 @@ const App = {
         totalAmount,
         balanceDue,
         paymentMethod: inc.paymentMethod || 'Cash',
-        notes: inc.notes
+        notes: inc.notes,
+        items: (inc.items && inc.items.length > 0) ? inc.items : ((proj && proj.items && proj.items.length > 0) ? proj.items : [])
       };
     }
 
@@ -3024,6 +3178,15 @@ const App = {
     const isSettled = (Number(receiptData.balanceDue) || 0) <= 0;
     const statusBadgeText = isSettled ? 'FULLY SETTLED' : 'PARTIALLY PAID';
     const statusBadgeClass = isSettled ? 'settled' : 'partial';
+
+    const serviceItems = (receiptData.items && Array.isArray(receiptData.items) && receiptData.items.length > 0)
+      ? receiptData.items
+      : [{
+          description: receiptData.projectName || receiptData.category || 'Wedding Photography & Videography Package',
+          quantity: 1,
+          rate: receiptData.totalAmount || receiptData.amountReceived || 0,
+          amount: receiptData.totalAmount || receiptData.amountReceived || 0
+        }];
 
     const sheetEl = document.getElementById('a4-receipt-sheet');
     if (sheetEl) {
@@ -3076,6 +3239,41 @@ const App = {
               <td style="color: #4b5563;">Shoot / Service Category</td>
               <td class="a4-td-val">${receiptData.category || receiptData.notes || 'Wedding Shoot'}</td>
             </tr>
+          </table>
+        </div>
+
+        <!-- Service Details Table (Matching user reference image media_1790828356001.png) -->
+        <div style="margin-bottom: 16px;">
+          <div style="margin-bottom: 6px;">
+            <div style="font-size: 13px; font-weight: 800; color: #1e293b; letter-spacing: 0.08em; text-transform: uppercase;">
+              SERVICE DETAILS
+            </div>
+            <div class="a4-gold-underline"></div>
+          </div>
+          <table class="a4-service-table">
+            <thead>
+              <tr>
+                <th style="text-align: left; width: 48%;">DESCRIPTION</th>
+                <th style="text-align: center; width: 14%;">QTY</th>
+                <th style="text-align: right; width: 19%;">RATE</th>
+                <th style="text-align: right; width: 19%;">AMOUNT</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${serviceItems.map(it => {
+                const q = Number(it.quantity) || 1;
+                const r = Number(it.rate) || 0;
+                const amt = Number(it.amount !== undefined ? it.amount : q * r) || 0;
+                return `
+                  <tr>
+                    <td style="text-align: left; font-weight: 500; color: #1e293b;">${it.description || 'Service Item'}</td>
+                    <td style="text-align: center; color: #334155;">${q}</td>
+                    <td style="text-align: right; color: #334155;">₹${r.toLocaleString('en-IN')}</td>
+                    <td style="text-align: right; font-weight: 700; color: #0f172a;">₹${amt.toLocaleString('en-IN')}</td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
           </table>
         </div>
 
@@ -3210,6 +3408,17 @@ const App = {
       `📅 *Date:* ${r.date}\n` +
       `━━━━━━━━━━━━━━━━━━━━━━\n`;
 
+    if (r.items && r.items.length > 0) {
+      text += `📋 *SERVICE DETAILS:*\n`;
+      r.items.forEach(it => {
+        const q = Number(it.quantity) || 1;
+        const rVal = Number(it.rate) || 0;
+        const amt = Number(it.amount !== undefined ? it.amount : q * rVal) || 0;
+        text += `  • ${it.description} (${q} × ${FinanceEngine.formatINR(rVal)}) = ${FinanceEngine.formatINR(amt)}\n`;
+      });
+      text += `━━━━━━━━━━━━━━━━━━━━━━\n`;
+    }
+
     if (r.amountReceived !== undefined) {
       text += `🟢 *Amount Received:* ${FinanceEngine.formatINR(r.amountReceived)} (${r.paymentMethod || 'UPI'})\n`;
     }
@@ -3231,6 +3440,19 @@ const App = {
       `Thank you for choosing ${billing.studioName}! 🎞️✨`;
 
     return text;
+  },
+
+  editReceiptSource() {
+    if (!this.sharingReceiptData) return;
+    const { type, id } = this.sharingReceiptData;
+    this.closeModalDirect('modal-share-receipt');
+    if (type === 'payment') {
+      this.openEditIncomeModal(id);
+    } else if (type === 'project') {
+      this.openEditProjectModal(id);
+    } else if (type === 'invoice') {
+      this.openEditInvoiceModal(id);
+    }
   },
 
   sendReceiptWhatsApp() {

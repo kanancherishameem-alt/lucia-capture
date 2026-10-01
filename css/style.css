@@ -2216,6 +2216,100 @@ html, body {
   text-align: right;
 }
 
+/* Service Details Table (Matching user reference image media_1790828356001.png) */
+.a4-service-table {
+  width: 100%;
+  border: 1px solid #e2e8f0;
+  border-collapse: collapse;
+  font-size: 11.5px;
+  background: #ffffff;
+  border-radius: 6px;
+  overflow: hidden;
+  margin-top: 6px;
+}
+
+.a4-service-table thead tr {
+  background: #f8fafc;
+}
+
+.a4-service-table th {
+  padding: 8px 12px;
+  font-size: 10.5px;
+  font-weight: 800;
+  color: #1e293b;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border-bottom: 1px solid #e2e8f0;
+  border-right: 1px solid #e2e8f0;
+}
+
+.a4-service-table th:last-child {
+  border-right: none;
+}
+
+.a4-service-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid #e2e8f0;
+  border-right: 1px solid #e2e8f0;
+  font-size: 11.5px;
+}
+
+.a4-service-table td:last-child {
+  border-right: none;
+}
+
+.a4-service-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.a4-service-table tbody tr:nth-child(even) {
+  background: #fafbfc;
+}
+
+.a4-gold-underline {
+  width: 44px;
+  height: 2.5px;
+  background: #c59b27;
+  border-radius: 2px;
+  margin-top: 3px;
+  margin-bottom: 8px;
+}
+
+/* Service Details Item Rows in modal-income */
+.inc-line-item-row {
+  display: grid;
+  grid-template-columns: 2.4fr 0.7fr 1.2fr 1.1fr 34px;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+  background: rgba(255, 255, 255, 0.02);
+  padding: 4px 6px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+@media (max-width: 600px) {
+  .inc-line-item-row {
+    grid-template-columns: 1fr 1fr;
+    background: var(--bg-secondary);
+    padding: 10px;
+    border-radius: var(--radius-md);
+    margin-bottom: 10px;
+    border: 1px solid var(--border-subtle);
+  }
+  .inc-line-item-row .inc-desc-col {
+    grid-column: span 2;
+  }
+  .inc-line-item-row .inc-total-col {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    grid-column: span 2;
+    padding-top: 4px;
+    border-top: 1px dashed var(--border-subtle);
+  }
+}
+
 /* Two Columns */
 .a4-two-col {
   display: grid;
