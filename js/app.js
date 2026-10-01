@@ -6,6 +6,8 @@
 const App = {
   currentView: 'home',
   homePeriod: 'month', // 'month' or 'all'
+  homeSelectedYear: new Date().getFullYear(),
+  homeSelectedMonth: new Date().getMonth(), // 0-11
   reportPeriod: 'this-month',
   selectedProjectFilter: 'all',
   selectedExpenseCategory: 'all',
@@ -328,16 +330,60 @@ const App = {
     }
   },
 
+  setHomeMonth(year, monthIndex) {
+    this.homeSelectedYear = Number(year);
+    this.homeSelectedMonth = Number(monthIndex);
+    this.homePeriod = 'month';
+    this.updateHomeMonthPills();
+    this.renderHome();
+  },
+
+  navigateHomeMonth(delta) {
+    let m = this.homeSelectedMonth + delta;
+    let y = this.homeSelectedYear;
+    if (m < 0) {
+      m = 11;
+      y -= 1;
+    } else if (m > 11) {
+      m = 0;
+      y += 1;
+    }
+    this.setHomeMonth(y, m);
+  },
+
+  onHomeMonthSelect(monthKey) {
+    if (!monthKey) return;
+    if (monthKey === 'all') {
+      this.setHomePeriod('all');
+      return;
+    }
+    const [yStr, mStr] = monthKey.split('-');
+    this.setHomeMonth(parseInt(yStr, 10), parseInt(mStr, 10) - 1);
+  },
+
   setHomePeriod(period) {
     this.homePeriod = period;
-    document.querySelectorAll('#home-period-filter .pill-btn').forEach(btn => {
-      btn.classList.toggle('active', btn.getAttribute('data-period') === period);
-    });
-    const sub = document.getElementById('dashboard-period-subtitle');
-    if (sub) {
-      sub.textContent = period === 'month' ? 'Showing performance for This Month' : 'Showing all-time studio performance';
-    }
+    this.updateHomeMonthPills();
     this.renderHome();
+  },
+
+  updateHomeMonthPills() {
+    document.querySelectorAll('#home-period-filter .pill-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.getAttribute('data-period') === this.homePeriod);
+    });
+  },
+
+  populateHomeMonthSelect() {
+    const sel = document.getElementById('home-month-select');
+    if (!sel) return;
+
+    const breakdown = FinanceEngine.computeMonthlyBreakdown(window.dataStore.data);
+    const curSelectedKey = `${this.homeSelectedYear}-${String(this.homeSelectedMonth + 1).padStart(2, '0')}`;
+
+    sel.innerHTML = breakdown.map(m => {
+      const isSel = m.key === curSelectedKey && this.homePeriod === 'month';
+      return `<option value="${m.key}" ${isSel ? 'selected' : ''}>📅 ${m.label}</option>`;
+    }).join('');
   },
 
   setReportPeriod(period) {
@@ -999,8 +1045,11 @@ const App = {
 
   openQuickEditDashboardModal() {
     const store = window.dataStore.data;
-    const financials = FinanceEngine.computeFinancials(store, { type: 'all' });
-    const currentBalance = financials.companyFund.balance || 0;
+    const filter = this.homePeriod === 'month' 
+      ? { type: 'month', monthIndex: this.homeSelectedMonth, year: this.homeSelectedYear }
+      : { type: 'all' };
+    const financials = FinanceEngine.computeFinancials(store, filter);
+    const currentBalance = financials.companyFundBalance || 0;
     const settings = store.settings || {};
     const p1Name = settings.partner1Name || 'Shameem';
     const p2Name = settings.partner2Name || 'Shiyan';
@@ -2444,12 +2493,25 @@ const App = {
   },
 
   renderHome() {
-    const today = new Date();
     const filter = this.homePeriod === 'month' 
-      ? { type: 'month', monthIndex: today.getMonth(), year: today.getFullYear() }
+      ? { type: 'month', monthIndex: this.homeSelectedMonth, year: this.homeSelectedYear }
       : { type: 'all' };
 
     const financials = FinanceEngine.computeFinancials(window.dataStore.data, filter);
+
+    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    const currentMonthLabel = `${monthNames[this.homeSelectedMonth]} ${this.homeSelectedYear}`;
+
+    // Update Subhead text
+    const sub = document.getElementById('dashboard-period-subtitle');
+    if (sub) {
+      sub.textContent = this.homePeriod === 'month' 
+        ? `Showing separate calculation for ${currentMonthLabel}` 
+        : 'Showing all-time cumulative studio performance';
+    }
+
+    // Populate month dropdown options
+    this.populateHomeMonthSelect();
 
     // Update Top Metric Cards
     if (document.getElementById('home-stat-income')) document.getElementById('home-stat-income').textContent = FinanceEngine.formatINR(financials.income);
@@ -2481,31 +2543,128 @@ const App = {
     const incFooter = document.getElementById('home-stat-income-footer');
     if (incFooter) {
       const pendingStr = financials.pendingPayments > 0 ? ` • Pending: ${FinanceEngine.formatINR(financials.pendingPayments)}` : '';
-      incFooter.textContent = `Total booked & direct revenue${pendingStr} (Tap to edit) →`;
+      incFooter.textContent = this.homePeriod === 'month' 
+        ? `${currentMonthLabel} revenue${pendingStr} (Tap to edit) →` 
+        : `All-time revenue${pendingStr} (Tap to edit) →`;
     }
 
-    // Render Active Projects on Home
+    // Update Pending subtitle
+    const pendSub = document.getElementById('home-pending-subtitle');
+    if (pendSub) {
+      pendSub.textContent = this.homePeriod === 'month'
+        ? `Pending for ${currentMonthLabel} (All-Time: ${FinanceEngine.formatINR(financials.allTimePendingPayments || financials.pendingPayments)}) →`
+        : `Uncollected client balance across all events (Tap to edit) →`;
+    }
+
+    // Update Chart Header Titles
+    const chartTitle = document.getElementById('home-chart-title');
+    if (chartTitle) {
+      chartTitle.textContent = this.homePeriod === 'month' 
+        ? `${currentMonthLabel} Financial Breakdown` 
+        : 'All-Time Financial Breakdown';
+    }
+    const chartSub = document.getElementById('home-chart-subtitle');
+    if (chartSub) {
+      chartSub.textContent = this.homePeriod === 'month'
+        ? `Separate performance for ${currentMonthLabel}` 
+        : 'Cumulative studio performance';
+    }
+
+    // Render Separate Monthly Breakdown Table
+    this.renderHomeMonthlyBreakdown();
+
+    // Render Active Projects on Home (filtered by selected month if monthly)
     this.renderHomeProjects();
 
-    // Render Recent Transactions
+    // Render Recent Transactions (filtered by selected month if monthly)
     this.renderRecentTransactions();
 
     // Render Home Chart
     LuciaCharts.renderFinancialBars('home-chart-canvas', financials);
   },
 
+  renderHomeMonthlyBreakdown() {
+    const tbody = document.getElementById('home-monthly-breakdown-body');
+    if (!tbody) return;
+
+    const breakdown = FinanceEngine.computeMonthlyBreakdown(window.dataStore.data);
+    const p1Name = window.dataStore.data.settings?.partner1Name || 'Shameem';
+    const p2Name = window.dataStore.data.settings?.partner2Name || 'Shiyan';
+    const pcts = window.dataStore.data.settings?.profitPercentages || { partner1: 33.33, partner2: 33.33, companyFund: 33.34 };
+
+    const th1 = document.getElementById('th-breakdown-p1-share');
+    const th2 = document.getElementById('th-breakdown-p2-share');
+    const thCf = document.getElementById('th-breakdown-cf-share');
+    if (th1) th1.textContent = `${p1Name} (${pcts.partner1}%)`;
+    if (th2) th2.textContent = `${p2Name} (${pcts.partner2}%)`;
+    if (thCf) thCf.textContent = `Company (${pcts.companyFund}%)`;
+
+    if (!breakdown || breakdown.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="9" class="empty-state" style="text-align: center; padding: 20px;">No monthly data recorded yet.</td></tr>';
+      return;
+    }
+
+    const curKey = `${this.homeSelectedYear}-${String(this.homeSelectedMonth + 1).padStart(2, '0')}`;
+
+    tbody.innerHTML = breakdown.map(item => {
+      const isSelected = this.homePeriod === 'month' && item.key === curKey;
+      const rowStyle = isSelected ? 'background: rgba(212, 175, 55, 0.12);' : '';
+
+      return `
+        <tr style="border-bottom: 1px solid rgba(255,255,255,0.06); cursor: pointer; ${rowStyle}" onclick="App.setHomeMonth(${item.year}, ${item.monthIndex})" title="Click to calculate and view ${item.label} on Dashboard">
+          <td style="padding: 10px 12px; white-space: nowrap;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-weight: 700; color: ${isSelected ? 'var(--gold-primary)' : '#fff'};">${item.label}</span>
+              ${isSelected ? '<span class="badge-tag" style="background: rgba(212, 175, 55, 0.25); color: var(--gold-primary); font-size: 10px; padding: 1px 6px; border-color: rgba(212, 175, 55, 0.4);">Active</span>' : ''}
+              ${item.projectCount > 0 ? `<span style="font-size: 11px; color: var(--text-muted);">(${item.projectCount} shoot${item.projectCount > 1 ? 's' : ''})</span>` : ''}
+            </div>
+          </td>
+          <td style="padding: 10px 12px; text-align: right; color: var(--accent-income); font-weight: 700;">${FinanceEngine.formatINR(item.income)}</td>
+          <td style="padding: 10px 12px; text-align: right; color: var(--accent-expense); font-weight: 600;">${FinanceEngine.formatINR(item.expenses)}</td>
+          <td style="padding: 10px 12px; text-align: right; color: var(--gold-primary); font-weight: 700;">${FinanceEngine.formatINR(item.netProfit)}</td>
+          <td style="padding: 10px 12px; text-align: right; font-size: 13px;">${FinanceEngine.formatINR(item.distribution.partner1)}</td>
+          <td style="padding: 10px 12px; text-align: right; font-size: 13px;">${FinanceEngine.formatINR(item.distribution.partner2)}</td>
+          <td style="padding: 10px 12px; text-align: right; font-size: 13px;">${FinanceEngine.formatINR(item.distribution.companyFund)}</td>
+          <td style="padding: 10px 12px; text-align: right; color: ${item.pendingPayments > 0 ? '#fbbf24' : 'var(--text-muted)'}; font-weight: 600;">${FinanceEngine.formatINR(item.pendingPayments)}</td>
+          <td style="padding: 10px 12px; text-align: center;">
+            <button class="btn btn-sm ${isSelected ? 'btn-gold' : 'btn-outline'}" style="padding: 3px 10px; font-size: 11px;" onclick="event.stopPropagation(); App.setHomeMonth(${item.year}, ${item.monthIndex})">
+              ${isSelected ? '✓ Viewing' : 'Select'}
+            </button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  },
+
   renderHomeProjects() {
     const container = document.getElementById('home-projects-list');
     if (!container) return;
 
-    const projects = (window.dataStore.data.projects || []).slice(0, 5);
+    let allProjects = window.dataStore.data.projects || [];
+    let projects = allProjects;
+
+    if (this.homePeriod === 'month') {
+      projects = allProjects.filter(p => {
+        if (!p.eventDate) return false;
+        const parts = String(p.eventDate).split('T')[0].split('-');
+        return parts.length >= 2 && 
+               parseInt(parts[0], 10) === this.homeSelectedYear && 
+               parseInt(parts[1], 10) - 1 === this.homeSelectedMonth;
+      });
+    }
+
+    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    const monthLabel = `${monthNames[this.homeSelectedMonth]} ${this.homeSelectedYear}`;
 
     if (projects.length === 0) {
-      container.innerHTML = '<div class="empty-state">No projects recorded yet. Tap "+ New Project" to add your first shoot.</div>';
+      const msg = this.homePeriod === 'month'
+        ? `No shoots recorded for ${monthLabel}. Tap "+ New Project" to add an event for this month, or switch months above.`
+        : 'No projects recorded yet. Tap "+ New Project" to add your first shoot.';
+      container.innerHTML = `<div class="empty-state">${msg}</div>`;
       return;
     }
 
-    container.innerHTML = projects.map(proj => {
+    container.innerHTML = projects.slice(0, 8).map(proj => {
       const pkg = Number(proj.packageAmount) || 0;
       const disc = Number(proj.discount) || 0;
       const netPkg = Math.max(0, pkg - disc);
@@ -2601,10 +2760,28 @@ const App = {
         displayTitle: f.type === 'addition' ? `Fund Deposit: ${f.description || f.category || 'Capital'}` : `Fund Purchase: ${f.description || f.category || 'Asset'}`,
         displayMeta: `${f.paymentMethod || 'Fund Reserve'} • ${f.category || 'Reserve'}`
       }))
-    ].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0)).slice(0, 8);
+    ].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
 
-    if (combined.length === 0) {
-      container.innerHTML = '<div class="empty-state">No transactions recorded yet. Tap + Add New to add.</div>';
+    let list = combined;
+    if (this.homePeriod === 'month') {
+      list = combined.filter(tx => {
+        if (!tx.date) return false;
+        const parts = String(tx.date).split('T')[0].split('-');
+        return parts.length >= 2 && 
+               parseInt(parts[0], 10) === this.homeSelectedYear && 
+               parseInt(parts[1], 10) - 1 === this.homeSelectedMonth;
+      });
+    }
+
+    const displayed = list.slice(0, 8);
+
+    if (displayed.length === 0) {
+      const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+      const monthLabel = `${monthNames[this.homeSelectedMonth]} ${this.homeSelectedYear}`;
+      const msg = this.homePeriod === 'month' 
+        ? `No transactions recorded for ${monthLabel}. Tap + Add New to record revenue or expenses for this month.` 
+        : 'No transactions recorded yet. Tap + Add New to add.';
+      container.innerHTML = `<div class="empty-state">${msg}</div>`;
       return;
     }
 

@@ -108,13 +108,17 @@ const FinanceEngine = {
         cf = Math.max(0, profit - (p1 + p2));
       }
 
-      return {
-        partner1: p1,
-        partner2: p2,
-        companyFund: cf,
-        total: p1 + p2 + cf,
-        isCustomAmount: true
-      };
+      const customTotal = p1 + p2 + cf;
+      // Only return custom direct amounts if they strictly match the net profit
+      if (customTotal === profit && profit > 0) {
+        return {
+          partner1: p1,
+          partner2: p2,
+          companyFund: cf,
+          total: customTotal,
+          isCustomAmount: true
+        };
+      }
     }
 
     if (profit === 0) {
@@ -211,18 +215,28 @@ const FinanceEngine = {
     // Profit Distribution
     const distribution = this.distributeProfit(netProfit, settings.profitPercentages, settings.customProfitAmounts);
 
-    // Pending Payments calculation (across all active projects)
-    const pendingPayments = projects.reduce((sum, proj) => {
+    // Pending Payments calculation:
+    // Period pending payments (projects whose eventDate falls in filtered period)
+    const periodProjects = filter.type === 'all' ? projects : projects.filter(p => matchDate(p.eventDate));
+    const periodPending = periodProjects.reduce((sum, proj) => {
       const packageAmt = Number(proj.packageAmount) || 0;
       const discount = Number(proj.discount) || 0;
       const netPkg = Math.max(0, packageAmt - discount);
       const receivedAmt = Number(proj.receivedAmount) || 0;
-      const pending = Math.max(0, netPkg - receivedAmt);
-      return sum + pending;
+      return sum + Math.max(0, netPkg - receivedAmt);
+    }, 0);
+
+    const allTimePending = projects.reduce((sum, proj) => {
+      const packageAmt = Number(proj.packageAmount) || 0;
+      const discount = Number(proj.discount) || 0;
+      const netPkg = Math.max(0, packageAmt - discount);
+      const receivedAmt = Number(proj.receivedAmount) || 0;
+      return sum + Math.max(0, netPkg - receivedAmt);
     }, 0);
 
     // Total collected income across projects
-    const totalCollected = projects.reduce((sum, proj) => sum + (Number(proj.receivedAmount) || 0), 0);
+    const periodCollected = periodProjects.reduce((sum, proj) => sum + (Number(proj.receivedAmount) || 0), 0);
+    const allTimeCollected = projects.reduce((sum, proj) => sum + (Number(proj.receivedAmount) || 0), 0);
 
     // Company Fund Cumulative Balance:
     // Starts with initial balance + manual additions + company fund profit shares - fund uses
@@ -282,18 +296,81 @@ const FinanceEngine = {
     return {
       period: filter,
       income: totalIncome,
-      collectedIncome: totalCollected,
+      collectedIncome: filter.type === 'all' ? allTimeCollected : periodCollected,
+      allTimeCollectedIncome: allTimeCollected,
       expenses: totalExpenses,
       salaries: 0,
       netProfit: netProfit,
       distribution: distribution,
-      pendingPayments: pendingPayments,
+      pendingPayments: filter.type === 'all' ? allTimePending : periodPending,
+      allTimePendingPayments: allTimePending,
+      periodPendingPayments: periodPending,
       companyFundBalance: totalCompanyFundBalance,
       partner1: partner1Stats,
       partner2: partner2Stats,
       filteredIncomeCount: filteredIncome.length,
       filteredExpensesCount: filteredExpenses.length
     };
+  },
+
+  /**
+   * Compute separate financial calculations for each distinct month in the studio store
+   * @param {object} store 
+   * @returns {Array} List of monthly summary objects sorted in descending order
+   */
+  computeMonthlyBreakdown(store) {
+    const { income = [], expenses = [], projects = [] } = store;
+    const monthKeys = new Set();
+
+    const addDate = (dStr) => {
+      if (!dStr) return;
+      const parts = String(dStr).split('T')[0].split('-');
+      if (parts.length >= 2) {
+        monthKeys.add(`${parts[0]}-${parts[1]}`);
+      }
+    };
+
+    income.forEach(i => addDate(i.date));
+    expenses.forEach(e => addDate(e.date));
+    projects.forEach(p => addDate(p.eventDate));
+
+    // Always include current month if set is empty or missing
+    const now = new Date();
+    const curYear = now.getFullYear();
+    const curMonth = String(now.getMonth() + 1).padStart(2, '0');
+    monthKeys.add(`${curYear}-${curMonth}`);
+
+    const sortedKeys = Array.from(monthKeys).sort().reverse();
+
+    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+    return sortedKeys.map(key => {
+      const [yStr, mStr] = key.split('-');
+      const year = parseInt(yStr, 10);
+      const monthIndex = parseInt(mStr, 10) - 1;
+      const fin = this.computeFinancials(store, { type: 'month', monthIndex, year });
+
+      const monthProjects = (projects || []).filter(p => {
+        const parts = String(p.eventDate || '').split('T')[0].split('-');
+        return parts.length >= 2 && parseInt(parts[0], 10) === year && parseInt(parts[1], 10) - 1 === monthIndex;
+      });
+
+      return {
+        key,
+        year,
+        monthIndex,
+        monthName: monthNames[monthIndex],
+        label: `${monthNames[monthIndex]} ${year}`,
+        shortLabel: `${monthNames[monthIndex].substring(0, 3)} ${year}`,
+        income: fin.income,
+        collectedIncome: fin.collectedIncome,
+        expenses: fin.expenses,
+        netProfit: fin.netProfit,
+        distribution: fin.distribution,
+        pendingPayments: fin.pendingPayments,
+        projectCount: monthProjects.length
+      };
+    });
   },
 
   // --- INVOICE & BILLING CALCULATIONS ---

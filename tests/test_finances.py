@@ -282,6 +282,77 @@ def test_project_addition_auto_adds_to_dashboard():
     assert pending == 11500, f"Expected pending 11500, got {pending}"
     print(f"Auto Dashboard Reflection Test Passed: Revenue=₹{revenue}, Profit=₹{net_profit}, Shameem=₹{p1}, Shiyan=₹{p2}, Company Fund=₹{cf}")
 
+def test_separate_monthly_calculations():
+    # User's request: "monthly based calculate seperate"
+    # Scenario with 3 distinct months of studio activity:
+    # 1. September 2026:
+    #    Income: ₹80,000, Expenses: ₹25,000 => Net Profit: ₹55,000
+    # 2. October 2026:
+    #    Income: ₹1,50,000, Expenses: ₹40,000 => Net Profit: ₹1,10,000
+    # 3. November 2026:
+    #    Income: ₹20,000, Expenses: ₹5,000 => Net Profit: ₹15,000
+    #
+    # Calculations for each month must be completely separate!
+
+    months_data = {
+        '2026-09': {'income': 80000, 'expenses': 25000, 'pending': 10000},
+        '2026-10': {'income': 150000, 'expenses': 40000, 'pending': 25000},
+        '2026-11': {'income': 20000, 'expenses': 5000, 'pending': 5000}
+    }
+
+    # Month 1: September 2026
+    sep = months_data['2026-09']
+    sep_profit = sep['income'] - sep['expenses']
+    assert sep_profit == 55000
+    sep_p1, sep_p2, sep_cf, sep_tot = distribute_profit(sep_profit, 33.33, 33.33, 33.34)
+    assert sep_tot == 55000
+    assert sep_p1 == 18332
+    assert sep_p2 == 18332
+    assert sep_cf == 18336
+
+    # Month 2: October 2026
+    octo = months_data['2026-10']
+    octo_profit = octo['income'] - octo['expenses']
+    assert octo_profit == 110000
+    octo_p1, octo_p2, octo_cf, octo_tot = distribute_profit(octo_profit, 33.33, 33.33, 33.34)
+    assert octo_tot == 110000
+    assert octo_p1 == 36663
+    assert octo_p2 == 36663
+    assert octo_cf == 36674
+
+    # Month 3: November 2026
+    nov = months_data['2026-11']
+    nov_profit = nov['income'] - nov['expenses']
+    assert nov_profit == 15000
+    nov_p1, nov_p2, nov_cf, nov_tot = distribute_profit(nov_profit, 33.33, 33.33, 33.34)
+    assert nov_tot == 15000
+    assert nov_p1 == 5000
+    assert nov_p2 == 5000
+    assert nov_cf == 5000
+
+    # All-Time Cumulative:
+    all_income = sum(m['income'] for m in months_data.values())
+    all_expenses = sum(m['expenses'] for m in months_data.values())
+    all_profit = all_income - all_expenses
+    all_pending = sum(m['pending'] for m in months_data.values())
+
+    assert all_income == 250000
+    assert all_expenses == 70000
+    assert all_profit == 180000
+    assert all_pending == 40000
+
+    all_p1, all_p2, all_cf, all_tot = distribute_profit(all_profit, 33.33, 33.33, 33.34)
+    assert all_tot == 180000
+    assert all_p1 == 59994
+    assert all_p2 == 59994
+    assert all_cf == 60012
+
+    print("Separate Monthly Calculations Test Passed:")
+    print(f"  • Sept 2026: Profit=₹{sep_profit} -> Shameem=₹{sep_p1}, Shiyan=₹{sep_p2}, Company Fund=₹{sep_cf}")
+    print(f"  • Oct  2026: Profit=₹{octo_profit} -> Shameem=₹{octo_p1}, Shiyan=₹{octo_p2}, Company Fund=₹{octo_cf}")
+    print(f"  • Nov  2026: Profit=₹{nov_profit} -> Shameem=₹{nov_p1}, Shiyan=₹{nov_p2}, Company Fund=₹{nov_cf}")
+    print(f"  • All-Time : Profit=₹{all_profit} -> Shameem=₹{all_p1}, Shiyan=₹{all_p2}, Company Fund=₹{all_cf}")
+
 if __name__ == '__main__':
     test_profit_split_example()
     test_default_this_month()
@@ -294,4 +365,5 @@ if __name__ == '__main__':
     test_streamlined_direct_amount_items()
     test_discount_and_payment_methods()
     test_project_addition_auto_adds_to_dashboard()
+    test_separate_monthly_calculations()
     print("ALL TESTS PASSED SUCCESSFULLY! ✓")
