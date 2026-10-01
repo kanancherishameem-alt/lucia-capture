@@ -413,6 +413,11 @@ const App = {
         if (pkgInp) pkgInp.value = 12000;
         const rcvInp = document.getElementById('proj-received');
         if (rcvInp) rcvInp.value = 0;
+        const otherExpInp = document.getElementById('proj-other-expense');
+        if (otherExpInp) otherExpInp.value = '';
+        const otherExpNotesInp = document.getElementById('proj-other-expense-notes');
+        if (otherExpNotesInp) otherExpNotesInp.value = '';
+        this.updateProjectLiveProfit();
       } else if (modalId === 'modal-withdrawal' && !this.editingWithdrawalId) {
         document.getElementById('form-withdrawal')?.reset();
         const dateEl = document.getElementById('wd-date');
@@ -709,6 +714,19 @@ const App = {
       ];
     }
     this.renderProjectLineItemRows();
+
+    // Populate project expenses if any
+    const projectExpenses = (window.dataStore.data.expenses || []).filter(e => e.projectId === id);
+    const totalExp = projectExpenses.reduce((s, e) => s + (Number(e.amount) || 0), 0);
+    const expNotes = projectExpenses.map(e => e.notes || e.category).filter(Boolean).join(', ');
+
+    const otherExpInp = document.getElementById('proj-other-expense');
+    if (otherExpInp) otherExpInp.value = totalExp > 0 ? totalExp : '';
+
+    const otherExpNotesInp = document.getElementById('proj-other-expense-notes');
+    if (otherExpNotesInp) otherExpNotesInp.value = expNotes || '';
+
+    this.updateProjectLiveProfit();
 
     const titleEl = document.getElementById('modal-project-title');
     if (titleEl) titleEl.textContent = 'Edit Project Details';
@@ -1601,6 +1619,29 @@ const App = {
     if (pkgInp && sum > 0) {
       pkgInp.value = sum;
     }
+    this.updateProjectLiveProfit();
+  },
+
+  updateProjectLiveProfit() {
+    const pkgInp = document.getElementById('proj-package');
+    const expInp = document.getElementById('proj-other-expense');
+    const badge = document.getElementById('proj-live-net-profit');
+    if (!badge) return;
+
+    const pkg = pkgInp ? FinanceEngine.parseINR(pkgInp.value) || 0 : 0;
+    const exp = expInp ? FinanceEngine.parseINR(expInp.value) || 0 : 0;
+    const profit = pkg - exp;
+
+    badge.textContent = `Est. Profit: ${FinanceEngine.formatINR(profit)}`;
+    if (profit < 0) {
+      badge.style.color = '#ef4444';
+      badge.style.background = 'rgba(239, 68, 68, 0.15)';
+      badge.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+    } else {
+      badge.style.color = 'var(--gold-light)';
+      badge.style.background = 'rgba(212, 175, 55, 0.12)';
+      badge.style.borderColor = 'rgba(212, 175, 55, 0.3)';
+    }
   },
 
   handlePayProjectSelected() {
@@ -1885,8 +1926,12 @@ const App = {
         };
       });
 
+    const otherExpenseAmount = FinanceEngine.parseINR(document.getElementById('proj-other-expense')?.value || '0');
+    const otherExpenseNotes = (document.getElementById('proj-other-expense-notes')?.value || '').trim();
+
     if (this.editingProjectId) {
-      window.dataStore.updateProject(this.editingProjectId, {
+      const pid = this.editingProjectId;
+      window.dataStore.updateProject(pid, {
         name,
         clientName,
         clientPhone,
@@ -1897,16 +1942,42 @@ const App = {
         location,
         items: validItems
       });
-      const pid = this.editingProjectId;
+
+      // Update or create project other expense
+      if (otherExpenseAmount > 0) {
+        const existingExp = (window.dataStore.data.expenses || []).find(e => e.projectId === pid);
+        if (existingExp) {
+          window.dataStore.updateExpense(existingExp.id, {
+            amount: otherExpenseAmount,
+            notes: otherExpenseNotes || `Other project expense for ${name}`,
+            category: 'Other'
+          });
+        } else {
+          window.dataStore.addExpense({
+            projectId: pid,
+            projectName: name,
+            category: 'Other',
+            amount: otherExpenseAmount,
+            date: eventDate || new Date().toISOString().split('T')[0],
+            paymentMethod: 'UPI',
+            notes: otherExpenseNotes || `Other project expense for ${name}`
+          });
+        }
+      }
+
       this.editingProjectId = null;
       e.target.reset();
+      const otherExpInp = document.getElementById('proj-other-expense');
+      if (otherExpInp) otherExpInp.value = '';
+      const otherExpNotesInp = document.getElementById('proj-other-expense-notes');
+      if (otherExpNotesInp) otherExpNotesInp.value = '';
       this.closeModalDirect('modal-project');
       this.showToast(`Project "${name}" updated successfully ✓`);
       if (document.getElementById('modal-project-details')?.classList.contains('open')) {
         this.viewProjectDetails(pid);
       }
     } else {
-      window.dataStore.addProject({
+      const newProj = window.dataStore.addProject({
         name,
         clientName,
         clientPhone,
@@ -1917,7 +1988,24 @@ const App = {
         location,
         items: validItems
       });
+
+      if (otherExpenseAmount > 0 && newProj) {
+        window.dataStore.addExpense({
+          projectId: newProj.id,
+          projectName: newProj.name,
+          category: 'Other',
+          amount: otherExpenseAmount,
+          date: eventDate || new Date().toISOString().split('T')[0],
+          paymentMethod: 'UPI',
+          notes: otherExpenseNotes || `Other project expense for ${newProj.name}`
+        });
+      }
+
       e.target.reset();
+      const otherExpInp = document.getElementById('proj-other-expense');
+      if (otherExpInp) otherExpInp.value = '';
+      const otherExpNotesInp = document.getElementById('proj-other-expense-notes');
+      if (otherExpNotesInp) otherExpNotesInp.value = '';
       document.getElementById('proj-date').value = new Date().toISOString().split('T')[0];
       this.closeModalDirect('modal-project');
       this.showToast(`Project "${name}" created ✓`);

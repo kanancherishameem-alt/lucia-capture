@@ -1090,9 +1090,14 @@
                   Shown in the A4 payment billing receipt table
                 </div>
               </div>
-              <button type="button" class="btn btn-gold btn-sm" onclick="App.addIncomeLineItem()" style="padding: 4px 10px; font-size: 11px; font-weight: 700;">
-                + Add Service
-              </button>
+              <div style="display: flex; gap: 6px; align-items: center;">
+                <button type="button" class="btn btn-outline btn-sm" onclick="App.addIncomePresetItem('Other Expense', 'Travel, food, stay, conveyance or extra logistics', 1, 2000)" style="padding: 4px 10px; font-size: 11px; font-weight: 700; color: #fbbf24; border-color: rgba(251, 191, 36, 0.45); background: rgba(251, 191, 36, 0.08);" title="Add an editable Other Expense item">
+                  + Other Expense
+                </button>
+                <button type="button" class="btn btn-gold btn-sm" onclick="App.addIncomeLineItem()" style="padding: 4px 10px; font-size: 11px; font-weight: 700;">
+                  + Add Service
+                </button>
+              </div>
             </div>
 
             <!-- Quick Preset Chips from Reference Image & User Example -->
@@ -1103,6 +1108,7 @@
               <button type="button" class="badge-tag" style="cursor: pointer; background: rgba(212, 175, 55, 0.1); border: 1px solid rgba(212, 175, 55, 0.3); color: var(--gold-light);" onclick="App.addIncomePresetItem('Videography (Camera)', '3 Videos (2 Reels + 1 Highlights)', 1, 15000)">+ Videography (₹15k)</button>
               <button type="button" class="badge-tag" style="cursor: pointer; background: rgba(212, 175, 55, 0.1); border: 1px solid rgba(212, 175, 55, 0.3); color: var(--gold-light);" onclick="App.addIncomePresetItem('Additional Service - Drone Shoot', 'Cinematic Aerial Shots', 1, 3000)">+ Drone Shoot (₹3k)</button>
               <button type="button" class="badge-tag" style="cursor: pointer; background: rgba(212, 175, 55, 0.1); border: 1px solid rgba(212, 175, 55, 0.3); color: var(--gold-light);" onclick="App.addIncomePresetItem('Custom Service - Photo Album', 'Premium Photo Book (20 Pages)', 1, 2500)">+ Photo Album (₹2.5k)</button>
+              <button type="button" class="badge-tag" style="cursor: pointer; background: rgba(251, 191, 36, 0.15); border: 1px solid rgba(251, 191, 36, 0.45); color: #fbbf24; font-weight: 700;" onclick="App.addIncomePresetItem('Other Expense', 'Travel, food, stay, conveyance or extra logistics', 1, 2000)">+ Other Expense (₹2k)</button>
             </div>
 
             <!-- Line Items Header Row -->
@@ -1294,9 +1300,14 @@
                   Itemized services auto-calculate package total & populate luxury receipts
                 </div>
               </div>
-              <button type="button" class="btn btn-gold btn-sm" onclick="App.addProjectLineItem()" style="padding: 4px 10px; font-size: 11px; font-weight: 700;">
-                + Add Service
-              </button>
+              <div style="display: flex; gap: 6px; align-items: center;">
+                <button type="button" class="btn btn-outline btn-sm" onclick="App.addProjectPresetItem('Other Expense', 'Travel, food, stay, conveyance or extra logistics', 1, 2000)" style="padding: 4px 10px; font-size: 11px; font-weight: 700; color: #fbbf24; border-color: rgba(251, 191, 36, 0.45); background: rgba(251, 191, 36, 0.08);" title="Add an editable Other Expense item">
+                  + Other Expense
+                </button>
+                <button type="button" class="btn btn-gold btn-sm" onclick="App.addProjectLineItem()" style="padding: 4px 10px; font-size: 11px; font-weight: 700;">
+                  + Add Service
+                </button>
+              </div>
             </div>
 
             <!-- Quick Preset Chips matching user request & reference image -->
@@ -1307,6 +1318,7 @@
               <button type="button" class="badge-tag" style="cursor: pointer; background: rgba(212, 175, 55, 0.1); border: 1px solid rgba(212, 175, 55, 0.3); color: var(--gold-light);" onclick="App.addProjectPresetItem('Videography (Camera)', '3 Videos (2 Reels + 1 Highlights)', 1, 15000)">+ Videography (₹15k)</button>
               <button type="button" class="badge-tag" style="cursor: pointer; background: rgba(212, 175, 55, 0.1); border: 1px solid rgba(212, 175, 55, 0.3); color: var(--gold-light);" onclick="App.addProjectPresetItem('Additional Service - Drone Shoot', 'Cinematic Aerial Shots', 1, 3000)">+ Drone Shoot (₹3k)</button>
               <button type="button" class="badge-tag" style="cursor: pointer; background: rgba(212, 175, 55, 0.1); border: 1px solid rgba(212, 175, 55, 0.3); color: var(--gold-light);" onclick="App.addProjectPresetItem('Custom Service - Photo Album', 'Premium Photo Book (20 Pages)', 1, 2500)">+ Photo Album (₹2.5k)</button>
+              <button type="button" class="badge-tag" style="cursor: pointer; background: rgba(251, 191, 36, 0.15); border: 1px solid rgba(251, 191, 36, 0.45); color: #fbbf24; font-weight: 700;" onclick="App.addProjectPresetItem('Other Expense', 'Travel, food, stay, conveyance or extra logistics', 1, 2000)">+ Other Expense (₹2k)</button>
             </div>
 
             <!-- Line Items Header Row -->
@@ -1327,11 +1339,37 @@
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
             <div class="form-group">
               <label class="form-label">Package (₹)</label>
-              <input type="number" inputmode="numeric" class="form-input" id="proj-package" placeholder="50000" required>
+              <input type="number" inputmode="numeric" class="form-input" id="proj-package" placeholder="50000" oninput="App.updateProjectLiveProfit()" required>
             </div>
             <div class="form-group">
               <label class="form-label">Advance Received (₹)</label>
               <input type="number" inputmode="numeric" class="form-input" id="proj-received" placeholder="0">
+            </div>
+          </div>
+
+          <!-- Optional Project Costs & Other Expenses (Editable) -->
+          <div style="background: rgba(255, 255, 255, 0.02); border: 1px dashed rgba(239, 68, 68, 0.35); border-radius: 10px; padding: 12px 14px; margin-bottom: 14px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <div>
+                <label class="form-label" style="margin: 0; font-size: 12.5px; font-weight: 700; color: #f87171;">
+                  Project Costs / Other Expense (₹) (Optional)
+                </label>
+                <div style="font-size: 11px; color: var(--text-muted); margin-top: 1px;">
+                  Direct project expenses (e.g. Travel, Assistant, Rentals, Editing)
+                </div>
+              </div>
+              <div id="proj-live-net-profit" class="badge-tag" style="background: rgba(212, 175, 55, 0.12); color: var(--gold-light); font-weight: 700;">
+                Est. Profit: ₹0
+              </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1.6fr; gap: 10px;">
+              <div class="amount-input-wrapper">
+                <span class="amount-prefix">₹</span>
+                <input type="number" inputmode="numeric" class="form-input" id="proj-other-expense" placeholder="0" oninput="App.updateProjectLiveProfit()">
+              </div>
+              <div>
+                <input type="text" class="form-input" id="proj-other-expense-notes" placeholder="Expense notes (e.g. Fuel, rental, assistant pay)">
+              </div>
             </div>
           </div>
 

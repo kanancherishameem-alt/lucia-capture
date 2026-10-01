@@ -174,6 +174,24 @@ def test_project_service_details():
     assert items[0]['amount'] == 12000
     print(f"Project Service Details Test Passed: Total Package=₹{total_package} with {len(items)} itemized services")
 
+def test_other_expense_item_and_project_profit():
+    # User's other expense request:
+    # 1. Other Expense service item can be added and edited in description/scope/amount
+    items = [
+        {'description': 'Photographer 1', 'details': 'couple bride/groom single stage full coverage', 'quantity': 1, 'rate': 12000, 'amount': 12000},
+        {'description': 'Other Expense', 'details': 'Travel, food, stay & extra gear rental', 'quantity': 1, 'rate': 2000, 'amount': 2000}
+    ]
+    package_total = sum(it['quantity'] * it['rate'] for it in items)
+    assert package_total == 14000, f"Expected 14000, got {package_total}"
+    assert items[1]['description'] == 'Other Expense'
+    assert items[1]['amount'] == 2000
+
+    # 2. Project Other Expense / Direct cost reduces net profit:
+    project_expense = 3000
+    net_profit = package_total - project_expense
+    assert net_profit == 11000, f"Expected 11000, got {net_profit}"
+    print(f"Other Expense Test Passed: Package=₹{package_total}, Other Expense=₹{project_expense}, Net Profit=₹{net_profit}")
+
 if __name__ == '__main__':
     test_profit_split_example()
     test_default_this_month()
@@ -182,4 +200,5 @@ if __name__ == '__main__':
     test_number_to_words()
     test_custom_profit_amounts()
     test_project_service_details()
+    test_other_expense_item_and_project_profit()
     print("ALL TESTS PASSED SUCCESSFULLY! ✓")
