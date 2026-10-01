@@ -1419,9 +1419,7 @@ const App = {
     }
 
     container.innerHTML = this.incomeLineItems.map((item, idx) => {
-      const q = Number(item.quantity) || 1;
-      const r = Number(item.rate) || 0;
-      const rowAmt = q * r;
+      const amt = Number(item.amount !== undefined ? item.amount : (Number(item.rate) || 0) * (Number(item.quantity) || 1)) || 0;
 
       return `
         <div class="proj-item-card" style="margin-bottom: 8px;">
@@ -1432,15 +1430,8 @@ const App = {
                 oninput="App.handleIncomeLineItemChange(${idx}, 'description', this.value)" style="font-size: 12.5px; padding: 6px 8px;" required>
             </div>
             <div>
-              <input type="number" min="1" class="form-input" placeholder="Qty" value="${q}" 
-                oninput="App.handleIncomeLineItemChange(${idx}, 'quantity', this.value)" style="text-align: center; font-size: 12.5px; padding: 6px 4px;" required>
-            </div>
-            <div>
-              <input type="number" min="0" class="form-input" placeholder="Rate" value="${r || ''}" 
-                oninput="App.handleIncomeLineItemChange(${idx}, 'rate', this.value)" style="text-align: right; font-size: 12.5px; padding: 6px 6px;" required>
-            </div>
-            <div style="font-weight: 700; font-size: 12.5px; text-align: right; color: var(--gold-light); padding-right: 4px;" id="inc-item-total-${idx}">
-              ${FinanceEngine.formatINR(rowAmt)}
+              <input type="number" min="0" class="form-input" placeholder="Amount (₹)" value="${amt || ''}" 
+                oninput="App.handleIncomeLineItemChange(${idx}, 'amount', this.value)" style="text-align: right; font-size: 12.5px; padding: 6px 8px; font-weight: 700; color: var(--gold-light);" required>
             </div>
             <div style="text-align: center;">
               <button type="button" class="line-item-delete-btn" onclick="App.removeIncomeLineItem(${idx})" title="Remove item" style="height: 28px; width: 28px; font-size: 12px;">✕</button>
@@ -1456,34 +1447,37 @@ const App = {
     }).join('');
   },
 
-  addIncomeLineItem(desc = '', details = '', qty = 1, rate = 0) {
-    if (typeof details === 'number') {
-      rate = qty;
-      qty = details;
+  addIncomeLineItem(desc = '', details = '', amount = 0, maybeRate = undefined) {
+    if (maybeRate !== undefined) {
+      amount = (Number(amount) || 1) * (Number(maybeRate) || 0);
+    } else if (typeof details === 'number') {
+      amount = details;
       details = '';
     }
+    const amt = Number(amount) || 0;
     if (!this.incomeLineItems) this.incomeLineItems = [];
     this.incomeLineItems.push({
       description: desc,
       details: details || '',
-      quantity: Number(qty) || 1,
-      rate: Number(rate) || 0,
-      amount: (Number(qty) || 1) * (Number(rate) || 0)
+      quantity: 1,
+      rate: amt,
+      amount: amt
     });
     this.renderIncomeLineItemRows();
     this.syncIncomeTotalFromItems();
   },
 
-  addIncomePresetItem(desc, details = '', qty = 1, rate = 0) {
-    if (typeof details === 'number') {
-      rate = qty;
-      qty = details;
+  addIncomePresetItem(desc, details = '', amount = 0, maybeRate = undefined) {
+    if (maybeRate !== undefined) {
+      amount = (Number(amount) || 1) * (Number(maybeRate) || 0);
+    } else if (typeof details === 'number') {
+      amount = details;
       details = '';
     }
-    if (this.incomeLineItems && this.incomeLineItems.length === 1 && !this.incomeLineItems[0].rate && (!this.incomeLineItems[0].description || this.incomeLineItems[0].description === 'Wedding Photography Package 01' || this.incomeLineItems[0].description === 'Photographer 1')) {
+    if (this.incomeLineItems && this.incomeLineItems.length === 1 && !this.incomeLineItems[0].amount && (!this.incomeLineItems[0].description || this.incomeLineItems[0].description === 'Wedding Photography Package 01' || this.incomeLineItems[0].description === 'Photographer 1')) {
       this.incomeLineItems = [];
     }
-    this.addIncomeLineItem(desc, details, qty, rate);
+    this.addIncomeLineItem(desc, details, amount);
   },
 
   removeIncomeLineItem(idx) {
@@ -1495,22 +1489,21 @@ const App = {
 
   handleIncomeLineItemChange(idx, field, value) {
     if (!this.incomeLineItems || !this.incomeLineItems[idx]) return;
-    this.incomeLineItems[idx][field] = value;
-
-    const q = Number(this.incomeLineItems[idx].quantity) || 1;
-    const r = Number(this.incomeLineItems[idx].rate) || 0;
-    const rowAmt = q * r;
-    this.incomeLineItems[idx].amount = rowAmt;
-
-    const totalEl = document.getElementById(`inc-item-total-${idx}`);
-    if (totalEl) totalEl.textContent = FinanceEngine.formatINR(rowAmt);
+    if (field === 'amount') {
+      const amt = Number(value) || 0;
+      this.incomeLineItems[idx].amount = amt;
+      this.incomeLineItems[idx].rate = amt;
+      this.incomeLineItems[idx].quantity = 1;
+    } else {
+      this.incomeLineItems[idx][field] = value;
+    }
 
     this.syncIncomeTotalFromItems();
   },
 
   syncIncomeTotalFromItems() {
     if (!this.incomeLineItems || this.incomeLineItems.length === 0) return;
-    const sum = this.incomeLineItems.reduce((s, it) => s + ((Number(it.quantity) || 1) * (Number(it.rate) || 0)), 0);
+    const sum = this.incomeLineItems.reduce((s, it) => s + (Number(it.amount !== undefined ? it.amount : it.rate) || 0), 0);
     const totalInp = document.getElementById('inc-total-amount');
     if (totalInp && sum > 0) {
       totalInp.value = sum;
@@ -1533,9 +1526,7 @@ const App = {
     }
 
     container.innerHTML = this.projectLineItems.map((item, idx) => {
-      const q = Number(item.quantity) || 1;
-      const r = Number(item.rate) || 0;
-      const rowAmt = q * r;
+      const amt = Number(item.amount !== undefined ? item.amount : (Number(item.rate) || 0) * (Number(item.quantity) || 1)) || 0;
 
       return `
         <div class="proj-item-card">
@@ -1546,15 +1537,8 @@ const App = {
                 oninput="App.handleProjectLineItemChange(${idx}, 'description', this.value)" style="font-size: 12.5px; padding: 6px 8px;" required>
             </div>
             <div>
-              <input type="number" min="1" class="form-input" placeholder="Qty" value="${q}" 
-                oninput="App.handleProjectLineItemChange(${idx}, 'quantity', this.value)" style="text-align: center; font-size: 12.5px; padding: 6px 4px;" required>
-            </div>
-            <div>
-              <input type="number" min="0" class="form-input" placeholder="Rate (₹)" value="${r || ''}" 
-                oninput="App.handleProjectLineItemChange(${idx}, 'rate', this.value)" style="text-align: right; font-size: 12.5px; padding: 6px 6px;" required>
-            </div>
-            <div style="font-weight: 700; font-size: 12.5px; text-align: right; color: var(--gold-light); padding-right: 4px;" id="proj-item-total-${idx}">
-              ${FinanceEngine.formatINR(rowAmt)}
+              <input type="number" min="0" class="form-input" placeholder="Amount (₹)" value="${amt || ''}" 
+                oninput="App.handleProjectLineItemChange(${idx}, 'amount', this.value)" style="text-align: right; font-size: 12.5px; padding: 6px 8px; font-weight: 700; color: var(--gold-light);" required>
             </div>
             <div style="text-align: center;">
               <button type="button" class="line-item-delete-btn" onclick="App.removeProjectLineItem(${idx})" title="Remove item" style="height: 28px; width: 28px; font-size: 12px;">✕</button>
@@ -1570,24 +1554,37 @@ const App = {
     }).join('');
   },
 
-  addProjectLineItem(desc = '', details = '', qty = 1, rate = 0) {
+  addProjectLineItem(desc = '', details = '', amount = 0, maybeRate = undefined) {
+    if (maybeRate !== undefined) {
+      amount = (Number(amount) || 1) * (Number(maybeRate) || 0);
+    } else if (typeof details === 'number') {
+      amount = details;
+      details = '';
+    }
+    const amt = Number(amount) || 0;
     if (!this.projectLineItems) this.projectLineItems = [];
     this.projectLineItems.push({
       description: desc,
       details: details || '',
-      quantity: Number(qty) || 1,
-      rate: Number(rate) || 0,
-      amount: (Number(qty) || 1) * (Number(rate) || 0)
+      quantity: 1,
+      rate: amt,
+      amount: amt
     });
     this.renderProjectLineItemRows();
     this.syncProjectPackageFromItems();
   },
 
-  addProjectPresetItem(desc, details = '', qty = 1, rate = 0) {
-    if (this.projectLineItems && this.projectLineItems.length === 1 && !this.projectLineItems[0].rate && (!this.projectLineItems[0].description || this.projectLineItems[0].description === 'Photographer 1' && !this.projectLineItems[0].rate)) {
+  addProjectPresetItem(desc, details = '', amount = 0, maybeRate = undefined) {
+    if (maybeRate !== undefined) {
+      amount = (Number(amount) || 1) * (Number(maybeRate) || 0);
+    } else if (typeof details === 'number') {
+      amount = details;
+      details = '';
+    }
+    if (this.projectLineItems && this.projectLineItems.length === 1 && !this.projectLineItems[0].amount && (!this.projectLineItems[0].description || (this.projectLineItems[0].description === 'Photographer 1' && !this.projectLineItems[0].amount))) {
       this.projectLineItems = [];
     }
-    this.addProjectLineItem(desc, details, qty, rate);
+    this.addProjectLineItem(desc, details, amount);
   },
 
   removeProjectLineItem(idx) {
@@ -1599,22 +1596,21 @@ const App = {
 
   handleProjectLineItemChange(idx, field, value) {
     if (!this.projectLineItems || !this.projectLineItems[idx]) return;
-    this.projectLineItems[idx][field] = value;
-
-    const q = Number(this.projectLineItems[idx].quantity) || 1;
-    const r = Number(this.projectLineItems[idx].rate) || 0;
-    const rowAmt = q * r;
-    this.projectLineItems[idx].amount = rowAmt;
-
-    const totalEl = document.getElementById(`proj-item-total-${idx}`);
-    if (totalEl) totalEl.textContent = FinanceEngine.formatINR(rowAmt);
+    if (field === 'amount') {
+      const amt = Number(value) || 0;
+      this.projectLineItems[idx].amount = amt;
+      this.projectLineItems[idx].rate = amt;
+      this.projectLineItems[idx].quantity = 1;
+    } else {
+      this.projectLineItems[idx][field] = value;
+    }
 
     this.syncProjectPackageFromItems();
   },
 
   syncProjectPackageFromItems() {
     if (!this.projectLineItems || this.projectLineItems.length === 0) return;
-    const sum = this.projectLineItems.reduce((s, it) => s + ((Number(it.quantity) || 1) * (Number(it.rate) || 0)), 0);
+    const sum = this.projectLineItems.reduce((s, it) => s + (Number(it.amount !== undefined ? it.amount : it.rate) || 0), 0);
     const pkgInp = document.getElementById('proj-package');
     if (pkgInp && sum > 0) {
       pkgInp.value = sum;
@@ -1705,13 +1701,13 @@ const App = {
     const validItems = (this.incomeLineItems || [])
       .filter(it => it.description && it.description.trim())
       .map(it => {
-        const q = Number(it.quantity) || 1;
-        const r = Number(it.rate) || 0;
+        const amt = Number(it.amount !== undefined ? it.amount : (Number(it.rate) || 0) * (Number(it.quantity) || 1)) || 0;
         return {
           description: it.description.trim(),
-          quantity: q,
-          rate: r,
-          amount: q * r
+          details: (it.details || '').trim(),
+          quantity: 1,
+          rate: amt,
+          amount: amt
         };
       });
 
@@ -1807,7 +1803,11 @@ const App = {
     let servicesBlock = '';
     if (inc.items && inc.items.length > 0) {
       servicesBlock = `📋 *Services Included:*\n` +
-        inc.items.map(it => `  • ${it.description} (${it.quantity || 1} × ₹${(it.rate || 0).toLocaleString('en-IN')}) = ₹${((it.amount !== undefined ? it.amount : (it.quantity || 1) * (it.rate || 0))).toLocaleString('en-IN')}`).join('\n') +
+        inc.items.map(it => {
+          const amt = Number(it.amount !== undefined ? it.amount : (Number(it.rate) || 0) * (Number(it.quantity) || 1)) || 0;
+          const scope = it.details ? ` (${it.details})` : '';
+          return `  • ${it.description}${scope}: ${FinanceEngine.formatINR(amt)}`;
+        }).join('\n') +
         `\n---------------------------\n`;
     }
 
@@ -1915,14 +1915,13 @@ const App = {
     const validItems = (this.projectLineItems || [])
       .filter(it => it.description && it.description.trim())
       .map(it => {
-        const q = Number(it.quantity) || 1;
-        const r = Number(it.rate) || 0;
+        const amt = Number(it.amount !== undefined ? it.amount : (Number(it.rate) || 0) * (Number(it.quantity) || 1)) || 0;
         return {
           description: it.description.trim(),
           details: (it.details || '').trim(),
-          quantity: q,
-          rate: r,
-          amount: q * r
+          quantity: 1,
+          rate: amt,
+          amount: amt
         };
       });
 
@@ -2185,25 +2184,19 @@ const App = {
           <table class="dark-gold-service-table">
             <thead>
               <tr>
-                <th style="text-align: left; width: 48%;">DESCRIPTION</th>
-                <th style="text-align: center; width: 14%;">QTY</th>
-                <th style="text-align: right; width: 19%;">RATE</th>
-                <th style="text-align: right; width: 19%;">AMOUNT</th>
+                <th style="text-align: left; width: 75%;">DESCRIPTION</th>
+                <th style="text-align: right; width: 25%;">AMOUNT</th>
               </tr>
             </thead>
             <tbody>
               ${projItems.map(it => {
-                const q = Number(it.quantity) || 1;
-                const r = Number(it.rate) || 0;
-                const amt = Number(it.amount !== undefined ? it.amount : q * r) || 0;
+                const amt = Number(it.amount !== undefined ? it.amount : (Number(it.rate) || 0) * (Number(it.quantity) || 1)) || 0;
                 return `
                   <tr>
                     <td style="text-align: left;">
                       <div class="service-name">${it.description || 'Service Item'}</div>
                       ${it.details ? `<div class="service-scope">${it.details}</div>` : ''}
                     </td>
-                    <td class="service-qty">${q}</td>
-                    <td class="service-rate">₹${r.toLocaleString('en-IN')}</td>
                     <td class="service-amount">₹${amt.toLocaleString('en-IN')}</td>
                   </tr>
                 `;
@@ -3563,25 +3556,19 @@ const App = {
           <table class="a4-service-table">
             <thead>
               <tr>
-                <th style="text-align: left; width: 48%;">DESCRIPTION</th>
-                <th style="text-align: center; width: 14%;">QTY</th>
-                <th style="text-align: right; width: 19%;">RATE</th>
-                <th style="text-align: right; width: 19%;">AMOUNT</th>
+                <th style="text-align: left; width: 75%;">DESCRIPTION</th>
+                <th style="text-align: right; width: 25%;">AMOUNT</th>
               </tr>
             </thead>
             <tbody>
               ${serviceItems.map(it => {
-                const q = Number(it.quantity) || 1;
-                const r = Number(it.rate) || 0;
-                const amt = Number(it.amount !== undefined ? it.amount : q * r) || 0;
+                const amt = Number(it.amount !== undefined ? it.amount : (Number(it.rate) || 0) * (Number(it.quantity) || 1)) || 0;
                 return `
                   <tr>
                     <td style="text-align: left; font-weight: 500; color: #1e293b;">
                       <div style="font-weight: 600; font-size: 12px; color: #0f172a;">${it.description || 'Service Item'}</div>
                       ${it.details ? `<div style="font-size: 10.5px; color: #64748b; margin-top: 2px; line-height: 1.3;">${it.details}</div>` : ''}
                     </td>
-                    <td style="text-align: center; color: #334155;">${q}</td>
-                    <td style="text-align: right; color: #334155;">₹${r.toLocaleString('en-IN')}</td>
                     <td style="text-align: right; font-weight: 700; color: #0f172a;">₹${amt.toLocaleString('en-IN')}</td>
                   </tr>
                 `;
@@ -3724,10 +3711,9 @@ const App = {
     if (r.items && r.items.length > 0) {
       text += `📋 *SERVICE DETAILS:*\n`;
       r.items.forEach(it => {
-        const q = Number(it.quantity) || 1;
-        const rVal = Number(it.rate) || 0;
-        const amt = Number(it.amount !== undefined ? it.amount : q * rVal) || 0;
-        text += `  • ${it.description} (${q} × ${FinanceEngine.formatINR(rVal)}) = ${FinanceEngine.formatINR(amt)}\n`;
+        const amt = Number(it.amount !== undefined ? it.amount : (Number(it.rate) || 0) * (Number(it.quantity) || 1)) || 0;
+        const scope = it.details ? ` (${it.details})` : '';
+        text += `  • ${it.description}${scope}: ${FinanceEngine.formatINR(amt)}\n`;
       });
       text += `━━━━━━━━━━━━━━━━━━━━━━\n`;
     }

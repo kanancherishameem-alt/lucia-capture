@@ -2327,16 +2327,14 @@ html, body {
 }
 .proj-item-card-top {
   display: grid;
-  grid-template-columns: 2.2fr 0.7fr 1.2fr 1fr 30px;
-  gap: 6px;
+  grid-template-columns: 1fr 140px 30px;
+  gap: 8px;
   align-items: center;
 }
 @media (max-width: 600px) {
   .proj-item-card-top {
-    grid-template-columns: 1fr 1fr;
-  }
-  .proj-item-card-top > div:first-child {
-    grid-column: span 2;
+    grid-template-columns: 1fr 115px 30px;
+    gap: 6px;
   }
 }
 

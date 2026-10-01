@@ -192,6 +192,27 @@ def test_other_expense_item_and_project_profit():
     assert net_profit == 11000, f"Expected 11000, got {net_profit}"
     print(f"Other Expense Test Passed: Package=₹{package_total}, Other Expense=₹{project_expense}, Net Profit=₹{net_profit}")
 
+def test_streamlined_direct_amount_items():
+    # User's request:
+    # "ithil qty section venda pinne rate , amount ithil amount mathram mathi"
+    # Services are streamlined: description, coverage notes, and direct editable amount (₹)
+    items = [
+        {'description': 'Photographer 1', 'details': 'couple bride/groom single stage full coverage', 'amount': 12000},
+        {'description': 'Other Expense', 'details': 'Travel & food logistics', 'amount': 2000},
+        {'description': 'Photo Album', 'details': '20 Pages Premium Book', 'amount': 2500}
+    ]
+    package_total = sum(it['amount'] for it in items)
+    assert package_total == 16500, f"Expected 16500, got {package_total}"
+
+    # WhatsApp message formatting verification: "• Description (Details): ₹Amount"
+    wa_lines = []
+    for it in items:
+        det = f" ({it['details']})" if it.get('details') else ''
+        wa_lines.append(f"• {it['description']}{det}: ₹{it['amount']:,}")
+    expected_line0 = "• Photographer 1 (couple bride/groom single stage full coverage): ₹12,000"
+    assert wa_lines[0] == expected_line0, f"Expected '{expected_line0}', got '{wa_lines[0]}'"
+    print("Streamlined Direct Amount Items Test Passed: Total Package=₹16,500, WhatsApp Line 1:", wa_lines[0])
+
 if __name__ == '__main__':
     test_profit_split_example()
     test_default_this_month()
@@ -201,4 +222,5 @@ if __name__ == '__main__':
     test_custom_profit_amounts()
     test_project_service_details()
     test_other_expense_item_and_project_profit()
+    test_streamlined_direct_amount_items()
     print("ALL TESTS PASSED SUCCESSFULLY! ✓")
