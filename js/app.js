@@ -439,6 +439,10 @@ const App = {
       } else if (modalId === 'modal-invoice' && !this.editingInvoiceId) {
         const delBtn = document.getElementById('btn-delete-invoice');
         if (delBtn) delBtn.style.display = 'none';
+      } else if (modalId === 'modal-payment') {
+        const discInp = document.getElementById('pay-discount');
+        if (discInp) discInp.value = '';
+        this.selectPaymentMethod('pay', 'GPay / UPI');
       }
 
       // Prepopulate select inputs
@@ -1685,16 +1689,26 @@ const App = {
   handlePayProjectSelected() {
     const select = document.getElementById('pay-project');
     const amountInput = document.getElementById('pay-amount');
+    const discountInput = document.getElementById('pay-discount');
     const hint = document.getElementById('pay-pending-hint');
     if (!select || !select.value) {
       if (hint) hint.textContent = '';
       return;
     }
     const opt = select.options[select.selectedIndex];
-    const pending = opt.getAttribute('data-pending');
-    if (pending) {
-      if (amountInput && !amountInput.value) amountInput.value = pending;
-      if (hint) hint.textContent = `Total pending balance: ₹${Number(pending).toLocaleString('en-IN')}`;
+    const pending = Number(opt.getAttribute('data-pending')) || 0;
+    const discount = discountInput ? (FinanceEngine.parseINR(discountInput.value) || 0) : 0;
+    const adjustedPending = Math.max(0, pending - discount);
+
+    if (amountInput && (!amountInput.value || Number(amountInput.value) === pending)) {
+      amountInput.value = adjustedPending;
+    }
+    if (hint) {
+      if (discount > 0) {
+        hint.textContent = `Pending: ₹${pending.toLocaleString('en-IN')} - Discount: ₹${discount.toLocaleString('en-IN')} = Net Due: ₹${adjustedPending.toLocaleString('en-IN')}`;
+      } else {
+        hint.textContent = `Total pending balance: ₹${pending.toLocaleString('en-IN')}`;
+      }
     }
   },
 
@@ -2085,17 +2099,24 @@ const App = {
     }
 
     const amount = FinanceEngine.parseINR(document.getElementById('pay-amount').value);
+    const discount = FinanceEngine.parseINR(document.getElementById('pay-discount')?.value) || 0;
     const date = document.getElementById('pay-date').value;
-    const paymentMethod = document.getElementById('pay-method').value || 'UPI';
+    const paymentMethod = document.getElementById('pay-method').value || 'GPay / UPI';
 
     const project = window.dataStore.data.projects.find(p => p.id === projectId);
     if (!project) return;
+
+    if (discount > 0) {
+      const existingDiscount = Number(project.discount) || 0;
+      window.dataStore.updateProject(project.id, { discount: existingDiscount + discount });
+    }
 
     window.dataStore.addIncome({
       projectId: project.id,
       projectName: project.name,
       clientName: project.clientName,
       amount,
+      discount,
       date,
       paymentMethod,
       notes: `Payment collection for ${project.name}`
@@ -2103,9 +2124,11 @@ const App = {
 
     e.target.reset();
     document.getElementById('pay-date').value = new Date().toISOString().split('T')[0];
+    const discEl = document.getElementById('pay-discount');
+    if (discEl) discEl.value = '';
     this.closeModalDirect('modal-payment');
 
-    this.showToast(`Payment of ₹${amount.toLocaleString('en-IN')} received for ${project.name} ✓`);
+    this.showToast(`Payment of ₹${amount.toLocaleString('en-IN')}${discount > 0 ? ` (with ₹${discount.toLocaleString('en-IN')} discount)` : ''} received for ${project.name} ✓`);
   },
 
   handleSaveWithdrawal(e) {

@@ -1339,30 +1339,43 @@
             </div>
           </div>
 
-          <div style="display: grid; grid-template-columns: 1.2fr 0.9fr 1.1fr; gap: 10px; margin-bottom: 12px;">
-            <div class="form-group">
-              <label class="form-label">Package (₹) <span style="color: #ef4444;">*</span></label>
-              <input type="number" inputmode="numeric" class="form-input" id="proj-package" placeholder="50000" oninput="App.updateProjectLiveProfit()" required>
+          <!-- Financial Details: Package, Discount, Advance Received & Payment Method (Attached section) -->
+          <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 12px 14px; margin-bottom: 14px;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+              <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label">Package (₹) <span style="color: #ef4444;">*</span></label>
+                <div class="amount-input-wrapper">
+                  <span class="amount-prefix">₹</span>
+                  <input type="number" inputmode="numeric" class="form-input" id="proj-package" placeholder="50000" oninput="App.updateProjectLiveProfit()" required>
+                </div>
+              </div>
+              <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label">Discount (₹)</label>
+                <div class="amount-input-wrapper">
+                  <span class="amount-prefix">₹</span>
+                  <input type="number" inputmode="numeric" class="form-input" id="proj-discount" placeholder="0" oninput="App.updateProjectLiveProfit()">
+                </div>
+              </div>
             </div>
-            <div class="form-group">
-              <label class="form-label">Discount (₹)</label>
-              <input type="number" inputmode="numeric" class="form-input" id="proj-discount" placeholder="0" oninput="App.updateProjectLiveProfit()">
-            </div>
-            <div class="form-group">
-              <label class="form-label">Advance Received (₹)</label>
-              <input type="number" inputmode="numeric" class="form-input" id="proj-received" placeholder="0" oninput="App.updateProjectLiveProfit()">
-            </div>
-          </div>
 
-          <!-- Payment Method for Project Advance -->
-          <div class="form-group" style="margin-bottom: 14px;">
-            <label class="form-label">Payment Method (for Advance / Booking)</label>
-            <div class="payment-method-selector" id="proj-method-selector">
-              <div class="method-choice selected" data-method="GPay / UPI" onclick="App.selectPaymentMethod('proj', 'GPay / UPI')">GPay / UPI</div>
-              <div class="method-choice" data-method="Cash" onclick="App.selectPaymentMethod('proj', 'Cash')">Cash</div>
-              <div class="method-choice" data-method="Bank" onclick="App.selectPaymentMethod('proj', 'Bank')">Bank</div>
+            <div style="display: grid; grid-template-columns: 1fr 1.25fr; gap: 12px; align-items: start;">
+              <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label">Advance Received (₹)</label>
+                <div class="amount-input-wrapper">
+                  <span class="amount-prefix">₹</span>
+                  <input type="number" inputmode="numeric" class="form-input" id="proj-received" placeholder="0" oninput="App.updateProjectLiveProfit()">
+                </div>
+              </div>
+              <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label">Payment Method</label>
+                <div class="payment-method-selector" id="proj-method-selector" style="margin-top: 2px;">
+                  <div class="method-choice" data-method="Cash" onclick="App.selectPaymentMethod('proj', 'Cash')">Cash</div>
+                  <div class="method-choice selected" data-method="GPay / UPI" onclick="App.selectPaymentMethod('proj', 'GPay / UPI')">GPay</div>
+                  <div class="method-choice" data-method="Bank" onclick="App.selectPaymentMethod('proj', 'Bank')">Bank</div>
+                </div>
+                <input type="hidden" id="proj-method" value="GPay / UPI">
+              </div>
             </div>
-            <input type="hidden" id="proj-method" value="GPay / UPI">
           </div>
 
           <!-- Optional Project Costs & Other Expenses (Editable) -->
@@ -1439,14 +1452,23 @@
             </select>
           </div>
 
-          <div class="form-group">
-            <label class="form-label">Amount (₹)</label>
-            <div class="amount-input-wrapper">
-              <span class="amount-prefix">₹</span>
-              <input type="number" inputmode="numeric" class="form-input" id="pay-amount" placeholder="0" required>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label">Amount (₹) <span style="color: #ef4444;">*</span></label>
+              <div class="amount-input-wrapper">
+                <span class="amount-prefix">₹</span>
+                <input type="number" inputmode="numeric" class="form-input" id="pay-amount" placeholder="0" required>
+              </div>
             </div>
-            <div id="pay-pending-hint" style="font-size: 11px; color: var(--gold-primary); margin-top: 4px;"></div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label">Discount (₹) (Optional)</label>
+              <div class="amount-input-wrapper">
+                <span class="amount-prefix">₹</span>
+                <input type="number" inputmode="numeric" class="form-input" id="pay-discount" placeholder="0" oninput="App.handlePayProjectSelected()">
+              </div>
+            </div>
           </div>
+          <div id="pay-pending-hint" style="font-size: 11px; color: var(--gold-primary); margin-top: 6px; margin-bottom: 12px;"></div>
 
           <div class="form-group">
             <label class="form-label">Date</label>
@@ -1456,8 +1478,8 @@
           <div class="form-group">
             <label class="form-label">Payment Method</label>
             <div class="payment-method-selector" id="pay-method-selector">
-              <div class="method-choice selected" data-method="GPay / UPI" onclick="App.selectPaymentMethod('pay', 'GPay / UPI')">GPay / UPI</div>
               <div class="method-choice" data-method="Cash" onclick="App.selectPaymentMethod('pay', 'Cash')">Cash</div>
+              <div class="method-choice selected" data-method="GPay / UPI" onclick="App.selectPaymentMethod('pay', 'GPay / UPI')">GPay</div>
               <div class="method-choice" data-method="Bank" onclick="App.selectPaymentMethod('pay', 'Bank')">Bank</div>
             </div>
             <input type="hidden" id="pay-method" value="GPay / UPI">
