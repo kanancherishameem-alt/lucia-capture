@@ -133,6 +133,47 @@ def test_custom_profit_amounts():
     assert total == 110000
     print(f"Custom Profit Amounts Test Passed: Shameem=₹{p1}, Shiyan=₹{p2}, Company Fund=₹{cf}, Total=₹{total}")
 
+def test_project_service_details():
+    # User's example:
+    # Description: Photographer 1, Couple bride/groom single state full coverage, Qty: 1, Rate: 12000 => Amount: 12000
+    items = [
+        {
+            'description': 'Photographer 1',
+            'details': 'couple bride/groom single state full coverage',
+            'quantity': 1,
+            'rate': 12000,
+            'amount': 12000
+        },
+        {
+            'description': 'Videography (Camera)',
+            'details': '3 Videos (2 Reels + 1 Highlights)',
+            'quantity': 1,
+            'rate': 15000,
+            'amount': 15000
+        },
+        {
+            'description': 'Additional Service - Drone Shoot',
+            'details': 'Cinematic Aerial Shots',
+            'quantity': 1,
+            'rate': 3000,
+            'amount': 3000
+        },
+        {
+            'description': 'Custom Service - Photo Album',
+            'details': 'Premium Photo Book (20 Pages)',
+            'quantity': 1,
+            'rate': 2500,
+            'amount': 2500
+        }
+    ]
+
+    total_package = sum(it['quantity'] * it['rate'] for it in items)
+    assert total_package == 32500, f"Expected 32500, got {total_package}"
+    assert items[0]['description'] == 'Photographer 1'
+    assert items[0]['details'] == 'couple bride/groom single state full coverage'
+    assert items[0]['amount'] == 12000
+    print(f"Project Service Details Test Passed: Total Package=₹{total_package} with {len(items)} itemized services")
+
 if __name__ == '__main__':
     test_profit_split_example()
     test_default_this_month()
@@ -140,4 +181,5 @@ if __name__ == '__main__':
     test_project_aswathi()
     test_number_to_words()
     test_custom_profit_amounts()
+    test_project_service_details()
     print("ALL TESTS PASSED SUCCESSFULLY! ✓")

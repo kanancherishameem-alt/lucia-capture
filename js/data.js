@@ -64,7 +64,14 @@ function getDefaultData() {
         eventDate: `${monthPrefix}-18`,
         status: 'Payment Pending', // Upcoming, Ongoing, Completed, Payment Pending
         location: 'Calicut Grand Hyatt',
-        notes: 'Full day traditional wedding & reception shoot with 2 candid cameras & drone.'
+        notes: 'Full day traditional wedding & reception shoot with 2 candid cameras & drone.',
+        items: [
+          { description: 'Photographer 1', details: 'couple bride/groom single stage full coverage', quantity: 1, rate: 12000, amount: 12000 },
+          { description: 'Wedding Photography (Package 01)', details: 'Candid + Traditional + Family + Full Coverage', quantity: 1, rate: 12000, amount: 12000 },
+          { description: 'Videography (Camera)', details: '3 Videos (2 Reels + 1 Highlights)', quantity: 1, rate: 15000, amount: 15000 },
+          { description: 'Additional Service - Drone Shoot', details: 'Cinematic Aerial Shots', quantity: 1, rate: 3000, amount: 3000 },
+          { description: 'Custom Service - Photo Album', details: 'Premium Photo Book (20 Pages)', quantity: 1, rate: 8000, amount: 8000 }
+        ]
       },
       {
         id: 'proj-2',
@@ -119,9 +126,9 @@ function getDefaultData() {
         paymentMethod: 'UPI', // Cash, UPI, Bank
         notes: 'Advance booking payment',
         items: [
-          { description: 'Wedding Photography Package 01', quantity: 1, rate: 12000, amount: 12000 },
-          { description: 'Camera Videography', quantity: 1, rate: 15000, amount: 15000 },
-          { description: 'Additional Service', quantity: 1, rate: 3000, amount: 3000 }
+          { description: 'Photographer 1', details: 'couple bride/groom single stage full coverage', quantity: 1, rate: 12000, amount: 12000 },
+          { description: 'Videography (Camera)', details: '3 Videos (2 Reels + 1 Highlights)', quantity: 1, rate: 15000, amount: 15000 },
+          { description: 'Additional Service - Drone Shoot', details: 'Cinematic Aerial Shots', quantity: 1, rate: 3000, amount: 3000 }
         ]
       },
       {
@@ -507,7 +514,7 @@ class DataStore {
     return newExpense;
   }
 
-  addProject({ name, clientName, clientPhone, packageAmount, receivedAmount, eventDate, status, location, notes }) {
+  addProject({ name, clientName, clientPhone, packageAmount, receivedAmount, eventDate, status, location, notes, items }) {
     const pkg = Number(packageAmount) || 0;
     const rcv = Number(receivedAmount) || 0;
 
@@ -521,7 +528,8 @@ class DataStore {
       eventDate: eventDate || new Date().toISOString().split('T')[0],
       status: status || (rcv < pkg ? 'Payment Pending' : 'Ongoing'),
       location: location || '',
-      notes: notes || ''
+      notes: notes || '',
+      items: Array.isArray(items) ? items : []
     };
 
     this.data.projects.unshift(newProject);
@@ -533,7 +541,11 @@ class DataStore {
         projectId: newProject.id,
         projectName: newProject.name,
         clientName: newProject.clientName,
+        clientPhone: newProject.clientPhone,
         amount: rcv,
+        totalAmount: pkg,
+        balanceDue: Math.max(0, pkg - rcv),
+        items: newProject.items && newProject.items.length > 0 ? JSON.parse(JSON.stringify(newProject.items)) : [],
         date: eventDate || new Date().toISOString().split('T')[0],
         paymentMethod: 'UPI',
         notes: `Advance payment for ${newProject.name}`

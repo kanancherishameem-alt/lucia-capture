@@ -397,6 +397,22 @@ const App = {
         if (btnEl) btnEl.textContent = 'Save Project';
         const delBtn = document.getElementById('btn-delete-project');
         if (delBtn) delBtn.style.display = 'none';
+
+        // Pre-populate with user requested example: Photographer 1, Couple bride/groom single stage full coverage, ₹12000
+        this.projectLineItems = [
+          {
+            description: 'Photographer 1',
+            details: 'couple bride/groom single stage full coverage',
+            quantity: 1,
+            rate: 12000,
+            amount: 12000
+          }
+        ];
+        this.renderProjectLineItemRows();
+        const pkgInp = document.getElementById('proj-package');
+        if (pkgInp) pkgInp.value = 12000;
+        const rcvInp = document.getElementById('proj-received');
+        if (rcvInp) rcvInp.value = 0;
       } else if (modalId === 'modal-withdrawal' && !this.editingWithdrawalId) {
         document.getElementById('form-withdrawal')?.reset();
         const dateEl = document.getElementById('wd-date');
@@ -677,6 +693,22 @@ const App = {
 
     const locInp = document.getElementById('proj-location');
     if (locInp) locInp.value = proj.location || '';
+
+    // Populate itemized services from project or default
+    if (proj.items && Array.isArray(proj.items) && proj.items.length > 0) {
+      this.projectLineItems = JSON.parse(JSON.stringify(proj.items));
+    } else {
+      this.projectLineItems = [
+        {
+          description: proj.name || 'Wedding Photography (Package 01)',
+          details: proj.notes || 'couple bride/groom single stage full coverage',
+          quantity: 1,
+          rate: Number(proj.packageAmount) || 0,
+          amount: Number(proj.packageAmount) || 0
+        }
+      ];
+    }
+    this.renderProjectLineItemRows();
 
     const titleEl = document.getElementById('modal-project-title');
     if (titleEl) titleEl.textContent = 'Edit Project Details';
@@ -1304,9 +1336,14 @@ const App = {
     const amtInp = document.getElementById('inc-amount');
     if (amtInp && (!amtInp.value || amtInp.value === '0')) amtInp.value = pending > 0 ? pending : pkg;
 
-    if (!this.incomeLineItems || this.incomeLineItems.length === 0 || (this.incomeLineItems.length === 1 && (!this.incomeLineItems[0].rate || this.incomeLineItems[0].rate === 0))) {
+    const projObj = (window.dataStore.data.projects || []).find(p => p.id === projectId);
+    if (projObj && projObj.items && Array.isArray(projObj.items) && projObj.items.length > 0) {
+      this.incomeLineItems = JSON.parse(JSON.stringify(projObj.items));
+      this.renderIncomeLineItemRows();
+    } else if (!this.incomeLineItems || this.incomeLineItems.length === 0 || (this.incomeLineItems.length === 1 && (!this.incomeLineItems[0].rate || this.incomeLineItems[0].rate === 0))) {
       this.incomeLineItems = [{
         description: projName || 'Wedding Photography & Videography Package',
+        details: (projObj && projObj.notes) || '',
         quantity: 1,
         rate: pkg,
         amount: pkg
@@ -1369,35 +1406,48 @@ const App = {
       const rowAmt = q * r;
 
       return `
-        <div class="inc-line-item-row">
-          <div class="inc-desc-col">
-            <input type="text" class="form-input" placeholder="Service description" 
-              value="${item.description ? item.description.replace(/"/g, '&quot;') : ''}" 
-              oninput="App.handleIncomeLineItemChange(${idx}, 'description', this.value)" style="font-size: 12.5px; padding: 7px 10px;" required>
+        <div class="proj-item-card" style="margin-bottom: 8px;">
+          <div class="proj-item-card-top">
+            <div>
+              <input type="text" class="form-input" placeholder="Service description" 
+                value="${item.description ? item.description.replace(/"/g, '&quot;') : ''}" 
+                oninput="App.handleIncomeLineItemChange(${idx}, 'description', this.value)" style="font-size: 12.5px; padding: 6px 8px;" required>
+            </div>
+            <div>
+              <input type="number" min="1" class="form-input" placeholder="Qty" value="${q}" 
+                oninput="App.handleIncomeLineItemChange(${idx}, 'quantity', this.value)" style="text-align: center; font-size: 12.5px; padding: 6px 4px;" required>
+            </div>
+            <div>
+              <input type="number" min="0" class="form-input" placeholder="Rate" value="${r || ''}" 
+                oninput="App.handleIncomeLineItemChange(${idx}, 'rate', this.value)" style="text-align: right; font-size: 12.5px; padding: 6px 6px;" required>
+            </div>
+            <div style="font-weight: 700; font-size: 12.5px; text-align: right; color: var(--gold-light); padding-right: 4px;" id="inc-item-total-${idx}">
+              ${FinanceEngine.formatINR(rowAmt)}
+            </div>
+            <div style="text-align: center;">
+              <button type="button" class="line-item-delete-btn" onclick="App.removeIncomeLineItem(${idx})" title="Remove item" style="height: 28px; width: 28px; font-size: 12px;">✕</button>
+            </div>
           </div>
           <div>
-            <input type="number" min="1" class="form-input" placeholder="Qty" value="${q}" 
-              oninput="App.handleIncomeLineItemChange(${idx}, 'quantity', this.value)" style="text-align: center; font-size: 12.5px; padding: 7px 4px;" required>
-          </div>
-          <div>
-            <input type="number" min="0" class="form-input" placeholder="Rate" value="${r || ''}" 
-              oninput="App.handleIncomeLineItemChange(${idx}, 'rate', this.value)" style="text-align: right; font-size: 12.5px; padding: 7px 8px;" required>
-          </div>
-          <div class="inc-total-col" style="font-weight: 700; font-size: 12.5px; text-align: right; padding-right: 4px; color: var(--gold-light);" id="inc-item-total-${idx}">
-            ${FinanceEngine.formatINR(rowAmt)}
-          </div>
-          <div style="text-align: center;">
-            <button type="button" class="line-item-delete-btn" onclick="App.removeIncomeLineItem(${idx})" title="Remove item" style="height: 32px; width: 32px;">✕</button>
+            <input type="text" class="form-input" placeholder="Coverage / Scope (optional, e.g. couple bride/groom single stage full coverage)" 
+              value="${item.details ? item.details.replace(/"/g, '&quot;') : ''}" 
+              oninput="App.handleIncomeLineItemChange(${idx}, 'details', this.value)" style="font-size: 11px; padding: 5px 8px; color: var(--text-secondary); background: rgba(0,0,0,0.2);">
           </div>
         </div>
       `;
     }).join('');
   },
 
-  addIncomeLineItem(desc = '', qty = 1, rate = 0) {
+  addIncomeLineItem(desc = '', details = '', qty = 1, rate = 0) {
+    if (typeof details === 'number') {
+      rate = qty;
+      qty = details;
+      details = '';
+    }
     if (!this.incomeLineItems) this.incomeLineItems = [];
     this.incomeLineItems.push({
       description: desc,
+      details: details || '',
       quantity: Number(qty) || 1,
       rate: Number(rate) || 0,
       amount: (Number(qty) || 1) * (Number(rate) || 0)
@@ -1406,11 +1456,16 @@ const App = {
     this.syncIncomeTotalFromItems();
   },
 
-  addIncomePresetItem(desc, qty, rate) {
-    if (this.incomeLineItems && this.incomeLineItems.length === 1 && !this.incomeLineItems[0].rate && (!this.incomeLineItems[0].description || this.incomeLineItems[0].description === 'Wedding Photography Package 01')) {
+  addIncomePresetItem(desc, details = '', qty = 1, rate = 0) {
+    if (typeof details === 'number') {
+      rate = qty;
+      qty = details;
+      details = '';
+    }
+    if (this.incomeLineItems && this.incomeLineItems.length === 1 && !this.incomeLineItems[0].rate && (!this.incomeLineItems[0].description || this.incomeLineItems[0].description === 'Wedding Photography Package 01' || this.incomeLineItems[0].description === 'Photographer 1')) {
       this.incomeLineItems = [];
     }
-    this.addIncomeLineItem(desc, qty, rate);
+    this.addIncomeLineItem(desc, details, qty, rate);
   },
 
   removeIncomeLineItem(idx) {
@@ -1443,6 +1498,109 @@ const App = {
       totalInp.value = sum;
     }
     this.updateIncomeLiveBalance();
+  },
+
+  /* Project Itemized Line Items (Add / Edit Project Modal) */
+  renderProjectLineItemRows() {
+    const container = document.getElementById('proj-line-items-container');
+    if (!container) return;
+
+    if (!this.projectLineItems || this.projectLineItems.length === 0) {
+      container.innerHTML = `
+        <div style="text-align: center; color: var(--text-muted); font-size: 11.5px; padding: 12px; border: 1px dashed var(--border-subtle); border-radius: 8px;">
+          No services added. Tap <strong>"+ Add Service"</strong> or click a Quick Add chip above to itemize this project.
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = this.projectLineItems.map((item, idx) => {
+      const q = Number(item.quantity) || 1;
+      const r = Number(item.rate) || 0;
+      const rowAmt = q * r;
+
+      return `
+        <div class="proj-item-card">
+          <div class="proj-item-card-top">
+            <div>
+              <input type="text" class="form-input" placeholder="Service (e.g. Photographer 1)" 
+                value="${item.description ? item.description.replace(/"/g, '&quot;') : ''}" 
+                oninput="App.handleProjectLineItemChange(${idx}, 'description', this.value)" style="font-size: 12.5px; padding: 6px 8px;" required>
+            </div>
+            <div>
+              <input type="number" min="1" class="form-input" placeholder="Qty" value="${q}" 
+                oninput="App.handleProjectLineItemChange(${idx}, 'quantity', this.value)" style="text-align: center; font-size: 12.5px; padding: 6px 4px;" required>
+            </div>
+            <div>
+              <input type="number" min="0" class="form-input" placeholder="Rate (₹)" value="${r || ''}" 
+                oninput="App.handleProjectLineItemChange(${idx}, 'rate', this.value)" style="text-align: right; font-size: 12.5px; padding: 6px 6px;" required>
+            </div>
+            <div style="font-weight: 700; font-size: 12.5px; text-align: right; color: var(--gold-light); padding-right: 4px;" id="proj-item-total-${idx}">
+              ${FinanceEngine.formatINR(rowAmt)}
+            </div>
+            <div style="text-align: center;">
+              <button type="button" class="line-item-delete-btn" onclick="App.removeProjectLineItem(${idx})" title="Remove item" style="height: 28px; width: 28px; font-size: 12px;">✕</button>
+            </div>
+          </div>
+          <div>
+            <input type="text" class="form-input" placeholder="Coverage / Scope (e.g. couple bride/groom single stage full coverage)" 
+              value="${item.details ? item.details.replace(/"/g, '&quot;') : ''}" 
+              oninput="App.handleProjectLineItemChange(${idx}, 'details', this.value)" style="font-size: 11.5px; padding: 5px 8px; color: var(--text-secondary); background: rgba(0,0,0,0.2);">
+          </div>
+        </div>
+      `;
+    }).join('');
+  },
+
+  addProjectLineItem(desc = '', details = '', qty = 1, rate = 0) {
+    if (!this.projectLineItems) this.projectLineItems = [];
+    this.projectLineItems.push({
+      description: desc,
+      details: details || '',
+      quantity: Number(qty) || 1,
+      rate: Number(rate) || 0,
+      amount: (Number(qty) || 1) * (Number(rate) || 0)
+    });
+    this.renderProjectLineItemRows();
+    this.syncProjectPackageFromItems();
+  },
+
+  addProjectPresetItem(desc, details = '', qty = 1, rate = 0) {
+    if (this.projectLineItems && this.projectLineItems.length === 1 && !this.projectLineItems[0].rate && (!this.projectLineItems[0].description || this.projectLineItems[0].description === 'Photographer 1' && !this.projectLineItems[0].rate)) {
+      this.projectLineItems = [];
+    }
+    this.addProjectLineItem(desc, details, qty, rate);
+  },
+
+  removeProjectLineItem(idx) {
+    if (!this.projectLineItems) return;
+    this.projectLineItems.splice(idx, 1);
+    this.renderProjectLineItemRows();
+    this.syncProjectPackageFromItems();
+  },
+
+  handleProjectLineItemChange(idx, field, value) {
+    if (!this.projectLineItems || !this.projectLineItems[idx]) return;
+    this.projectLineItems[idx][field] = value;
+
+    const q = Number(this.projectLineItems[idx].quantity) || 1;
+    const r = Number(this.projectLineItems[idx].rate) || 0;
+    const rowAmt = q * r;
+    this.projectLineItems[idx].amount = rowAmt;
+
+    const totalEl = document.getElementById(`proj-item-total-${idx}`);
+    if (totalEl) totalEl.textContent = FinanceEngine.formatINR(rowAmt);
+
+    this.syncProjectPackageFromItems();
+  },
+
+  syncProjectPackageFromItems() {
+    if (!this.projectLineItems || this.projectLineItems.length === 0) return;
+    const sum = this.projectLineItems.reduce((s, it) => s + ((Number(it.quantity) || 1) * (Number(it.rate) || 0)), 0);
+    const pkgInp = document.getElementById('proj-package');
+    if (pkgInp && sum > 0) {
+      pkgInp.value = sum;
+    }
   },
 
   handlePayProjectSelected() {
@@ -1713,6 +1871,20 @@ const App = {
       return;
     }
 
+    const validItems = (this.projectLineItems || [])
+      .filter(it => it.description && it.description.trim())
+      .map(it => {
+        const q = Number(it.quantity) || 1;
+        const r = Number(it.rate) || 0;
+        return {
+          description: it.description.trim(),
+          details: (it.details || '').trim(),
+          quantity: q,
+          rate: r,
+          amount: q * r
+        };
+      });
+
     if (this.editingProjectId) {
       window.dataStore.updateProject(this.editingProjectId, {
         name,
@@ -1722,7 +1894,8 @@ const App = {
         receivedAmount,
         eventDate,
         status,
-        location
+        location,
+        items: validItems
       });
       const pid = this.editingProjectId;
       this.editingProjectId = null;
@@ -1741,7 +1914,8 @@ const App = {
         receivedAmount,
         eventDate,
         status,
-        location
+        location,
+        items: validItems
       });
       e.target.reset();
       document.getElementById('proj-date').value = new Date().toISOString().split('T')[0];
@@ -1906,6 +2080,52 @@ const App = {
     const pending = Math.max(0, proj.packageAmount - proj.receivedAmount);
     const profit = totalIncome - totalExpenses;
 
+    const projItems = (proj.items && Array.isArray(proj.items) && proj.items.length > 0)
+      ? proj.items
+      : [{
+          description: proj.name || 'Wedding Photography (Package 01)',
+          details: proj.notes || 'couple bride/groom single stage full coverage',
+          quantity: 1,
+          rate: proj.packageAmount,
+          amount: proj.packageAmount
+        }];
+
+    const serviceDetailsHtml = `
+      <div class="dark-gold-service-block">
+        <div class="dark-gold-service-title">SERVICE DETAILS</div>
+        <div class="dark-gold-service-table-wrap">
+          <table class="dark-gold-service-table">
+            <thead>
+              <tr>
+                <th style="text-align: left; width: 48%;">DESCRIPTION</th>
+                <th style="text-align: center; width: 14%;">QTY</th>
+                <th style="text-align: right; width: 19%;">RATE</th>
+                <th style="text-align: right; width: 19%;">AMOUNT</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${projItems.map(it => {
+                const q = Number(it.quantity) || 1;
+                const r = Number(it.rate) || 0;
+                const amt = Number(it.amount !== undefined ? it.amount : q * r) || 0;
+                return `
+                  <tr>
+                    <td style="text-align: left;">
+                      <div class="service-name">${it.description || 'Service Item'}</div>
+                      ${it.details ? `<div class="service-scope">${it.details}</div>` : ''}
+                    </td>
+                    <td class="service-qty">${q}</td>
+                    <td class="service-rate">₹${r.toLocaleString('en-IN')}</td>
+                    <td class="service-amount">₹${amt.toLocaleString('en-IN')}</td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+
     let html = `
       <div style="background: var(--bg-secondary); border-radius: var(--radius-md); padding: 16px; margin-bottom: 20px;">
         <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
@@ -1946,6 +2166,8 @@ const App = {
           Share Project Bill Receipt
         </button>
       </div>
+
+      ${serviceDetailsHtml}
 
       <div style="margin-bottom: 20px;">
         <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 10px; color: var(--text-white);">Revenue Received (${projectIncomes.length})</h4>
@@ -3266,7 +3488,10 @@ const App = {
                 const amt = Number(it.amount !== undefined ? it.amount : q * r) || 0;
                 return `
                   <tr>
-                    <td style="text-align: left; font-weight: 500; color: #1e293b;">${it.description || 'Service Item'}</td>
+                    <td style="text-align: left; font-weight: 500; color: #1e293b;">
+                      <div style="font-weight: 600; font-size: 12px; color: #0f172a;">${it.description || 'Service Item'}</div>
+                      ${it.details ? `<div style="font-size: 10.5px; color: #64748b; margin-top: 2px; line-height: 1.3;">${it.details}</div>` : ''}
+                    </td>
                     <td style="text-align: center; color: #334155;">${q}</td>
                     <td style="text-align: right; color: #334155;">₹${r.toLocaleString('en-IN')}</td>
                     <td style="text-align: right; font-weight: 700; color: #0f172a;">₹${amt.toLocaleString('en-IN')}</td>

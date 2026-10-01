@@ -1095,13 +1095,14 @@
               </button>
             </div>
 
-            <!-- Quick Preset Chips from Reference Image -->
+            <!-- Quick Preset Chips from Reference Image & User Example -->
             <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px;">
               <span style="font-size: 11px; color: var(--text-muted); align-self: center;">Quick Add:</span>
-              <button type="button" class="badge-tag" style="cursor: pointer; background: rgba(212, 175, 55, 0.1); border: 1px solid rgba(212, 175, 55, 0.3); color: var(--gold-light);" onclick="App.addIncomePresetItem('Wedding Photography Package 01', 1, 12000)">+ Wedding Package (₹12k)</button>
-              <button type="button" class="badge-tag" style="cursor: pointer; background: rgba(212, 175, 55, 0.1); border: 1px solid rgba(212, 175, 55, 0.3); color: var(--gold-light);" onclick="App.addIncomePresetItem('Camera Videography', 1, 15000)">+ Videography (₹15k)</button>
-              <button type="button" class="badge-tag" style="cursor: pointer; background: rgba(212, 175, 55, 0.1); border: 1px solid rgba(212, 175, 55, 0.3); color: var(--gold-light);" onclick="App.addIncomePresetItem('Additional Service', 1, 3000)">+ Additional Service (₹3k)</button>
-              <button type="button" class="badge-tag" style="cursor: pointer; background: rgba(212, 175, 55, 0.1); border: 1px solid rgba(212, 175, 55, 0.3); color: var(--gold-light);" onclick="App.addIncomePresetItem('Photo Album', 1, 2500)">+ Photo Album (₹2.5k)</button>
+              <button type="button" class="badge-tag" style="cursor: pointer; background: rgba(212, 175, 55, 0.1); border: 1px solid rgba(212, 175, 55, 0.3); color: var(--gold-light);" onclick="App.addIncomePresetItem('Photographer 1', 'couple bride/groom single stage full coverage', 1, 12000)">+ Photographer 1 (₹12k)</button>
+              <button type="button" class="badge-tag" style="cursor: pointer; background: rgba(212, 175, 55, 0.1); border: 1px solid rgba(212, 175, 55, 0.3); color: var(--gold-light);" onclick="App.addIncomePresetItem('Wedding Photography (Package 01)', 'Candid + Traditional + Family + Full Coverage', 1, 12000)">+ Wedding Package (₹12k)</button>
+              <button type="button" class="badge-tag" style="cursor: pointer; background: rgba(212, 175, 55, 0.1); border: 1px solid rgba(212, 175, 55, 0.3); color: var(--gold-light);" onclick="App.addIncomePresetItem('Videography (Camera)', '3 Videos (2 Reels + 1 Highlights)', 1, 15000)">+ Videography (₹15k)</button>
+              <button type="button" class="badge-tag" style="cursor: pointer; background: rgba(212, 175, 55, 0.1); border: 1px solid rgba(212, 175, 55, 0.3); color: var(--gold-light);" onclick="App.addIncomePresetItem('Additional Service - Drone Shoot', 'Cinematic Aerial Shots', 1, 3000)">+ Drone Shoot (₹3k)</button>
+              <button type="button" class="badge-tag" style="cursor: pointer; background: rgba(212, 175, 55, 0.1); border: 1px solid rgba(212, 175, 55, 0.3); color: var(--gold-light);" onclick="App.addIncomePresetItem('Custom Service - Photo Album', 'Premium Photo Book (20 Pages)', 1, 2500)">+ Photo Album (₹2.5k)</button>
             </div>
 
             <!-- Line Items Header Row -->
@@ -1280,6 +1281,47 @@
           <div class="form-group">
             <label class="form-label">Client Phone (Optional)</label>
             <input type="tel" class="form-input" id="proj-phone" placeholder="+91 98470 12345">
+          </div>
+
+          <!-- Service Details (Itemized Breakdown & Coverage) matching media_1790829952966.png & user request -->
+          <div style="background: var(--bg-secondary); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 12px 14px; margin-bottom: 14px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <div>
+                <label class="form-label" style="margin: 0; font-size: 13px; font-weight: 700; color: var(--gold-light);">
+                  Service Details (Itemized Services & Coverage)
+                </label>
+                <div style="font-size: 11px; color: var(--text-muted); margin-top: 1px;">
+                  Itemized services auto-calculate package total & populate luxury receipts
+                </div>
+              </div>
+              <button type="button" class="btn btn-gold btn-sm" onclick="App.addProjectLineItem()" style="padding: 4px 10px; font-size: 11px; font-weight: 700;">
+                + Add Service
+              </button>
+            </div>
+
+            <!-- Quick Preset Chips matching user request & reference image -->
+            <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px;">
+              <span style="font-size: 11px; color: var(--text-muted); align-self: center;">Quick Add:</span>
+              <button type="button" class="badge-tag" style="cursor: pointer; background: rgba(212, 175, 55, 0.1); border: 1px solid rgba(212, 175, 55, 0.3); color: var(--gold-light);" onclick="App.addProjectPresetItem('Photographer 1', 'couple bride/groom single stage full coverage', 1, 12000)">+ Photographer 1 (₹12k)</button>
+              <button type="button" class="badge-tag" style="cursor: pointer; background: rgba(212, 175, 55, 0.1); border: 1px solid rgba(212, 175, 55, 0.3); color: var(--gold-light);" onclick="App.addProjectPresetItem('Wedding Photography (Package 01)', 'Candid + Traditional + Family + Full Coverage', 1, 12000)">+ Wedding Package (₹12k)</button>
+              <button type="button" class="badge-tag" style="cursor: pointer; background: rgba(212, 175, 55, 0.1); border: 1px solid rgba(212, 175, 55, 0.3); color: var(--gold-light);" onclick="App.addProjectPresetItem('Videography (Camera)', '3 Videos (2 Reels + 1 Highlights)', 1, 15000)">+ Videography (₹15k)</button>
+              <button type="button" class="badge-tag" style="cursor: pointer; background: rgba(212, 175, 55, 0.1); border: 1px solid rgba(212, 175, 55, 0.3); color: var(--gold-light);" onclick="App.addProjectPresetItem('Additional Service - Drone Shoot', 'Cinematic Aerial Shots', 1, 3000)">+ Drone Shoot (₹3k)</button>
+              <button type="button" class="badge-tag" style="cursor: pointer; background: rgba(212, 175, 55, 0.1); border: 1px solid rgba(212, 175, 55, 0.3); color: var(--gold-light);" onclick="App.addProjectPresetItem('Custom Service - Photo Album', 'Premium Photo Book (20 Pages)', 1, 2500)">+ Photo Album (₹2.5k)</button>
+            </div>
+
+            <!-- Line Items Header Row -->
+            <div style="display: grid; grid-template-columns: 2.2fr 0.7fr 1.2fr 1fr 30px; gap: 6px; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px; padding: 0 4px;">
+              <div>Service / Description</div>
+              <div style="text-align: center;">Qty</div>
+              <div style="text-align: right;">Rate (₹)</div>
+              <div style="text-align: right;">Amount (₹)</div>
+              <div></div>
+            </div>
+
+            <!-- Line Items Container -->
+            <div id="proj-line-items-container" style="display: flex; flex-direction: column; gap: 8px;">
+              <!-- Rendered dynamically -->
+            </div>
           </div>
 
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">

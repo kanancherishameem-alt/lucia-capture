@@ -2310,6 +2310,119 @@ html, body {
   }
 }
 
+/* Project Item Card in modal-project */
+.proj-item-card {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(212, 175, 55, 0.22);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+.proj-item-card:hover {
+  border-color: rgba(212, 175, 55, 0.45);
+  background: rgba(212, 175, 55, 0.03);
+}
+.proj-item-card-top {
+  display: grid;
+  grid-template-columns: 2.2fr 0.7fr 1.2fr 1fr 30px;
+  gap: 6px;
+  align-items: center;
+}
+@media (max-width: 600px) {
+  .proj-item-card-top {
+    grid-template-columns: 1fr 1fr;
+  }
+  .proj-item-card-top > div:first-child {
+    grid-column: span 2;
+  }
+}
+
+/* Luxury Dark & Gold Service Details Table (Matching Model Reference Image media_1790829952966.png) */
+.dark-gold-service-block {
+  margin: 18px 0;
+}
+.dark-gold-service-title {
+  font-family: 'Cinzel', 'Playfair Display', Georgia, serif;
+  font-size: 13.5px;
+  font-weight: 700;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: #c5a059;
+  margin-bottom: 10px;
+}
+.dark-gold-service-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  border-radius: 8px;
+  border: 1px solid rgba(212, 175, 55, 0.45);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+}
+.dark-gold-service-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #0d1310;
+  font-size: 12.5px;
+}
+.dark-gold-service-table th {
+  background: rgba(212, 175, 55, 0.08);
+  color: #c5a059;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  font-size: 11px;
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(212, 175, 55, 0.35);
+  border-right: 1px solid rgba(212, 175, 55, 0.25);
+  white-space: nowrap;
+}
+.dark-gold-service-table th:last-child {
+  border-right: none;
+}
+.dark-gold-service-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(212, 175, 55, 0.22);
+  border-right: 1px solid rgba(212, 175, 55, 0.22);
+  vertical-align: middle;
+}
+.dark-gold-service-table td:last-child {
+  border-right: none;
+}
+.dark-gold-service-table tbody tr:last-child td {
+  border-bottom: none;
+}
+.dark-gold-service-table .service-name {
+  color: #f3f4f6;
+  font-weight: 600;
+  font-size: 13px;
+  line-height: 1.35;
+}
+.dark-gold-service-table .service-scope {
+  color: #9ca3af;
+  font-size: 11px;
+  margin-top: 3px;
+  line-height: 1.35;
+}
+.dark-gold-service-table .service-qty {
+  text-align: center;
+  color: #f3f4f6;
+}
+.dark-gold-service-table .service-rate {
+  text-align: right;
+  color: #f3f4f6;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.dark-gold-service-table .service-amount {
+  text-align: right;
+  font-weight: 700;
+  color: #f3f4f6;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 /* Two Columns */
 .a4-two-col {
   display: grid;
