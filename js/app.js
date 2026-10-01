@@ -2086,7 +2086,8 @@ const App = {
       if (otherExpNotesInp) otherExpNotesInp.value = '';
       document.getElementById('proj-date').value = new Date().toISOString().split('T')[0];
       this.closeModalDirect('modal-project');
-      this.showToast(`Project "${name}" created ✓`);
+      this.showToast(`Project "${name}" created ✓ Added to Dashboard`);
+      this.renderAll();
     }
   },
 
@@ -2476,6 +2477,13 @@ const App = {
     document.getElementById('home-pending-amount').textContent = FinanceEngine.formatINR(financials.pendingPayments);
     document.getElementById('home-company-fund-balance').textContent = FinanceEngine.formatINR(financials.companyFundBalance);
 
+    // Update Income stat footer to show booked status
+    const incFooter = document.getElementById('home-stat-income-footer');
+    if (incFooter) {
+      const pendingStr = financials.pendingPayments > 0 ? ` • Pending: ${FinanceEngine.formatINR(financials.pendingPayments)}` : '';
+      incFooter.textContent = `Total booked & direct revenue${pendingStr} (Tap to edit) →`;
+    }
+
     // Render Active Projects on Home
     this.renderHomeProjects();
 
@@ -2499,8 +2507,10 @@ const App = {
 
     container.innerHTML = projects.map(proj => {
       const pkg = Number(proj.packageAmount) || 0;
+      const disc = Number(proj.discount) || 0;
+      const netPkg = Math.max(0, pkg - disc);
       const rcv = Number(proj.receivedAmount) || 0;
-      const pending = Math.max(0, pkg - rcv);
+      const pending = Math.max(0, netPkg - rcv);
 
       let statusBadgeClass = 'ongoing';
       if (proj.status === 'Completed') statusBadgeClass = 'completed';
@@ -2527,8 +2537,8 @@ const App = {
           </div>
           <div style="display: flex; align-items: center; gap: 6px;">
             <div style="text-align: right; margin-right: 6px;">
-              <div style="font-size: 13px; font-weight: 700; color: var(--gold-primary);">${FinanceEngine.formatINR(pkg)}</div>
-              <div style="font-size: 10px; color: var(--text-secondary);">Package</div>
+              <div style="font-size: 13px; font-weight: 700; color: var(--gold-primary);">${FinanceEngine.formatINR(disc > 0 ? netPkg : pkg)}</div>
+              <div style="font-size: 10px; color: var(--text-secondary);">${disc > 0 ? `Net (Disc -${FinanceEngine.formatINR(disc)})` : 'Package'}</div>
             </div>
             ${proj.clientPhone ? `
               <button class="btn-share-icon" onclick="event.stopPropagation(); App.sendProjectWhatsAppReminder('${proj.id}')" title="Send WhatsApp Details">

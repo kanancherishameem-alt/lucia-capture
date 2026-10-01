@@ -415,6 +415,9 @@ class DataStore {
           this.data.invoices = [];
           this.save();
         }
+
+        // Reconcile projects so all projects automatically reflect in Dashboard revenue & profit
+        this.reconcileProjectsWithIncome();
       } else {
         this.resetToDefaults();
       }
@@ -447,6 +450,51 @@ class DataStore {
 
   notify() {
     this.listeners.forEach(fn => fn(this.data));
+  }
+
+  /**
+   * Automatically ensure every project has a corresponding income record
+   * so projects immediately reflect in Dashboard Revenue, Net Profit, and Partner Split.
+   */
+  reconcileProjectsWithIncome() {
+    if (!this.data || !Array.isArray(this.data.projects)) return;
+    if (!Array.isArray(this.data.income)) this.data.income = [];
+
+    let changed = false;
+    this.data.projects.forEach(proj => {
+      const pkg = Number(proj.packageAmount) || 0;
+      const disc = Number(proj.discount) || 0;
+      const netPkg = Math.max(0, pkg - disc);
+      const rcv = Number(proj.receivedAmount) || 0;
+
+      // Find if this project has any linked income record
+      const existingIncome = this.data.income.find(i => i.projectId === proj.id);
+      if (!existingIncome) {
+        // Automatically create project income record so it reflects on Dashboard
+        const incomeAmt = rcv > 0 ? rcv : netPkg;
+        this.data.income.unshift({
+          id: 'inc-' + String(proj.id).replace('proj-', '') + '-' + Date.now(),
+          projectId: proj.id,
+          projectName: proj.name,
+          clientName: proj.clientName || '',
+          clientPhone: proj.clientPhone || '',
+          amount: incomeAmt,
+          discount: disc,
+          totalAmount: pkg,
+          netAmount: netPkg,
+          balanceDue: Math.max(0, netPkg - rcv),
+          items: proj.items && proj.items.length > 0 ? JSON.parse(JSON.stringify(proj.items)) : [],
+          date: proj.eventDate || new Date().toISOString().split('T')[0],
+          paymentMethod: proj.paymentMethod || 'GPay / UPI',
+          notes: rcv > 0 ? `Advance payment for ${proj.name}` : `Project contract booked for ${proj.name}`
+        });
+        changed = true;
+      }
+    });
+
+    if (changed) {
+      this.save();
+    }
   }
 
   // --- ACTIONS ---
@@ -545,25 +593,24 @@ class DataStore {
 
     this.data.projects.unshift(newProject);
 
-    // If advance received > 0, also create corresponding income record automatically
-    if (rcv > 0) {
-      this.data.income.unshift({
-        id: 'inc-' + Date.now(),
-        projectId: newProject.id,
-        projectName: newProject.name,
-        clientName: newProject.clientName,
-        clientPhone: newProject.clientPhone,
-        amount: rcv,
-        discount: disc,
-        totalAmount: pkg,
-        netAmount: netPkg,
-        balanceDue: Math.max(0, netPkg - rcv),
-        items: newProject.items && newProject.items.length > 0 ? JSON.parse(JSON.stringify(newProject.items)) : [],
-        date: eventDate || new Date().toISOString().split('T')[0],
-        paymentMethod: method,
-        notes: `Advance payment for ${newProject.name}`
-      });
-    }
+    // ALWAYS create corresponding income record automatically so project immediately adds to Dashboard
+    const incomeAmt = rcv > 0 ? rcv : netPkg;
+    this.data.income.unshift({
+      id: 'inc-' + Date.now(),
+      projectId: newProject.id,
+      projectName: newProject.name,
+      clientName: newProject.clientName,
+      clientPhone: newProject.clientPhone,
+      amount: incomeAmt,
+      discount: disc,
+      totalAmount: pkg,
+      netAmount: netPkg,
+      balanceDue: Math.max(0, netPkg - rcv),
+      items: newProject.items && newProject.items.length > 0 ? JSON.parse(JSON.stringify(newProject.items)) : [],
+      date: eventDate || new Date().toISOString().split('T')[0],
+      paymentMethod: method,
+      notes: rcv > 0 ? `Advance payment for ${newProject.name}` : `Project contract booked for ${newProject.name}`
+    });
 
     this.save();
     return newProject;
@@ -876,14 +923,47 @@ class DataStore {
 
     Object.assign(proj, updatedData);
 
+    const pkg = Number(proj.packageAmount) || 0;
+    const disc = Number(proj.discount) || 0;
+    const netPkg = Math.max(0, pkg - disc);
+    const rcv = Number(proj.receivedAmount) || 0;
+    proj.netPackageAmount = netPkg;
+
+    // Synchronize linked income record so Dashboard revenue stays accurate
+    const linkedIncome = (this.data.income || []).find(i => i.projectId === id);
+    if (linkedIncome) {
+      if (updatedData.name) linkedIncome.projectName = updatedData.name;
+      if (updatedData.clientName) linkedIncome.clientName = updatedData.clientName;
+      if (updatedData.clientPhone) linkedIncome.clientPhone = updatedData.clientPhone;
+      if (updatedData.eventDate) linkedIncome.date = updatedData.eventDate;
+      if (updatedData.paymentMethod) linkedIncome.paymentMethod = updatedData.paymentMethod;
+      if (updatedData.items) linkedIncome.items = JSON.parse(JSON.stringify(updatedData.items));
+      linkedIncome.totalAmount = pkg;
+      linkedIncome.discount = disc;
+      linkedIncome.netAmount = netPkg;
+      linkedIncome.balanceDue = Math.max(0, netPkg - rcv);
+      linkedIncome.amount = rcv > 0 ? rcv : netPkg;
+    } else {
+      this.data.income.unshift({
+        id: 'inc-' + Date.now(),
+        projectId: proj.id,
+        projectName: proj.name,
+        clientName: proj.clientName || '',
+        clientPhone: proj.clientPhone || '',
+        amount: rcv > 0 ? rcv : netPkg,
+        discount: disc,
+        totalAmount: pkg,
+        netAmount: netPkg,
+        balanceDue: Math.max(0, netPkg - rcv),
+        items: proj.items ? JSON.parse(JSON.stringify(proj.items)) : [],
+        date: proj.eventDate || new Date().toISOString().split('T')[0],
+        paymentMethod: proj.paymentMethod || 'GPay / UPI',
+        notes: rcv > 0 ? `Advance payment for ${proj.name}` : `Project contract booked for ${proj.name}`
+      });
+    }
+
     // If name or client changed, synchronize linked records
     if (updatedData.name && updatedData.name !== oldName) {
-      (this.data.income || []).forEach(i => {
-        if (i.projectId === id) {
-          i.projectName = updatedData.name;
-          if (updatedData.clientName) i.clientName = updatedData.clientName;
-        }
-      });
       (this.data.expenses || []).forEach(e => {
         if (e.projectId === id) {
           e.projectName = updatedData.name;

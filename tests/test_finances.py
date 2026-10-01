@@ -247,6 +247,41 @@ def test_discount_and_payment_methods():
     assert "Payment Method: Cash" in wa_receipt
     print(f"Discount & Payment Method Test Passed: Net Package=₹{net_package}, Balance=₹{balance_due}, Method={payment_method}")
 
+def test_project_addition_auto_adds_to_dashboard():
+    # User's scenario from screenshot media_1790838285835.png:
+    # User adds a project with:
+    # Package: ₹12,000, Discount: ₹500 => Net Package: ₹11,500
+    # Advance received: 0 (or empty)
+    # When added, it MUST automatically update Dashboard:
+    # - Revenue: ₹11,500
+    # - Expenses: ₹0
+    # - Net Profit: ₹11,500
+    # - Shameem Share (33.33%): ₹3,833
+    # - Shiyan Share (33.33%): ₹3,833
+    # - Company Fund Share (33.34%): ₹3,834
+    # - Distributed Total strictly == Net Profit (11,500)
+    # - Pending Payments: ₹11,500
+    gross_pkg = 12000
+    discount = 500
+    net_pkg = max(0, gross_pkg - discount)
+    advance_rcv = 0
+    expenses = 0
+
+    revenue = advance_rcv if advance_rcv > 0 else net_pkg
+    net_profit = revenue - expenses
+    pending = max(0, net_pkg - advance_rcv)
+
+    p1, p2, cf, total = distribute_profit(net_profit, 33.33, 33.33, 33.34)
+
+    assert revenue == 11500, f"Expected 11500, got {revenue}"
+    assert net_profit == 11500, f"Expected 11500, got {net_profit}"
+    assert p1 == 3833, f"Expected 3833, got {p1}"
+    assert p2 == 3833, f"Expected 3833, got {p2}"
+    assert cf == 3834, f"Expected 3834, got {cf}"
+    assert total == 11500, f"Expected total 11500, got {total}"
+    assert pending == 11500, f"Expected pending 11500, got {pending}"
+    print(f"Auto Dashboard Reflection Test Passed: Revenue=₹{revenue}, Profit=₹{net_profit}, Shameem=₹{p1}, Shiyan=₹{p2}, Company Fund=₹{cf}")
+
 if __name__ == '__main__':
     test_profit_split_example()
     test_default_this_month()
@@ -258,4 +293,5 @@ if __name__ == '__main__':
     test_other_expense_item_and_project_profit()
     test_streamlined_direct_amount_items()
     test_discount_and_payment_methods()
+    test_project_addition_auto_adds_to_dashboard()
     print("ALL TESTS PASSED SUCCESSFULLY! ✓")

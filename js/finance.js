@@ -154,19 +154,28 @@ const FinanceEngine = {
   computeFinancials(store, filter = { type: 'month', monthIndex: new Date().getMonth(), year: new Date().getFullYear() }) {
     const { income = [], expenses = [], projects = [], partnerSalaries = [], withdrawals = [], companyFundLedger = [], settings } = store;
 
-    // Helper date matcher
+    // Helper date matcher (timezone-safe)
     const matchDate = (dateStr) => {
       if (!dateStr) return false;
+      if (filter.type === 'all') return true;
+
+      // Timezone-safe string matching for YYYY-MM-DD
+      const dateOnly = String(dateStr).split('T')[0];
+      const parts = dateOnly.split('-');
+      if (parts.length >= 2) {
+        const itemYear = parseInt(parts[0], 10);
+        const itemMonthIndex = parseInt(parts[1], 10) - 1;
+        if (filter.type === 'year') {
+          return itemYear === filter.year;
+        }
+        if (filter.type === 'month') {
+          return itemYear === filter.year && itemMonthIndex === filter.monthIndex;
+        }
+      }
+
       const d = new Date(dateStr);
       if (isNaN(d.getTime())) return false;
 
-      if (filter.type === 'all') return true;
-      if (filter.type === 'year') {
-        return d.getFullYear() === filter.year;
-      }
-      if (filter.type === 'month') {
-        return d.getFullYear() === filter.year && d.getMonth() === filter.monthIndex;
-      }
       if (filter.type === 'custom' && filter.startDate && filter.endDate) {
         const start = new Date(filter.startDate);
         const end = new Date(filter.endDate);
@@ -178,7 +187,19 @@ const FinanceEngine = {
 
     // Filter income and calculate total
     const filteredIncome = income.filter(item => matchDate(item.date));
-    const totalIncome = filteredIncome.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+    let totalIncome = filteredIncome.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+
+    // Ensure any project in the filtered period is counted in revenue even if unlinked
+    const linkedProjectIds = new Set(filteredIncome.filter(i => i.projectId).map(i => i.projectId));
+    projects.forEach(proj => {
+      if (matchDate(proj.eventDate) && !linkedProjectIds.has(proj.id)) {
+        const pkg = Number(proj.packageAmount) || 0;
+        const disc = Number(proj.discount) || 0;
+        const net = Math.max(0, pkg - disc);
+        const rcv = Number(proj.receivedAmount) || 0;
+        totalIncome += (rcv > 0 ? rcv : net);
+      }
+    });
 
     // Filter expenses (business expenses only; salary is separate)
     const filteredExpenses = expenses.filter(item => matchDate(item.date));
@@ -200,6 +221,9 @@ const FinanceEngine = {
       return sum + pending;
     }, 0);
 
+    // Total collected income across projects
+    const totalCollected = projects.reduce((sum, proj) => sum + (Number(proj.receivedAmount) || 0), 0);
+
     // Company Fund Cumulative Balance:
     // Starts with initial balance + manual additions + company fund profit shares - fund uses
     let companyFundBalance = Number(settings.initialCompanyFundBalance || 0);
@@ -216,7 +240,19 @@ const FinanceEngine = {
 
     // Add company share of profit from all past periods (or calculate globally)
     // To ensure consistency, calculate all-time net profit company fund share:
-    const allTimeIncome = income.reduce((sum, i) => sum + (Number(i.amount) || 0), 0);
+    const allLinkedProjectIds = new Set(income.filter(i => i.projectId).map(i => i.projectId));
+    let unlinkedAllTimeProjectRevenue = 0;
+    projects.forEach(proj => {
+      if (!allLinkedProjectIds.has(proj.id)) {
+        const pkg = Number(proj.packageAmount) || 0;
+        const disc = Number(proj.discount) || 0;
+        const net = Math.max(0, pkg - disc);
+        const rcv = Number(proj.receivedAmount) || 0;
+        unlinkedAllTimeProjectRevenue += (rcv > 0 ? rcv : net);
+      }
+    });
+
+    const allTimeIncome = income.reduce((sum, i) => sum + (Number(i.amount) || 0), 0) + unlinkedAllTimeProjectRevenue;
     const allTimeExpenses = expenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
     const allTimeNetProfit = this.calculateNetProfit(allTimeIncome, allTimeExpenses);
     const allTimeDistribution = this.distributeProfit(allTimeNetProfit, settings.profitPercentages, settings.customProfitAmounts);
@@ -246,6 +282,7 @@ const FinanceEngine = {
     return {
       period: filter,
       income: totalIncome,
+      collectedIncome: totalCollected,
       expenses: totalExpenses,
       salaries: 0,
       netProfit: netProfit,
