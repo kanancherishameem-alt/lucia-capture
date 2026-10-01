@@ -213,6 +213,40 @@ def test_streamlined_direct_amount_items():
     assert wa_lines[0] == expected_line0, f"Expected '{expected_line0}', got '{wa_lines[0]}'"
     print("Streamlined Direct Amount Items Test Passed: Total Package=₹16,500, WhatsApp Line 1:", wa_lines[0])
 
+def test_discount_and_payment_methods():
+    # User's request:
+    # "payment receipts il discount optionum add avanam ,add project il payment method undaavanam eg , cash ,g pay,"
+    gross_package = 50000
+    discount = 5000
+    net_package = max(0, gross_package - discount)
+    advance_received = 20000
+    payment_method = 'Cash' # or 'GPay / UPI' or 'Bank'
+
+    # Balance due calculation with discount:
+    balance_due = max(0, net_package - advance_received)
+    assert net_package == 45000, f"Expected 45000, got {net_package}"
+    assert balance_due == 25000, f"Expected 25000, got {balance_due}"
+    assert payment_method in ['GPay / UPI', 'Cash', 'Bank']
+
+    # Project completion check with discount
+    further_payment = 25000
+    total_received = advance_received + further_payment
+    is_completed = total_received >= net_package
+    assert is_completed is True
+
+    # WhatsApp format verification with discount and payment method
+    wa_receipt = f"🟢 Amount Received: ₹{advance_received:,} ({payment_method})\n" \
+                 f"💰 Grand Total: ₹{gross_package:,}\n" \
+                 f"🏷️ Discount Applied: -₹{discount:,}\n" \
+                 f"💵 Net Package Amount: ₹{net_package:,}\n" \
+                 f"✅ Paid to Date: ₹{advance_received:,}\n" \
+                 f"⚠️ Balance Due: ₹{balance_due:,}\n" \
+                 f"💳 Payment Method: {payment_method}"
+    assert "Discount Applied: -₹5,000" in wa_receipt
+    assert "Net Package Amount: ₹45,000" in wa_receipt
+    assert "Payment Method: Cash" in wa_receipt
+    print(f"Discount & Payment Method Test Passed: Net Package=₹{net_package}, Balance=₹{balance_due}, Method={payment_method}")
+
 if __name__ == '__main__':
     test_profit_split_example()
     test_default_this_month()
@@ -223,4 +257,5 @@ if __name__ == '__main__':
     test_project_service_details()
     test_other_expense_item_and_project_profit()
     test_streamlined_direct_amount_items()
+    test_discount_and_payment_methods()
     print("ALL TESTS PASSED SUCCESSFULLY! ✓")

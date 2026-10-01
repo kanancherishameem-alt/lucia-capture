@@ -369,7 +369,9 @@ const App = {
         if (btnEl) btnEl.textContent = 'Save Revenue & Bill';
         const delBtn = document.getElementById('btn-delete-income');
         if (delBtn) delBtn.style.display = 'none';
-        this.selectPaymentMethod('inc', 'UPI');
+        const discountInp = document.getElementById('inc-discount');
+        if (discountInp) discountInp.value = '';
+        this.selectPaymentMethod('inc', 'GPay / UPI');
         this.populateIncomeProjectDropdown();
         this.incomeLineItems = [
           { description: 'Wedding Photography Package 01', quantity: 1, rate: 0, amount: 0 }
@@ -411,8 +413,11 @@ const App = {
         this.renderProjectLineItemRows();
         const pkgInp = document.getElementById('proj-package');
         if (pkgInp) pkgInp.value = 12000;
+        const discountInp = document.getElementById('proj-discount');
+        if (discountInp) discountInp.value = '';
         const rcvInp = document.getElementById('proj-received');
         if (rcvInp) rcvInp.value = 0;
+        this.selectPaymentMethod('proj', 'GPay / UPI');
         const otherExpInp = document.getElementById('proj-other-expense');
         if (otherExpInp) otherExpInp.value = '';
         const otherExpNotesInp = document.getElementById('proj-other-expense-notes');
@@ -588,6 +593,9 @@ const App = {
     const totalInp = document.getElementById('inc-total-amount');
     if (totalInp) totalInp.value = inc.totalAmount !== undefined ? inc.totalAmount : inc.amount;
 
+    const discountInp = document.getElementById('inc-discount');
+    if (discountInp) discountInp.value = inc.discount || '';
+
     const amtInp = document.getElementById('inc-amount');
     if (amtInp) amtInp.value = inc.amount;
 
@@ -597,7 +605,7 @@ const App = {
     const notesInp = document.getElementById('inc-notes');
     if (notesInp) notesInp.value = inc.notes || '';
 
-    this.selectPaymentMethod('inc', inc.paymentMethod || 'UPI');
+    this.selectPaymentMethod('inc', inc.paymentMethod || 'GPay / UPI');
 
     const titleEl = document.getElementById('modal-income-title');
     if (titleEl) titleEl.innerHTML = `<svg width="20" height="20" fill="none" stroke="var(--gold-primary)" stroke-width="2.2" viewBox="0 0 24 24" style="vertical-align: middle; margin-right: 6px;"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Edit Revenue & Bill Record`;
@@ -687,8 +695,13 @@ const App = {
     const pkgInp = document.getElementById('proj-package');
     if (pkgInp) pkgInp.value = proj.packageAmount || 0;
 
+    const discountInp = document.getElementById('proj-discount');
+    if (discountInp) discountInp.value = proj.discount || '';
+
     const rcvInp = document.getElementById('proj-received');
     if (rcvInp) rcvInp.value = proj.receivedAmount || 0;
+
+    this.selectPaymentMethod('proj', proj.paymentMethod || 'GPay / UPI');
 
     const dateInp = document.getElementById('proj-date');
     if (dateInp) dateInp.value = proj.eventDate || new Date().toISOString().split('T')[0];
@@ -1267,7 +1280,11 @@ const App = {
     const selector = document.getElementById(`${prefix}-method-selector`);
     if (selector) {
       selector.querySelectorAll('.method-choice').forEach(btn => {
-        btn.classList.toggle('selected', btn.getAttribute('data-method') === method);
+        const m = btn.getAttribute('data-method');
+        const isMatch = m === method || 
+          (method === 'UPI' && (m === 'GPay / UPI' || m === 'GPay')) || 
+          ((method === 'GPay / UPI' || method === 'GPay') && (m === 'UPI' || m === 'GPay / UPI'));
+        btn.classList.toggle('selected', isMatch);
       });
     }
   },
@@ -1281,10 +1298,13 @@ const App = {
 
     let options = '<option value="">-- Direct Client Bill / Custom Event --</option>';
     projects.forEach(p => {
-      const pending = Math.max(0, (Number(p.packageAmount) || 0) - (Number(p.receivedAmount) || 0));
+      const pkg = Number(p.packageAmount) || 0;
+      const disc = Number(p.discount) || 0;
+      const net = Math.max(0, pkg - disc);
+      const pending = Math.max(0, net - (Number(p.receivedAmount) || 0));
       const pendingTxt = pending > 0 ? ` (Pending: ₹${pending.toLocaleString('en-IN')})` : ' (Fully Paid)';
       const isSel = p.id === selectedProjectId ? 'selected' : '';
-      options += `<option value="${p.id}" ${isSel} data-client="${(p.clientName || '').replace(/"/g, '&quot;')}" data-phone="${(p.clientPhone || '').replace(/"/g, '&quot;')}" data-name="${(p.name || '').replace(/"/g, '&quot;')}" data-package="${p.packageAmount || 0}" data-pending="${pending}">${p.name} - ${p.clientName}${pendingTxt}</option>`;
+      options += `<option value="${p.id}" ${isSel} data-client="${(p.clientName || '').replace(/"/g, '&quot;')}" data-phone="${(p.clientPhone || '').replace(/"/g, '&quot;')}" data-name="${(p.name || '').replace(/"/g, '&quot;')}" data-package="${pkg}" data-discount="${disc}" data-pending="${pending}">${p.name} - ${p.clientName}${pendingTxt}</option>`;
     });
     select.innerHTML = options;
   },
@@ -1305,14 +1325,18 @@ const App = {
     const select = document.getElementById('pay-project');
     if (!select) return;
     const projects = window.dataStore.data.projects || [];
-    const pendingProjects = projects.filter(p => (p.packageAmount - p.receivedAmount) > 0);
+    const pendingProjects = projects.filter(p => {
+      const net = Math.max(0, (Number(p.packageAmount) || 0) - (Number(p.discount) || 0));
+      return (net - (Number(p.receivedAmount) || 0)) > 0;
+    });
 
     let options = '';
     if (pendingProjects.length === 0) {
       options = '<option value="">No projects with pending payments</option>';
     } else {
       pendingProjects.forEach(p => {
-        const pending = p.packageAmount - p.receivedAmount;
+        const net = Math.max(0, (Number(p.packageAmount) || 0) - (Number(p.discount) || 0));
+        const pending = Math.max(0, net - (Number(p.receivedAmount) || 0));
         options += `<option value="${p.id}" data-pending="${pending}">${p.name} — Pending: ₹${pending.toLocaleString('en-IN')}</option>`;
       });
     }
@@ -1334,6 +1358,7 @@ const App = {
     const projName = opt.getAttribute('data-name') || '';
     const pkg = Number(opt.getAttribute('data-package')) || 0;
     const pending = Number(opt.getAttribute('data-pending')) || 0;
+    const discount = Number(opt.getAttribute('data-discount')) || 0;
 
     const clientInp = document.getElementById('inc-client-name');
     if (clientInp && (!clientInp.value || clientInp.value === 'Studio Client' || clientInp.value === 'Direct Client')) {
@@ -1350,6 +1375,11 @@ const App = {
 
     const totalInp = document.getElementById('inc-total-amount');
     if (totalInp && (!totalInp.value || totalInp.value === '0')) totalInp.value = pkg;
+
+    const discountInp = document.getElementById('inc-discount');
+    if (discountInp && (!discountInp.value || discountInp.value === '0') && discount > 0) {
+      discountInp.value = discount;
+    }
 
     const amtInp = document.getElementById('inc-amount');
     if (amtInp && (!amtInp.value || amtInp.value === '0')) amtInp.value = pending > 0 ? pending : pkg;
@@ -1374,19 +1404,28 @@ const App = {
 
   updateIncomeLiveBalance() {
     const totalInp = document.getElementById('inc-total-amount');
+    const discountInp = document.getElementById('inc-discount');
     const amtInp = document.getElementById('inc-amount');
     const totalPrev = document.getElementById('inc-preview-total');
     const recPrev = document.getElementById('inc-preview-received');
     const tagPrev = document.getElementById('inc-preview-balance-tag');
 
     const total = totalInp ? FinanceEngine.parseINR(totalInp.value) || 0 : 0;
+    const discount = discountInp ? FinanceEngine.parseINR(discountInp.value) || 0 : 0;
+    const netTotal = Math.max(0, total - discount);
     const received = amtInp ? FinanceEngine.parseINR(amtInp.value) || 0 : 0;
-    const balance = Math.max(0, total - received);
+    const balance = Math.max(0, netTotal - received);
 
-    if (totalPrev) totalPrev.textContent = FinanceEngine.formatINR(total);
+    if (totalPrev) {
+      if (discount > 0) {
+        totalPrev.innerHTML = `${FinanceEngine.formatINR(total)} <span style="font-size: 11px; color: #f87171; font-weight: normal;">(-${FinanceEngine.formatINR(discount)})</span> = <strong>${FinanceEngine.formatINR(netTotal)}</strong>`;
+      } else {
+        totalPrev.textContent = FinanceEngine.formatINR(total);
+      }
+    }
     if (recPrev) recPrev.textContent = FinanceEngine.formatINR(received);
     if (tagPrev) {
-      if (balance <= 0 && total > 0) {
+      if (balance <= 0 && netTotal > 0) {
         tagPrev.style.background = 'rgba(16, 185, 129, 0.15)';
         tagPrev.style.color = '#34d399';
         tagPrev.style.borderColor = 'rgba(16, 185, 129, 0.3)';
@@ -1620,13 +1659,16 @@ const App = {
 
   updateProjectLiveProfit() {
     const pkgInp = document.getElementById('proj-package');
+    const discountInp = document.getElementById('proj-discount');
     const expInp = document.getElementById('proj-other-expense');
     const badge = document.getElementById('proj-live-net-profit');
     if (!badge) return;
 
     const pkg = pkgInp ? FinanceEngine.parseINR(pkgInp.value) || 0 : 0;
+    const discount = discountInp ? FinanceEngine.parseINR(discountInp.value) || 0 : 0;
+    const netPkg = Math.max(0, pkg - discount);
     const exp = expInp ? FinanceEngine.parseINR(expInp.value) || 0 : 0;
-    const profit = pkg - exp;
+    const profit = netPkg - exp;
 
     badge.textContent = `Est. Profit: ${FinanceEngine.formatINR(profit)}`;
     if (profit < 0) {
@@ -1685,9 +1727,10 @@ const App = {
     }
 
     const totalAmount = FinanceEngine.parseINR(document.getElementById('inc-total-amount')?.value) || 0;
+    const discount = FinanceEngine.parseINR(document.getElementById('inc-discount')?.value) || 0;
     const amount = FinanceEngine.parseINR(document.getElementById('inc-amount')?.value) || 0;
     const date = document.getElementById('inc-date')?.value || new Date().toISOString().split('T')[0];
-    const paymentMethod = document.getElementById('inc-method')?.value || 'UPI';
+    const paymentMethod = document.getElementById('inc-method')?.value || 'GPay / UPI';
     const notes = (document.getElementById('inc-notes')?.value || '').trim();
 
     if (amount <= 0) {
@@ -1695,8 +1738,9 @@ const App = {
       return;
     }
 
-    const finalTotal = totalAmount > 0 ? totalAmount : amount;
-    const balanceDue = Math.max(0, finalTotal - amount);
+    const packageTotal = totalAmount > 0 ? totalAmount : amount;
+    const netTotal = Math.max(0, packageTotal - discount);
+    const balanceDue = Math.max(0, netTotal - amount);
 
     const validItems = (this.incomeLineItems || [])
       .filter(it => it.description && it.description.trim())
@@ -1714,8 +1758,8 @@ const App = {
     const items = validItems.length > 0 ? validItems : [{
       description: projectName || category || 'Studio Photography & Videography Service',
       quantity: 1,
-      rate: finalTotal,
-      amount: finalTotal
+      rate: netTotal,
+      amount: netTotal
     }];
 
     let savedId = null;
@@ -1728,7 +1772,9 @@ const App = {
         clientName,
         clientPhone,
         category,
-        totalAmount: finalTotal,
+        totalAmount: packageTotal,
+        discount,
+        netAmount: netTotal,
         amount,
         balanceDue,
         date,
@@ -1750,7 +1796,9 @@ const App = {
         clientName,
         clientPhone,
         category,
-        totalAmount: finalTotal,
+        totalAmount: packageTotal,
+        discount,
+        netAmount: netTotal,
         amount,
         balanceDue,
         date,
@@ -1790,10 +1838,14 @@ const App = {
     const total = (inc.totalAmount !== undefined && inc.totalAmount !== null && inc.totalAmount > 0)
       ? Number(inc.totalAmount)
       : Number(inc.amount);
+    const discount = (inc.discount !== undefined && inc.discount !== null && Number(inc.discount) > 0)
+      ? Number(inc.discount)
+      : 0;
+    const netTotal = inc.netAmount ? Number(inc.netAmount) : Math.max(0, total - discount);
     const received = Number(inc.amount) || 0;
     const balance = (inc.balanceDue !== undefined && inc.balanceDue !== null)
       ? Number(inc.balanceDue)
-      : Math.max(0, total - received);
+      : Math.max(0, netTotal - received);
     const refNo = `REC-${inc.id.slice(-6).toUpperCase()}`;
 
     let statusLine = balance > 0 
@@ -1818,10 +1870,11 @@ const App = {
       (inc.projectName ? `Project: ${inc.projectName}\n` : '') +
       (inc.category ? `Category: ${inc.category}\n` : '') +
       `Date: ${inc.date}\n` +
-      `Payment Mode: ${inc.paymentMethod || 'UPI'}\n` +
+      `Payment Mode: ${inc.paymentMethod || 'GPay / UPI'}\n` +
       `---------------------------\n` +
       servicesBlock +
       `Total Package: ${FinanceEngine.formatINR(total)}\n` +
+      (discount > 0 ? `Discount Applied: -${FinanceEngine.formatINR(discount)}\nNet Package Amount: ${FinanceEngine.formatINR(netTotal)}\n` : '') +
       `Amount Received: ${FinanceEngine.formatINR(received)}\n` +
       `${statusLine}\n` +
       `---------------------------\n` +
@@ -1902,7 +1955,9 @@ const App = {
     const clientName = document.getElementById('proj-client').value.trim();
     const clientPhone = document.getElementById('proj-phone').value.trim();
     const packageAmount = FinanceEngine.parseINR(document.getElementById('proj-package').value);
+    const discount = FinanceEngine.parseINR(document.getElementById('proj-discount')?.value || '0');
     const receivedAmount = FinanceEngine.parseINR(document.getElementById('proj-received').value);
+    const paymentMethod = document.getElementById('proj-method')?.value || 'GPay / UPI';
     const eventDate = document.getElementById('proj-date').value;
     const status = document.getElementById('proj-status').value;
     const location = document.getElementById('proj-location').value.trim();
@@ -1935,7 +1990,9 @@ const App = {
         clientName,
         clientPhone,
         packageAmount,
+        discount,
         receivedAmount,
+        paymentMethod,
         eventDate,
         status,
         location,
@@ -1958,7 +2015,7 @@ const App = {
             category: 'Other',
             amount: otherExpenseAmount,
             date: eventDate || new Date().toISOString().split('T')[0],
-            paymentMethod: 'UPI',
+            paymentMethod: paymentMethod || 'GPay / UPI',
             notes: otherExpenseNotes || `Other project expense for ${name}`
           });
         }
@@ -1966,6 +2023,9 @@ const App = {
 
       this.editingProjectId = null;
       e.target.reset();
+      const discountInp = document.getElementById('proj-discount');
+      if (discountInp) discountInp.value = '';
+      this.selectPaymentMethod('proj', 'GPay / UPI');
       const otherExpInp = document.getElementById('proj-other-expense');
       if (otherExpInp) otherExpInp.value = '';
       const otherExpNotesInp = document.getElementById('proj-other-expense-notes');
@@ -1981,7 +2041,9 @@ const App = {
         clientName,
         clientPhone,
         packageAmount,
+        discount,
         receivedAmount,
+        paymentMethod,
         eventDate,
         status,
         location,
@@ -2001,6 +2063,9 @@ const App = {
       }
 
       e.target.reset();
+      const discountInp = document.getElementById('proj-discount');
+      if (discountInp) discountInp.value = '';
+      this.selectPaymentMethod('proj', 'GPay / UPI');
       const otherExpInp = document.getElementById('proj-other-expense');
       if (otherExpInp) otherExpInp.value = '';
       const otherExpNotesInp = document.getElementById('proj-other-expense-notes');
@@ -2162,9 +2227,11 @@ const App = {
     const projectIncomes = (window.dataStore.data.income || []).filter(i => i.projectId === proj.id);
     const projectExpenses = (window.dataStore.data.expenses || []).filter(e => e.projectId === proj.id);
 
+    const discount = Number(proj.discount) || 0;
+    const netPackage = Math.max(0, (Number(proj.packageAmount) || 0) - discount);
     const totalIncome = projectIncomes.reduce((s, i) => s + (Number(i.amount) || 0), 0);
     const totalExpenses = projectExpenses.reduce((s, e) => s + (Number(e.amount) || 0), 0);
-    const pending = Math.max(0, proj.packageAmount - proj.receivedAmount);
+    const pending = Math.max(0, netPackage - (Number(proj.receivedAmount) || 0));
     const profit = totalIncome - totalExpenses;
 
     const projItems = (proj.items && Array.isArray(proj.items) && proj.items.length > 0)
@@ -2217,6 +2284,11 @@ const App = {
           <span style="color: var(--text-secondary); font-size: 13px;">Event Date</span>
           <span style="font-weight: 700;">${proj.eventDate}</span>
         </div>
+        ${proj.paymentMethod ? `
+        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+          <span style="color: var(--text-secondary); font-size: 13px;">Payment Method</span>
+          <span style="font-weight: 700; color: var(--gold-primary);"><span class="method-tag">${proj.paymentMethod}</span></span>
+        </div>` : ''}
         ${proj.location ? `
         <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
           <span style="color: var(--text-secondary); font-size: 13px;">Location</span>
@@ -2226,6 +2298,15 @@ const App = {
           <span style="color: var(--text-secondary); font-size: 13px;">Package Total</span>
           <span style="font-size: 16px; font-weight: 800;">${FinanceEngine.formatINR(proj.packageAmount)}</span>
         </div>
+        ${discount > 0 ? `
+        <div style="display: flex; justify-content: space-between; margin-top: 6px;">
+          <span style="color: var(--text-secondary); font-size: 13px;">Discount</span>
+          <span style="font-size: 14px; font-weight: 700; color: #f87171;">-${FinanceEngine.formatINR(discount)}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-top: 6px;">
+          <span style="color: var(--text-secondary); font-size: 13px;">Net Package</span>
+          <span style="font-size: 16px; font-weight: 800; color: var(--gold-primary);">${FinanceEngine.formatINR(netPackage)}</span>
+        </div>` : ''}
         <div style="display: flex; justify-content: space-between; margin-top: 6px;">
           <span style="color: var(--text-secondary); font-size: 13px;">Total Received</span>
           <span style="font-size: 16px; font-weight: 800; color: var(--accent-income);">${FinanceEngine.formatINR(proj.receivedAmount)}</span>
@@ -2549,15 +2630,17 @@ const App = {
 
     container.innerHTML = projects.map(proj => {
       const pkg = Number(proj.packageAmount) || 0;
+      const discount = Number(proj.discount) || 0;
+      const netPkg = Math.max(0, pkg - discount);
       const rcv = Number(proj.receivedAmount) || 0;
-      const pending = Math.max(0, pkg - rcv);
+      const pending = Math.max(0, netPkg - rcv);
 
       // Calculate project specific expenses
       const projExpenses = (window.dataStore.data.expenses || [])
         .filter(e => e.projectId === proj.id)
         .reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
 
-      const profit = pkg - projExpenses;
+      const profit = netPkg - projExpenses;
 
       let statusClass = 'pending';
       if (proj.status === 'Completed') statusClass = 'completed';
@@ -2577,8 +2660,8 @@ const App = {
 
             <div class="project-metrics-grid">
               <div class="metric-item">
-                <span class="metric-label">Package</span>
-                <span class="metric-val">${FinanceEngine.formatINR(pkg)}</span>
+                <span class="metric-label">${discount > 0 ? 'Net Package' : 'Package'}</span>
+                <span class="metric-val">${FinanceEngine.formatINR(discount > 0 ? netPkg : pkg)}${discount > 0 ? `<span style="font-size:10px; color:#f87171; display:block; font-weight: normal;">(Disc. -${FinanceEngine.formatINR(discount)})</span>` : ''}</span>
               </div>
               <div class="metric-item">
                 <span class="metric-label">Received</span>
@@ -3362,7 +3445,9 @@ const App = {
       const yr = (inv.issueDate || new Date().toISOString().split('T')[0]).slice(0, 4);
       const paid = Number(inv.paidAmount) || 0;
       const total = Number(inv.totalAmount) || paid;
-      const due = Number(inv.balanceDue) || 0;
+      const discount = Number(inv.discount) || 0;
+      const netAmount = Math.max(0, total - discount);
+      const due = Number(inv.balanceDue !== undefined ? inv.balanceDue : Math.max(0, netAmount - paid));
       receiptData = {
         type: 'invoice',
         id: inv.id,
@@ -3376,9 +3461,11 @@ const App = {
         amountReceived: paid,
         previousPaid: 0,
         paidAmount: paid,
+        discount,
+        netAmount,
         totalAmount: total,
         balanceDue: due,
-        paymentMethod: 'UPI',
+        paymentMethod: inv.paymentMethod || 'GPay / UPI',
         notes: inv.notes,
         items: (inv.items && inv.items.length > 0) ? inv.items : []
       };
@@ -3387,6 +3474,8 @@ const App = {
       if (!proj) return;
       const yr = (proj.eventDate || new Date().toISOString().split('T')[0]).slice(0, 4);
       const pkg = Number(proj.packageAmount) || 0;
+      const discount = Number(proj.discount) || 0;
+      const netPkg = Math.max(0, pkg - discount);
       const rcv = Number(proj.receivedAmount) || 0;
       receiptData = {
         type: 'project',
@@ -3401,9 +3490,11 @@ const App = {
         amountReceived: rcv,
         previousPaid: 0,
         paidAmount: rcv,
+        discount,
+        netAmount: netPkg,
         totalAmount: pkg,
-        balanceDue: Math.max(0, pkg - rcv),
-        paymentMethod: 'Direct Studio',
+        balanceDue: Math.max(0, netPkg - rcv),
+        paymentMethod: proj.paymentMethod || 'GPay / UPI',
         notes: proj.location ? `Shoot Location: ${proj.location}` : '',
         items: (proj.items && proj.items.length > 0) ? proj.items : []
       };
@@ -3418,6 +3509,12 @@ const App = {
       const totalAmount = (inc.totalAmount !== undefined && inc.totalAmount !== null && inc.totalAmount > 0)
         ? Number(inc.totalAmount)
         : (proj ? (Number(proj.packageAmount) || 0) : Number(inc.amount));
+      const discount = (inc.discount !== undefined && inc.discount !== null && Number(inc.discount) >= 0)
+        ? Number(inc.discount)
+        : (proj ? (Number(proj.discount) || 0) : 0);
+      const netAmount = (inc.netAmount !== undefined && inc.netAmount !== null && Number(inc.netAmount) > 0)
+        ? Number(inc.netAmount)
+        : Math.max(0, totalAmount - discount);
       const amountReceived = Number(inc.amount) || 0;
 
       let previousPaid = 0;
@@ -3436,13 +3533,13 @@ const App = {
         }
         previousPaid = found ? sumBefore : Math.max(0, (Number(proj.receivedAmount) || 0) - amountReceived);
       } else {
-        const dueVal = inc.balanceDue !== undefined ? Number(inc.balanceDue) : Math.max(0, totalAmount - amountReceived);
-        previousPaid = Math.max(0, totalAmount - dueVal - amountReceived);
+        const dueVal = inc.balanceDue !== undefined ? Number(inc.balanceDue) : Math.max(0, netAmount - amountReceived);
+        previousPaid = Math.max(0, netAmount - dueVal - amountReceived);
       }
       const totalPaid = previousPaid + amountReceived;
       const balanceDue = (inc.balanceDue !== undefined && inc.balanceDue !== null)
         ? Number(inc.balanceDue)
-        : Math.max(0, totalAmount - totalPaid);
+        : Math.max(0, netAmount - totalPaid);
 
       const yr = (inc.date || new Date().toISOString().split('T')[0]).slice(0, 4);
       receiptData = {
@@ -3458,9 +3555,11 @@ const App = {
         amountReceived,
         previousPaid,
         paidAmount: totalPaid,
+        discount,
+        netAmount,
         totalAmount,
         balanceDue,
-        paymentMethod: inc.paymentMethod || 'Cash',
+        paymentMethod: inc.paymentMethod || (proj ? proj.paymentMethod : 'GPay / UPI') || 'GPay / UPI',
         notes: inc.notes,
         items: (inc.items && inc.items.length > 0) ? inc.items : ((proj && proj.items && proj.items.length > 0) ? proj.items : [])
       };
@@ -3586,6 +3685,16 @@ const App = {
                 <td>Total Package Fee</td>
                 <td class="a4-td-val">Rs. ${Number(receiptData.totalAmount || 0).toLocaleString('en-IN')}</td>
               </tr>
+              ${receiptData.discount > 0 ? `
+              <tr>
+                <td style="color: #dc2626;">Discount Applied</td>
+                <td class="a4-td-val" style="color: #dc2626; font-weight: 700;">- Rs. ${Number(receiptData.discount).toLocaleString('en-IN')}</td>
+              </tr>
+              <tr>
+                <td style="font-weight: 700; color: #0f172a;">Net Package Amount</td>
+                <td class="a4-td-val" style="font-weight: 800; color: #d97706;">Rs. ${Number(receiptData.netAmount || (receiptData.totalAmount - receiptData.discount)).toLocaleString('en-IN')}</td>
+              </tr>
+              ` : ''}
               <tr>
                 <td>Current Payment</td>
                 <td class="a4-td-val" style="color: #16a34a;">Rs. ${Number(receiptData.amountReceived || 0).toLocaleString('en-IN')}</td>
@@ -3607,11 +3716,11 @@ const App = {
             <table class="a4-table">
               <tr>
                 <td>Payment Method</td>
-                <td class="a4-td-val">${receiptData.paymentMethod || 'UPI'}</td>
+                <td class="a4-td-val" style="font-weight: 700; color: #0f172a;">${receiptData.paymentMethod || 'GPay / UPI'}</td>
               </tr>
               <tr>
                 <td>Mode / Type</td>
-                <td class="a4-td-val">${receiptData.paymentMethod === 'Cash' ? 'Offline Cash' : 'Online Digital'}</td>
+                <td class="a4-td-val">${receiptData.paymentMethod === 'Cash' ? 'Offline Cash' : (receiptData.paymentMethod === 'Bank' ? 'Direct Bank Transfer' : 'Online Digital / UPI')}</td>
               </tr>
             </table>
 
@@ -3719,12 +3828,17 @@ const App = {
     }
 
     if (r.amountReceived !== undefined) {
-      text += `🟢 *Amount Received:* ${FinanceEngine.formatINR(r.amountReceived)} (${r.paymentMethod || 'UPI'})\n`;
+      text += `🟢 *Amount Received:* ${FinanceEngine.formatINR(r.amountReceived)} (${r.paymentMethod || 'GPay / UPI'})\n`;
     }
 
-    text += `💰 *Grand Total:* ${FinanceEngine.formatINR(r.totalAmount)}\n` +
-      `✅ *Paid to Date:* ${FinanceEngine.formatINR(r.paidAmount)}\n` +
+    text += `💰 *Grand Total:* ${FinanceEngine.formatINR(r.totalAmount)}\n`;
+    if (r.discount && Number(r.discount) > 0) {
+      text += `🏷️ *Discount Applied:* -${FinanceEngine.formatINR(r.discount)}\n` +
+        `💵 *Net Package Amount:* ${FinanceEngine.formatINR(r.netAmount || (r.totalAmount - r.discount))}\n`;
+    }
+    text += `✅ *Paid to Date:* ${FinanceEngine.formatINR(r.paidAmount)}\n` +
       `⚠️ *Balance Due:* ${FinanceEngine.formatINR(r.balanceDue)}\n` +
+      `💳 *Payment Method:* ${r.paymentMethod || 'GPay / UPI'}\n` +
       `━━━━━━━━━━━━━━━━━━━━━━\n` +
       `🏦 *Payment Settlement Details:*\n` +
       `▸ *UPI ID:* ${billing.upiId}\n`;

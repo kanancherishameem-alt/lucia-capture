@@ -451,10 +451,12 @@ class DataStore {
 
   // --- ACTIONS ---
 
-  addIncome({ projectId, projectName, clientName, clientPhone, amount, totalAmount, balanceDue, category, date, paymentMethod, notes, items }) {
+  addIncome({ projectId, projectName, clientName, clientPhone, amount, totalAmount, discount = 0, balanceDue, category, date, paymentMethod, notes, items }) {
     const rcv = Number(amount) || 0;
     const total = totalAmount !== undefined ? (Number(totalAmount) || 0) : rcv;
-    const due = balanceDue !== undefined ? (Number(balanceDue) || 0) : Math.max(0, total - rcv);
+    const disc = Number(discount) || 0;
+    const net = Math.max(0, total - disc);
+    const due = balanceDue !== undefined ? (Number(balanceDue) || 0) : Math.max(0, net - rcv);
 
     const newIncome = {
       id: 'inc-' + Date.now(),
@@ -463,11 +465,13 @@ class DataStore {
       clientName: clientName || '',
       clientPhone: clientPhone || '',
       amount: rcv,
+      discount: disc,
       totalAmount: total > 0 ? total : rcv,
+      netAmount: net,
       balanceDue: due,
       category: category || 'Wedding Shoot',
       date: date || new Date().toISOString().split('T')[0],
-      paymentMethod: paymentMethod || 'UPI',
+      paymentMethod: paymentMethod || 'GPay / UPI',
       notes: notes || '',
       items: Array.isArray(items) ? items : []
     };
@@ -479,7 +483,8 @@ class DataStore {
       const project = this.data.projects.find(p => p.id === projectId);
       if (project) {
         project.receivedAmount = (Number(project.receivedAmount) || 0) + newIncome.amount;
-        if (project.receivedAmount >= project.packageAmount) {
+        const projNet = Math.max(0, (Number(project.packageAmount) || 0) - (Number(project.discount) || 0));
+        if (project.receivedAmount >= projNet) {
           if (project.status === 'Payment Pending') {
             project.status = 'Completed';
           }
@@ -514,9 +519,12 @@ class DataStore {
     return newExpense;
   }
 
-  addProject({ name, clientName, clientPhone, packageAmount, receivedAmount, eventDate, status, location, notes, items }) {
+  addProject({ name, clientName, clientPhone, packageAmount, discount = 0, receivedAmount, paymentMethod, eventDate, status, location, notes, items }) {
     const pkg = Number(packageAmount) || 0;
+    const disc = Number(discount) || 0;
+    const netPkg = Math.max(0, pkg - disc);
     const rcv = Number(receivedAmount) || 0;
+    const method = paymentMethod || 'GPay / UPI';
 
     const newProject = {
       id: 'proj-' + Date.now(),
@@ -524,9 +532,12 @@ class DataStore {
       clientName: clientName || '',
       clientPhone: clientPhone || '',
       packageAmount: pkg,
+      discount: disc,
+      netPackageAmount: netPkg,
       receivedAmount: rcv,
+      paymentMethod: method,
       eventDate: eventDate || new Date().toISOString().split('T')[0],
-      status: status || (rcv < pkg ? 'Payment Pending' : 'Ongoing'),
+      status: status || (rcv < netPkg ? 'Payment Pending' : 'Ongoing'),
       location: location || '',
       notes: notes || '',
       items: Array.isArray(items) ? items : []
@@ -543,11 +554,13 @@ class DataStore {
         clientName: newProject.clientName,
         clientPhone: newProject.clientPhone,
         amount: rcv,
+        discount: disc,
         totalAmount: pkg,
-        balanceDue: Math.max(0, pkg - rcv),
+        netAmount: netPkg,
+        balanceDue: Math.max(0, netPkg - rcv),
         items: newProject.items && newProject.items.length > 0 ? JSON.parse(JSON.stringify(newProject.items)) : [],
         date: eventDate || new Date().toISOString().split('T')[0],
-        paymentMethod: 'UPI',
+        paymentMethod: method,
         notes: `Advance payment for ${newProject.name}`
       });
     }
@@ -858,6 +871,7 @@ class DataStore {
     const oldName = proj.name;
 
     if (updatedData.packageAmount !== undefined) updatedData.packageAmount = Number(updatedData.packageAmount) || 0;
+    if (updatedData.discount !== undefined) updatedData.discount = Number(updatedData.discount) || 0;
     if (updatedData.receivedAmount !== undefined) updatedData.receivedAmount = Number(updatedData.receivedAmount) || 0;
 
     Object.assign(proj, updatedData);
@@ -903,9 +917,10 @@ class DataStore {
         if (proj) {
           const delta = newAmount - oldAmount;
           proj.receivedAmount = Math.max(0, (Number(proj.receivedAmount) || 0) + delta);
-          if (proj.receivedAmount >= proj.packageAmount && proj.status === 'Payment Pending') {
+          const net = Math.max(0, (Number(proj.packageAmount) || 0) - (Number(proj.discount) || 0));
+          if (proj.receivedAmount >= net && proj.status === 'Payment Pending') {
             proj.status = 'Completed';
-          } else if (proj.receivedAmount < proj.packageAmount && proj.status === 'Completed') {
+          } else if (proj.receivedAmount < net && proj.status === 'Completed') {
             proj.status = 'Payment Pending';
           }
         }
@@ -916,7 +931,8 @@ class DataStore {
         const oldProj = (this.data.projects || []).find(p => p.id === oldProjectId);
         if (oldProj) {
           oldProj.receivedAmount = Math.max(0, (Number(oldProj.receivedAmount) || 0) - oldAmount);
-          if (oldProj.receivedAmount < oldProj.packageAmount && oldProj.status === 'Completed') {
+          const oldNet = Math.max(0, (Number(oldProj.packageAmount) || 0) - (Number(oldProj.discount) || 0));
+          if (oldProj.receivedAmount < oldNet && oldProj.status === 'Completed') {
             oldProj.status = 'Payment Pending';
           }
         }
@@ -925,7 +941,8 @@ class DataStore {
         const newProj = (this.data.projects || []).find(p => p.id === newProjectId);
         if (newProj) {
           newProj.receivedAmount = (Number(newProj.receivedAmount) || 0) + newAmount;
-          if (newProj.receivedAmount >= newProj.packageAmount && newProj.status === 'Payment Pending') {
+          const newNet = Math.max(0, (Number(newProj.packageAmount) || 0) - (Number(newProj.discount) || 0));
+          if (newProj.receivedAmount >= newNet && newProj.status === 'Payment Pending') {
             newProj.status = 'Completed';
           }
         }

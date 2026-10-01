@@ -193,8 +193,10 @@ const FinanceEngine = {
     // Pending Payments calculation (across all active projects)
     const pendingPayments = projects.reduce((sum, proj) => {
       const packageAmt = Number(proj.packageAmount) || 0;
+      const discount = Number(proj.discount) || 0;
+      const netPkg = Math.max(0, packageAmt - discount);
       const receivedAmt = Number(proj.receivedAmount) || 0;
-      const pending = Math.max(0, packageAmt - receivedAmt);
+      const pending = Math.max(0, netPkg - receivedAmt);
       return sum + pending;
     }, 0);
 
