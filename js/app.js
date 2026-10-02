@@ -848,6 +848,11 @@ const App = {
     const entry = (window.dataStore.data.companyFundLedger || []).find(e => e.id === id);
     if (!entry) return;
 
+    if (entry.expenseId) {
+      this.openEditExpenseModal(entry.expenseId);
+      return;
+    }
+
     this.editingFundId = id;
 
     const typeInp = document.getElementById('fund-tx-type');
@@ -2753,13 +2758,15 @@ const App = {
           displayMeta: `${w.paymentMethod || 'Bank'} • Payout`
         };
       }),
-      ...companyFundLedger.map(f => ({
-        ...f,
-        txType: f.type === 'addition' ? 'fund-deposit' : 'fund-expense',
-        collection: 'companyFundLedger',
-        displayTitle: f.type === 'addition' ? `Fund Deposit: ${f.description || f.category || 'Capital'}` : `Fund Purchase: ${f.description || f.category || 'Asset'}`,
-        displayMeta: `${f.paymentMethod || 'Fund Reserve'} • ${f.category || 'Reserve'}`
-      }))
+      ...companyFundLedger
+        .filter(f => !f.expenseId && !f.id?.startsWith('cf-exp-'))
+        .map(f => ({
+          ...f,
+          txType: f.type === 'addition' ? 'fund-deposit' : 'fund-expense',
+          collection: 'companyFundLedger',
+          displayTitle: f.type === 'addition' ? `Fund Deposit: ${f.description || f.category || 'Capital'}` : `Fund Purchase: ${f.description || f.category || 'Asset'}`,
+          displayMeta: `${f.paymentMethod || 'Fund Reserve'} • ${f.category || 'Reserve'}`
+        }))
     ].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
 
     let list = combined;
@@ -4400,15 +4407,22 @@ const App = {
 
     listContainer.innerHTML = ledger.map(entry => {
       const isUse = entry.type === 'usage';
+      const isExp = Boolean(entry.expenseId || entry.id?.startsWith('cf-exp-'));
       const sign = isUse ? '−' : '+';
       const color = isUse ? 'var(--accent-expense)' : 'var(--gold-primary)';
+      const badge = isExp 
+        ? '<span class="badge-tag" style="background: rgba(239, 68, 68, 0.15); color: #f87171; border-color: rgba(239, 68, 68, 0.3); font-size: 10px; margin-left: 6px; padding: 1px 6px;">Expense</span>' 
+        : '';
 
       return `
         <div class="transaction-item">
           <div class="transaction-left">
             <div class="tx-icon" style="background: ${isUse ? 'var(--accent-expense-bg)' : 'var(--gold-subtle)'}; color: ${color};">${sign}</div>
             <div>
-              <div class="tx-title">${entry.category}: ${entry.description}</div>
+              <div class="tx-title" style="display: flex; align-items: center; flex-wrap: wrap; gap: 4px;">
+                <span>${entry.category}: ${entry.description}</span>
+                ${badge}
+              </div>
               <div class="tx-meta">
                 <span>${entry.date}</span>
                 <span class="method-tag">${entry.paymentMethod}</span>

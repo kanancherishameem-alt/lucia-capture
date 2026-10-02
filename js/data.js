@@ -418,6 +418,7 @@ class DataStore {
 
         // Reconcile projects so all projects automatically reflect in Dashboard revenue & profit
         this.reconcileProjectsWithIncome();
+        this.reconcileCompanyFundWithExpenses();
       } else {
         this.resetToDefaults();
       }
@@ -497,6 +498,43 @@ class DataStore {
     }
   }
 
+  /**
+   * Automatically ensure every expense has a corresponding usage in companyFundLedger
+   * so expenses automatically decrease Company Fund balance and appear in fund records.
+   */
+  reconcileCompanyFundWithExpenses() {
+    if (!this.data || !Array.isArray(this.data.expenses)) return;
+    if (!Array.isArray(this.data.companyFundLedger)) this.data.companyFundLedger = [];
+
+    const existingExpenseFundIds = new Set(
+      this.data.companyFundLedger
+        .filter(entry => entry.expenseId || entry.id?.startsWith('cf-exp-'))
+        .map(entry => entry.expenseId || entry.id.replace('cf-exp-', ''))
+    );
+
+    let changed = false;
+    this.data.expenses.forEach(exp => {
+      if (exp.id && !existingExpenseFundIds.has(exp.id) && Number(exp.amount) > 0) {
+        this.data.companyFundLedger.unshift({
+          id: 'cf-exp-' + exp.id,
+          expenseId: exp.id,
+          type: 'usage',
+          category: exp.category || 'Expense',
+          description: `${exp.projectName || 'Studio Overhead'}${exp.notes ? ' - ' + exp.notes : ''}`,
+          amount: Number(exp.amount) || 0,
+          date: exp.date || new Date().toISOString().split('T')[0],
+          paymentMethod: exp.paymentMethod || 'UPI'
+        });
+        existingExpenseFundIds.add(exp.id);
+        changed = true;
+      }
+    });
+
+    if (changed) {
+      this.save();
+    }
+  }
+
   // --- ACTIONS ---
 
   addIncome({ projectId, projectName, clientName, clientPhone, amount, totalAmount, discount = 0, balanceDue, category, date, paymentMethod, notes, items }) {
@@ -563,6 +601,22 @@ class DataStore {
     };
 
     this.data.expenses.unshift(newExpense);
+
+    // Automatically record deduction in Company Fund so expenses automatically decrease company fund
+    if (newExpense.amount > 0) {
+      if (!Array.isArray(this.data.companyFundLedger)) this.data.companyFundLedger = [];
+      this.data.companyFundLedger.unshift({
+        id: 'cf-exp-' + newExpense.id,
+        expenseId: newExpense.id,
+        type: 'usage',
+        category: newExpense.category || 'Expense',
+        description: `${newExpense.projectName || 'Studio Overhead'}${newExpense.notes ? ' - ' + newExpense.notes : ''}`,
+        amount: newExpense.amount,
+        date: newExpense.date,
+        paymentMethod: newExpense.paymentMethod || 'UPI'
+      });
+    }
+
     this.save();
     return newExpense;
   }
@@ -725,19 +779,29 @@ class DataStore {
   setCompanyFundBalance(targetBalance) {
     const target = Number(targetBalance) || 0;
     
-    // Calculate ledger net difference (additions - usages)
+    // Calculate ledger net difference (additions - usages, including expenses)
     const ledgerDiff = (this.data.companyFundLedger || []).reduce((sum, entry) => {
       const amt = Number(entry.amount) || 0;
       return entry.type === 'addition' ? sum + amt : sum - amt;
     }, 0);
 
-    const allTimeIncome = (this.data.income || []).reduce((sum, i) => sum + (Number(i.amount) || 0), 0);
-    const allTimeExpenses = (this.data.expenses || []).reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
-    const allTimeNetProfit = FinanceEngine.calculateNetProfit(allTimeIncome, allTimeExpenses);
-    const allTimeDist = FinanceEngine.distributeProfit(allTimeNetProfit, this.data.settings.profitPercentages, this.data.settings.customProfitAmounts);
+    const allLinkedProjectIds = new Set((this.data.income || []).filter(i => i.projectId).map(i => i.projectId));
+    let unlinkedAllTimeProjectRevenue = 0;
+    (this.data.projects || []).forEach(proj => {
+      if (!allLinkedProjectIds.has(proj.id)) {
+        const pkg = Number(proj.packageAmount) || 0;
+        const disc = Number(proj.discount) || 0;
+        const net = Math.max(0, pkg - disc);
+        const rcv = Number(proj.receivedAmount) || 0;
+        unlinkedAllTimeProjectRevenue += (rcv > 0 ? rcv : net);
+      }
+    });
+
+    const allTimeIncome = (this.data.income || []).reduce((sum, i) => sum + (Number(i.amount) || 0), 0) + unlinkedAllTimeProjectRevenue;
+    const allTimeRevenueDist = FinanceEngine.distributeProfit(allTimeIncome, this.data.settings.profitPercentages, this.data.settings.customProfitAmounts);
 
     // Set initial balance so total matches target exactly
-    this.data.settings.initialCompanyFundBalance = target - (ledgerDiff + allTimeDist.companyFund);
+    this.data.settings.initialCompanyFundBalance = target - (ledgerDiff + allTimeRevenueDist.companyFund);
     this.save();
     return true;
   }
@@ -1050,6 +1114,19 @@ class DataStore {
     if (projName) updatedData.projectName = projName;
 
     Object.assign(exp, updatedData);
+
+    // Keep linked company fund deduction entry in sync
+    const cf = (this.data.companyFundLedger || []).find(e => e.expenseId === id || e.id === 'cf-exp-' + id);
+    if (cf) {
+      if (updatedData.amount !== undefined) cf.amount = Number(updatedData.amount) || 0;
+      if (updatedData.category) cf.category = updatedData.category;
+      if (updatedData.date) cf.date = updatedData.date;
+      if (updatedData.paymentMethod) cf.paymentMethod = updatedData.paymentMethod;
+      const pName = exp.projectName || 'Studio Overhead';
+      const nts = exp.notes || '';
+      cf.description = `${pName}${nts ? ' - ' + nts : ''}`;
+    }
+
     this.save();
     return exp;
   }
@@ -1075,6 +1152,18 @@ class DataStore {
     if (updatedData.amount !== undefined) updatedData.amount = Number(updatedData.amount) || 0;
 
     Object.assign(entry, updatedData);
+
+    // If this entry is linked to an expense, keep expense in sync
+    if (entry.expenseId) {
+      const exp = (this.data.expenses || []).find(e => e.id === entry.expenseId);
+      if (exp) {
+        if (updatedData.amount !== undefined) exp.amount = Number(updatedData.amount) || 0;
+        if (updatedData.category) exp.category = updatedData.category;
+        if (updatedData.date) exp.date = updatedData.date;
+        if (updatedData.paymentMethod) exp.paymentMethod = updatedData.paymentMethod;
+      }
+    }
+
     this.save();
     return entry;
   }
@@ -1098,6 +1187,20 @@ class DataStore {
           }
         }
       }
+
+      // If deleting an expense, also remove its deduction from company fund ledger
+      if (collectionName === 'expenses') {
+        this.data.companyFundLedger = (this.data.companyFundLedger || []).filter(
+          e => e.expenseId !== id && e.id !== 'cf-exp-' + id
+        );
+      }
+
+      // If deleting from company fund ledger and it's linked to an expense, also remove from expenses
+      if (collectionName === 'companyFundLedger' && target && (target.expenseId || target.id?.startsWith('cf-exp-'))) {
+        const expId = target.expenseId || target.id.replace('cf-exp-', '');
+        this.data.expenses = (this.data.expenses || []).filter(e => e.id !== expId);
+      }
+
       this.data[collectionName] = this.data[collectionName].filter(item => item.id !== id);
       this.save();
       return true;
@@ -1109,6 +1212,11 @@ class DataStore {
     const proj = (this.data.projects || []).find(p => p.id === projectId);
     if (!proj) return false;
 
+    // Collect linked expense IDs
+    const linkedExpenseIds = new Set(
+      (this.data.expenses || []).filter(e => e.projectId === projectId).map(e => e.id)
+    );
+
     // Remove project
     this.data.projects = this.data.projects.filter(p => p.id !== projectId);
 
@@ -1116,6 +1224,11 @@ class DataStore {
     this.data.income = (this.data.income || []).filter(i => i.projectId !== projectId);
     this.data.expenses = (this.data.expenses || []).filter(e => e.projectId !== projectId);
     this.data.invoices = (this.data.invoices || []).filter(inv => inv.projectId !== projectId);
+
+    // Clean up linked company fund deductions for these project expenses
+    this.data.companyFundLedger = (this.data.companyFundLedger || []).filter(
+      entry => !entry.expenseId || !linkedExpenseIds.has(entry.expenseId)
+    );
 
     this.save();
     return true;
@@ -1136,14 +1249,22 @@ class DataStore {
   resetCompanyFund(targetBalance = 0) {
     this.data.companyFundLedger = [];
     
-    // Calculate current net profit share for company fund
-    const allTimeIncome = (this.data.income || []).reduce((sum, i) => sum + (Number(i.amount) || 0), 0);
-    const allTimeExpenses = (this.data.expenses || []).reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
-    const allTimeNetProfit = FinanceEngine.calculateNetProfit(allTimeIncome, allTimeExpenses);
-    const allTimeDist = FinanceEngine.distributeProfit(allTimeNetProfit, this.data.settings.profitPercentages, this.data.settings.customProfitAmounts);
+    const allLinkedProjectIds = new Set((this.data.income || []).filter(i => i.projectId).map(i => i.projectId));
+    let unlinkedAllTimeProjectRevenue = 0;
+    (this.data.projects || []).forEach(proj => {
+      if (!allLinkedProjectIds.has(proj.id)) {
+        const pkg = Number(proj.packageAmount) || 0;
+        const disc = Number(proj.discount) || 0;
+        const net = Math.max(0, pkg - disc);
+        const rcv = Number(proj.receivedAmount) || 0;
+        unlinkedAllTimeProjectRevenue += (rcv > 0 ? rcv : net);
+      }
+    });
+
+    const allTimeIncome = (this.data.income || []).reduce((sum, i) => sum + (Number(i.amount) || 0), 0) + unlinkedAllTimeProjectRevenue;
+    const allTimeRevenueDist = FinanceEngine.distributeProfit(allTimeIncome, this.data.settings.profitPercentages, this.data.settings.customProfitAmounts);
     
-    // Set initial balance so that initialBalance + companyFundProfitShare = targetBalance
-    this.data.settings.initialCompanyFundBalance = targetBalance - allTimeDist.companyFund;
+    this.data.settings.initialCompanyFundBalance = targetBalance - allTimeRevenueDist.companyFund;
     this.save();
     return true;
   }

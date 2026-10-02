@@ -270,8 +270,9 @@ const FinanceEngine = {
     const allTimeExpenses = expenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
     const allTimeNetProfit = this.calculateNetProfit(allTimeIncome, allTimeExpenses);
     const allTimeDistribution = this.distributeProfit(allTimeNetProfit, settings.profitPercentages, settings.customProfitAmounts);
+    const allTimeRevenueDistribution = this.distributeProfit(allTimeIncome, settings.profitPercentages, settings.customProfitAmounts);
 
-    const totalCompanyFundBalance = companyFundBalance + allTimeDistribution.companyFund;
+    const totalCompanyFundBalance = companyFundBalance + allTimeRevenueDistribution.companyFund;
 
     // Partner balances calculation (all-time available = total profit share - total withdrawals)
     const p1Withdrawals = withdrawals.filter(w => w.partnerId === 'partner1').reduce((sum, w) => sum + (Number(w.amount) || 0), 0);

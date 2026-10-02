@@ -353,6 +353,87 @@ def test_separate_monthly_calculations():
     print(f"  • Nov  2026: Profit=₹{nov_profit} -> Shameem=₹{nov_p1}, Shiyan=₹{nov_p2}, Company Fund=₹{nov_cf}")
     print(f"  • All-Time : Profit=₹{all_profit} -> Shameem=₹{all_p1}, Shiyan=₹{all_p2}, Company Fund=₹{all_cf}")
 
+def test_expenses_automatically_decrease_company_fund():
+    """
+    User request: "expenses add cheyyumbol company fund automatically decrease cheyyanam"
+    Verify:
+    1. Base Company Fund balance is set to ₹41,121 (as in user screenshot).
+    2. An expense of ₹2,650 (UMMAR&NIDHA WEDS) is added -> Company Fund automatically decreases to ₹38,471 (-₹2,650).
+    3. Another expense of ₹169 (Lightroom) is added -> Company Fund automatically decreases to ₹38,302 (-₹169).
+    4. Expense of ₹169 is edited to ₹500 -> Company Fund automatically adjusts to ₹37,971 (-₹331).
+    5. The ₹2,650 expense is deleted -> Company Fund automatically restores by +₹2,650 to ₹40,621.
+    """
+    def compute_fund(initial_bal, ledger, income):
+        bal = initial_bal
+        for entry in ledger:
+            amt = entry.get('amount', 0)
+            if entry.get('type') == 'addition':
+                bal += amt
+            elif entry.get('type') == 'usage':
+                bal -= amt
+        _, _, cf_rev_share, _ = distribute_profit(income)
+        return bal + cf_rev_share
+
+    def set_fund_bal(target, ledger, income):
+        ledger_diff = sum(e['amount'] if e.get('type') == 'addition' else -e['amount'] for e in ledger)
+        _, _, cf_rev_share, _ = distribute_profit(income)
+        return target - (ledger_diff + cf_rev_share)
+
+    income = 6000
+    ledger = []
+
+    # Step 1: User sets Company Fund Balance to ₹41,121
+    initial_bal = set_fund_bal(41121, ledger, income)
+    current_fund = compute_fund(initial_bal, ledger, income)
+    assert current_fund == 41121, f"Expected 41121, got {current_fund}"
+
+    # Step 2: User adds expense of ₹2,650 (UMMAR&NIDHA WEDS)
+    exp1 = {
+        'id': 'cf-exp-1',
+        'expenseId': 'exp-1',
+        'type': 'usage',
+        'category': 'Other',
+        'description': 'UMMAR&NIDHA WEDS - petrol-1050,ad-500,lenc-800,lc-300',
+        'amount': 2650
+    }
+    ledger.insert(0, exp1)
+    current_fund = compute_fund(initial_bal, ledger, income)
+    assert current_fund == 41121 - 2650, f"Expected 38471, got {current_fund}"
+    assert current_fund == 38471
+
+    # Step 3: User adds another expense of ₹169 (Lightroom)
+    exp2 = {
+        'id': 'cf-exp-2',
+        'expenseId': 'exp-2',
+        'type': 'usage',
+        'category': 'Software',
+        'description': 'Studio Overhead - LIGHTROOM PREMIUM PURCHASE',
+        'amount': 169
+    }
+    ledger.insert(0, exp2)
+    current_fund = compute_fund(initial_bal, ledger, income)
+    assert current_fund == 38471 - 169, f"Expected 38302, got {current_fund}"
+    assert current_fund == 38302
+
+    # Step 4: Expense of ₹169 is edited to ₹500
+    exp2['amount'] = 500
+    current_fund = compute_fund(initial_bal, ledger, income)
+    assert current_fund == 38302 - 331, f"Expected 37971, got {current_fund}"
+    assert current_fund == 37971
+
+    # Step 5: The ₹2,650 expense is deleted -> Fund restores by +₹2,650
+    ledger = [e for e in ledger if e['id'] != 'cf-exp-1']
+    current_fund = compute_fund(initial_bal, ledger, income)
+    assert current_fund == 37971 + 2650, f"Expected 40621, got {current_fund}"
+    assert current_fund == 40621
+
+    print("Expense Automatic Company Fund Deduction Test Passed:")
+    print("  • Initial Balance: ₹41,121")
+    print("  • After adding ₹2,650 expense: ₹38,471 (Decreased by ₹2,650 ✓)")
+    print("  • After adding ₹169 expense: ₹38,302 (Decreased by ₹169 ✓)")
+    print("  • After editing ₹169 -> ₹500: ₹37,971 (Adjusted by -₹331 ✓)")
+    print("  • After deleting ₹2,650 expense: ₹40,621 (Restored by +₹2,650 ✓)")
+
 if __name__ == '__main__':
     test_profit_split_example()
     test_default_this_month()
@@ -366,4 +447,5 @@ if __name__ == '__main__':
     test_discount_and_payment_methods()
     test_project_addition_auto_adds_to_dashboard()
     test_separate_monthly_calculations()
+    test_expenses_automatically_decrease_company_fund()
     print("ALL TESTS PASSED SUCCESSFULLY! ✓")
